@@ -55,7 +55,7 @@ crashlytics-build.properties
 .mtj.tmp/
 
 # Package Files #
-*.jar
+#*.jar
 *.war
 *.ear
 
@@ -68,3 +68,4 @@ target
 .project
 
 build-util.properties
+dist
