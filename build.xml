@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="oimadmin-release" default="release">
+    <property file="build.properties"/>
+    <include file="build-util.xml"/>
+    <property name="artifacts.temp.manifest.dir" value="${module.oimadmin.basedir}/target/generated-sources/manifest"/>
+
+    <target name="update-release-jar" depends="oimadmin.init.artifacts" description="Removes signature from given file">
+        <mkdir dir="${artifacts.temp.manifest.dir}"/>
+        <copyfile src="src/main/resources/META-INF/MANIFEST.MF" dest="${artifacts.temp.manifest.dir}/MANIFEST.MF"/>
+        <manifest mode="update" file="${artifacts.temp.manifest.dir}/MANIFEST.MF">
+            <section name="sysadmin++">
+                <attribute  name="Specification-Title" value="Oracle Identity Manager"/>
+                <attribute name="Specification-Version" value="11g R2"/>
+                <attribute name="Specification-Vendor" value="Oracle"/>
+                <attribute name="Implementation-Title" value="sysadmin++"/>
+                <attribute name="Implementation-Version" value="${version}"/>
+                <attribute name="Implementation-Vendor" value="Shekhar Jha"/>
+            </section>
+        </manifest>
+        <jar update="true" file="${temp.jar.path.OIMAdmin.jar}"
+             manifest="${artifacts.temp.manifest.dir}/MANIFEST.MF"/>
+        <exec executable="zip">
+            <arg value="-d"/>
+            <arg value="${temp.jar.path.OIMAdmin.jar}"/>
+            <arg value="*.RSA"/>
+            <arg value="*.SF"/>
+            <arg value="*.DSA"/>
+        </exec>
+    </target>
+
+    <target name="build" depends="oimadmin.build.modules" description="Builds all components">
+        <delete dir="${artifacts.temp.dir}"/>
+    </target>
+
+    <target name="run" depends="build" description="Executes the application">
+        <java classname="com.jhash.oimadmin.ui.OIMAdmin" fork="true">
+            <jvmarg value="-Dapple.laf.useScreenMenuBar=true -Xdock:name=sysadmin++"/>
+            <classpath refid="oimadmin.runtime.module.classpath"/>
+        </java>
+    </target>
+
+    <target name="release" depends="clean, build, oimadmin.build.all.artifacts, update-release-jar"
+            description="Builds the component for release">
+        <zip destfile="${artifact.output.oimadmin:jar}/configuration.zip" duplicate="preserve">
+            <zipfileset dir="${basedir}/src/main/resources" includes="conf/**/*"/>
+        </zip>
+        <delete dir="${artifacts.temp.dir}"/>
+    </target>
+
+    <target name="clean" depends="oimadmin.init.artifacts, oimadmin.clean"
+            description="Cleans all the intermediate and release files">
+        <delete dir="${artifacts.temp.manifest.dir}"/>
+        <delete dir="${artifacts.temp.dir}"/>
+    </target>
+
+</project>
+

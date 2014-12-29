@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<eventhandlers xmlns="http://www.oracle.com/schema/oim/platform/kernel"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.oracle.com/schema/oim/platform/kernel
+    orchestration-handlers.xsd">
+      
+    <@@EVENT_HANDLER@@ class="@@CLASS_NAME@@" 
+        entity-type="@@ENTITY@@" operation="@@OPERATION@@" name="@@NAME@@"
+        stage="@@STAGE@@" order="@@ORDER@@" sync="@@SYNC@@"/>
+        
+</eventhandlers>

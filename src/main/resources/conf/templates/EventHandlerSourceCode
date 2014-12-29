@@ -1,0 +1,87 @@
+package com.jhash.oim.eventhandler;
+
+import java.io.Serializable;
+import java.util.HashMap;
+
+import oracle.iam.platform.context.ContextManager;
+import oracle.iam.platform.context.ContextManager.ContextTypes;
+import oracle.iam.platform.kernel.vo.Orchestration;
+import oracle.iam.platform.kernel.vo.BulkOrchestration;
+
+import oracle.iam.platform.kernel.spi.EventHandler;
+import oracle.iam.platform.kernel.spi.ConditionalEventHandler;
+import oracle.iam.platform.kernel.vo.AbstractGenericOrchestration;
+import oracle.iam.platform.kernel.spi.ValidationHandler;
+import oracle.iam.platform.kernel.ValidationException;
+import oracle.iam.platform.kernel.spi.PreProcessHandler;
+import oracle.iam.platform.kernel.spi.PostProcessHandler;
+import oracle.iam.platform.kernel.spi.FinalizationHandler;
+import oracle.iam.platform.kernel.spi.FailedHandler;
+
+import oracle.iam.platform.kernel.vo.EventResult;
+import oracle.iam.platform.kernel.vo.BulkEventResult;
+
+public class CustomEventHandler implements ConditionalEventHandler, ValidationHandler, PreProcessHandler, PostProcessHandler, FinalizationHandler
+//FailedHandler
+{
+
+    @Override
+    public void initialize(HashMap<String, String> parameters) {
+ 
+    }
+    //ConditionalEventHandler
+    public boolean isApplicable(AbstractGenericOrchestration orchestration) {
+        // SELF, ADMIN, RECON, POLICY, REQUEST, BULKLOAD, CERTIFICATION
+        if (ContextManager.getContextType() == ContextTypes.REQUEST) {
+        // this is something
+        } else {
+        // do something else
+        }
+        return true;
+    }
+    
+    // ValidationHandler
+    public void validate(long processId, long eventId, Orchestration orchestration) throws ValidationException,  
+        oracle.iam.platform.kernel.ValidationFailedException {
+        //throw ValidationFailedException incase business validation fails
+        // throw ValidationException in case of internal issues e.g. connectivity not available
+    }
+    
+    // ValidationHandler
+    public void validate(long processId, long eventId, BulkOrchestration orchestration) throws ValidationException,
+        oracle.iam.platform.kernel.ValidationFailedException {
+        // typically for recon scenario.        
+    }
+    
+    // PreProcess & PostProcess
+    // FailedHandler returns  FailedEventResult
+    public EventResult execute(long processId, long eventId, Orchestration orchestration) {
+        return new EventResult();
+    }
+    
+    // PreProcess & PostProcess
+    // FailedHandler returns  FailedEventResult
+    public BulkEventResult execute(long processId, long eventId, BulkOrchestration orchestration) {
+        return new BulkEventResult();
+    }
+    
+    // PreProcess & PostProcess
+    public void compensate(long processId, long eventId, AbstractGenericOrchestration orchestration) {
+    }
+    
+    // PreProcess & PostProcess
+    public boolean cancel(long processId, long eventId, AbstractGenericOrchestration orchestration) {
+        return false;
+    }
+    
+    // FailedHandler Only
+    // boolean cancel(long processId, long eventId) {
+    // }
+    
+    public void finalize(long processId, long eventId, Orchestration orchestration) {
+    }
+    
+    public void finalize(long processId, long eventId, BulkOrchestration orchestration) {
+    }
+
+}

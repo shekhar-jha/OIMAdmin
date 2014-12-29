@@ -1,0 +1,12 @@
+Manifest-Version: 1.0
+Class-Path: ~/.oimadm/conf mdsrt.jar jgoodies-binding-2.10.0.jar smart-client-showcas
+ e-1.3.1.jar slf4j-log4j12-1.5.11.jar mdslcm-client.jar jgoodies-looks
+ -2.6.0.jar log4j-1.2.14.jar jgoodies-common-1.8.0.jar wljmxclient.jar
+  ojdbc6.jar slf4j-log4j12-1.5.11.jar wlfullclient.jar spring.jar jrf-
+ api.jar eclipselink.jar commons-logging.jar commons-io-2.4.jar jgoodi
+ es-animation-1.4.3.jar jgoodies-validation-2.5.0.jar ojdbc6.jar jide-
+ oss-3.6.1.jar oimclient.jar jgoodies-forms-1.8.0.jar commons-logging.
+ jar eclipselink.jar spring.jar jrf-api.jar wlfullclient.jar slf4j-api
+ -1.5.11.jar
+Main-Class: com.jhash.oimadmin.ui.OIMAdmin
+
