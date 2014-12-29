@@ -19,6 +19,7 @@
         </manifest>
         <jar update="true" file="${temp.jar.path.OIMAdmin.jar}"
              manifest="${artifacts.temp.manifest.dir}/MANIFEST.MF"/>
+        <copy file="${temp.jar.path.OIMAdmin.jar}" tofile="${artifact.output.oimadmin:jar}/OIMAdmin.jar"/>
         <exec executable="zip">
             <arg value="-d"/>
             <arg value="${temp.jar.path.OIMAdmin.jar}"/>
