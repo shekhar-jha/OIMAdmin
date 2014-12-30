@@ -6,7 +6,7 @@
 
     <target name="update-release-jar" depends="oimadmin.init.artifacts" description="Removes signature from given file">
         <mkdir dir="${artifacts.temp.manifest.dir}"/>
-        <copyfile src="src/main/resources/META-INF/MANIFEST.MF" dest="${artifacts.temp.manifest.dir}/MANIFEST.MF"/>
+        <!--copyfile src="${module.oimadmin.basedir}/src/main/resources/META-INF/MANIFEST.MF" dest="${artifacts.temp.manifest.dir}/MANIFEST.MF"/>
         <manifest mode="update" file="${artifacts.temp.manifest.dir}/MANIFEST.MF">
             <section name="sysadmin++">
                 <attribute  name="Specification-Title" value="Oracle Identity Manager"/>
@@ -18,7 +18,9 @@
             </section>
         </manifest>
         <jar update="true" file="${temp.jar.path.OIMAdmin.jar}"
-             manifest="${artifacts.temp.manifest.dir}/MANIFEST.MF"/>
+             manifest="${artifacts.temp.manifest.dir}/MANIFEST.MF"/-->
+        <jar update="true" file="${temp.jar.path.OIMAdmin.jar}"
+             manifest="${module.oimadmin.basedir}/src/main/resources/META-INF/MANIFEST.MF"/>
         <copy file="${temp.jar.path.OIMAdmin.jar}" tofile="${artifact.output.oimadmin:jar}/OIMAdmin.jar"/>
         <exec executable="zip">
             <arg value="-d"/>
