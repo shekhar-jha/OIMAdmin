@@ -39,6 +39,7 @@ public class OIMConnection extends AbstractConnection {
     public static final String ATTR_OIM_APP_SERVER_TYPE = "APPSERVER_TYPE";
     public static final String ATTR_OIM_APP_SERVER_TYPE_WLS = "wls";
     public static final String ATTR_EXPORT_DIR = "oim.export.dir";
+    public static final String VAL_DEFAULT_OIM_HOME = System.getProperty("user.home") + "/.oimadm/";
 
     private static final Logger logger = LoggerFactory.getLogger(OIMConnection.class);
     // TODO: Not thread safe
@@ -64,7 +65,7 @@ public class OIMConnection extends AbstractConnection {
             case WEBLOGIC:
                 String xlHome = config.getWorkArea();
                 if (config.getProperty(ATTR_OIM_HOME) != null) {
-                    xlHome = config.getProperty(ATTR_OIM_HOME);
+                    xlHome = config.getProperty(ATTR_OIM_HOME, VAL_DEFAULT_OIM_HOME);
                 } else if (
                         System.getProperties().contains("XL.HomeDir")) {
                     xlHome = System.getProperty("XL.HomeDir");

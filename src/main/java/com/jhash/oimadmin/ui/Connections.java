@@ -199,7 +199,7 @@ public class Connections extends AbstractUIComponent implements RegisterUI {
             nameLabel.getDocument().addDocumentListener(new StandardDocumentListener(nameLabel, configuration, OIMConnection.ATTR_CONN_NAME));
             nameLabel.setText(configuration.getProperty(OIMConnection.ATTR_CONN_NAME));
             oimHome.getDocument().addDocumentListener(new StandardDocumentListener(oimHome, configuration, OIMConnection.ATTR_OIM_HOME));
-            oimHome.setText(configuration.getProperty(OIMConnection.ATTR_OIM_HOME, System.getProperty("user.home") + "/.oimadm/"));
+            oimHome.setText(configuration.getProperty(OIMConnection.ATTR_OIM_HOME,OIMConnection.VAL_DEFAULT_OIM_HOME));
             oimURL.getDocument().addDocumentListener(new StandardDocumentListener(oimURL, configuration, OIMConnection.ATTR_OIM_URL));
             oimURL.setText(configuration.getProperty(OIMConnection.ATTR_OIM_URL, "t3://<hostname>:14000"));
             oimUser.getDocument().addDocumentListener(new StandardDocumentListener(oimUser, configuration, OIMConnection.ATTR_OIM_USER));
