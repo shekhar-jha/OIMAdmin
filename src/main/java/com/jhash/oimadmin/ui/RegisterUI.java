@@ -13,13 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jhash.oimadmin;
 
-public class OIMAdminException extends RuntimeException {
+package com.jhash.oimadmin.ui;
 
-    private static final long serialVersionUID = 1L;
+import com.jhash.oimadmin.Config;
+import com.jhash.oimadmin.UIComponentTree;
 
-    public OIMAdminException(String message, Exception exception) {
-        super(message, exception);
-    }
+import javax.swing.*;
+import java.util.Map;
+
+public interface RegisterUI {
+
+    public void registerMenu(Config configuration, JMenuBar menu, Map<OIMAdmin.STANDARD_MENUS, JMenu> commonMenus, UIComponentTree selectionTree, DisplayArea displayArea);
+
+    public void registerSelectionTree(Config configuration, UIComponentTree selectionTree, DisplayArea displayArea);
 }

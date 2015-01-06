@@ -18,6 +18,7 @@ package com.jhash.oimadmin.oim;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.Config.Configuration;
 import com.jhash.oimadmin.OIMAdminException;
+import com.jhash.oimadmin.Utils;
 import oracle.mds.lcm.client.*;
 import oracle.mds.lcm.client.MetadataTransferManager.ASPlatform;
 import org.slf4j.Logger;
@@ -26,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import javax.management.MBeanServerConnection;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -40,7 +40,6 @@ public class MDSConnectionJMX extends AbstractConnection {
     protected String STRING_REPRESENTATION = "MDSConnectionJMX:";
     private JMXConnection jmxConnection = null;
     private ASPlatform platform = null;
-    private List<MDSPartition> mdsPartitions = new ArrayList<MDSPartition>();
 
     @Override
     protected void initializeConnection(Configuration config) {
@@ -87,10 +86,9 @@ public class MDSConnectionJMX extends AbstractConnection {
                 for (MDSAppInfo applicationInfo : applicationsInfo) {
                     MDSPartition newPartitionIdentified = new MDSPartition(runtimeServer, applicationInfo);
                     partitions.add(newPartitionIdentified);
-                    mdsPartitions.add(newPartitionIdentified);
                 }
             } catch (Exception exception) {
-
+                logger.warn("Failed to list MDS Application Names from server {} ", runtimeServer, exception);
             }
             logger.debug("Created MetadataTransferManager {}", mdsTransfer);
 
@@ -132,10 +130,6 @@ public class MDSConnectionJMX extends AbstractConnection {
             throw new OIMAdminException("Failed to import application " + application + " to location " + target
                     + " from " + importFileLocation, ex);
         }
-        File importFile = new File(importFileLocation);
-        logger.debug("Trying to delete the imported file {}", importFileLocation);
-        importFile.delete();
-        logger.debug("Deleted the imported file", importFileLocation);
         logger.debug("Completed import of Meta data from MDS repository");
     }
 
@@ -154,7 +148,6 @@ public class MDSConnectionJMX extends AbstractConnection {
         ProgressObject progress = mdsTransfer.exportMetadata(application, target, exportFileLocation, params);
         for (; (!progress.isCompleted()) && (!progress.isFailed()); Thread.sleep(100L)) {
             logger.trace("Exporting Meta data progress status {}", progress.getStatus().getMessage());
-            Thread.currentThread();
         }
         logger.debug("exportMetadata result: {}", progress.getStatus().getMessage());
         logger.debug("  Summary info: {}", progress.getSummaryInfo());
@@ -177,15 +170,6 @@ public class MDSConnectionJMX extends AbstractConnection {
 
     protected void destroyConnection() {
         logger.debug("Trying to destroy MDS Connection");
-        if (mdsPartitions != null && !mdsPartitions.isEmpty()) {
-            for (MDSPartition partition : mdsPartitions) {
-                try {
-                    partition.destroy();
-                } catch (Exception exception) {
-                    logger.warn("Failed to destroy partition {} ", partition, exception);
-                }
-            }
-        }
         if (this.jmxConnection != null) {
             logger.debug("Trying to destroy JMX connection {}", jmxConnection);
             jmxConnection.destroy();
@@ -197,9 +181,9 @@ public class MDSConnectionJMX extends AbstractConnection {
 
     public static class MDSFile {
 
-        public final MDSPartition partition;
-        public final JarFile jarFile;
-        public final JarEntry file;
+        private final MDSPartition partition;
+        private final JarFile jarFile;
+        private final JarEntry file;
         private String content = null;
 
         public MDSFile(MDSPartition partition, JarFile jarFile, JarEntry file) {
@@ -209,11 +193,18 @@ public class MDSConnectionJMX extends AbstractConnection {
         }
 
         public String getContent() {
+            if (content == null) {
+                content = Utils.readFileInJar(jarFile, file);
+            }
             return content;
         }
 
         public void setContent(String content) {
             this.content = content;
+        }
+
+        public void save() {
+            partition.savePartitionFile(this);
         }
 
     }
@@ -222,7 +213,6 @@ public class MDSConnectionJMX extends AbstractConnection {
         public final String serverName;
         public final MDSAppInfo application;
         private final String stringValue;
-        private String nameOfPartitionFilesExported;
 
         private MDSPartition(String serverName, MDSAppInfo application) {
             this.serverName = serverName;
@@ -243,35 +233,15 @@ public class MDSConnectionJMX extends AbstractConnection {
                     + (export ? "Export" : "Import") + System.currentTimeMillis() + ".jar";
         }
 
-        public void resetPartitionFiles() {
-            File existingFile;
-            try {
-                if (nameOfPartitionFilesExported != null
-                        && (existingFile = new File(nameOfPartitionFilesExported)).exists()) {
-                    nameOfPartitionFilesExported = null;
-                    existingFile.delete();
-                }
-            } catch (Exception exception) {
-                throw new OIMAdminException("Failed to cleanup the existing partition file"
-                        + nameOfPartitionFilesExported + " before reloading the new file for " + application, exception);
-            }
-        }
-
         public String getPartitionFiles() {
             logger.debug("Trying to get files present in MDS Partition {}", this);
-            String fileName = null;
-            if (nameOfPartitionFilesExported == null || (!(new File(nameOfPartitionFilesExported).exists()))) {
-                fileName = generateFileName(true);
-                logger.debug("Generated the dump file as {}", fileName);
-                try {
-                    MDSConnectionJMX.this.exportMetaData(application, new TargetInfo(serverName), fileName);
-                    nameOfPartitionFilesExported = fileName;
-                } catch (Exception exception) {
-                    throw new OIMAdminException("Failed to export MDS repository " + application + " from location "
-                            + serverName + " into file " + fileName, exception);
-                }
-            } else {
-                fileName = nameOfPartitionFilesExported;
+            String fileName = generateFileName(true);
+            logger.debug("Generated the dump file as {}", fileName);
+            try {
+                MDSConnectionJMX.this.exportMetaData(application, new TargetInfo(serverName), fileName);
+            } catch (Exception exception) {
+                throw new OIMAdminException("Failed to export MDS repository " + application + " from location "
+                        + serverName + " into file " + fileName, exception);
             }
             return fileName;
         }
@@ -281,37 +251,36 @@ public class MDSConnectionJMX extends AbstractConnection {
                 logger.debug("Nothing to do since file {} has invalid jar entry or content", file);
             } else {
                 String fileName = generateFileName(false);
-                try (JarOutputStream importFileOutputStream = new JarOutputStream(new FileOutputStream(fileName))) {
-                    JarEntry newFileEntry = new JarEntry(file.file.getName());
-                    newFileEntry.setTime(System.currentTimeMillis());
-                    importFileOutputStream.putNextEntry(newFileEntry);
-                    importFileOutputStream.write(file.content.getBytes());
-                } catch (Exception exception) {
-                    throw new OIMAdminException("Failed to create the jar file " + fileName, exception);
-                }
                 try {
-                    MDSConnectionJMX.this.importMetaData(file.partition.application, new TargetInfo(
-                            file.partition.serverName), fileName);
-                } catch (Exception exception) {
-                    throw new OIMAdminException("Failed to import file " + fileName + " into MDS repository "
-                            + application + " in location " + serverName, exception);
+                    try (JarOutputStream importFileOutputStream = new JarOutputStream(new FileOutputStream(fileName))) {
+                        JarEntry newFileEntry = new JarEntry(file.file.getName());
+                        newFileEntry.setTime(System.currentTimeMillis());
+                        importFileOutputStream.putNextEntry(newFileEntry);
+                        importFileOutputStream.write(file.content.getBytes());
+                    } catch (Exception exception) {
+                        throw new OIMAdminException("Failed to create the jar file " + fileName, exception);
+                    }
+                    try {
+                        MDSConnectionJMX.this.importMetaData(file.partition.application, new TargetInfo(
+                                file.partition.serverName), fileName);
+                    } catch (Exception exception) {
+                        throw new OIMAdminException("Failed to import file " + fileName + " into MDS repository "
+                                + application + " in location " + serverName, exception);
+                    }
+                } finally {
+                    if (fileName != null) {
+                        try {
+                            new File(fileName).delete();
+                        } catch (Exception fileDeleteException) {
+                            logger.warn("Failed to delete the file {} after saving the MDS File ", new Object[]{fileName, file}, fileDeleteException);
+                        }
+                    }
                 }
             }
         }
 
         public void destroy() {
-            logger.debug("Trying to destroy MDS Partition {}", stringValue);
-            File partitionFileExported;
-            logger.debug("Trying to validate whether partition file {} associated with partition exists",
-                    nameOfPartitionFilesExported);
-            if (nameOfPartitionFilesExported != null
-                    && (partitionFileExported = new File(nameOfPartitionFilesExported)).exists()) {
-
-                logger.debug("Trying to delete partition file");
-                partitionFileExported.delete();
-                logger.debug("Deleted partition file");
-            }
-            logger.debug("Destroyed MDS Partition {}", stringValue);
+            logger.debug("Destroyed {}", this);
         }
     }
 }

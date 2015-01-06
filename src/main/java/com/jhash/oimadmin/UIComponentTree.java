@@ -13,13 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.jhash.oimadmin;
 
-public class OIMAdminException extends RuntimeException {
+import java.util.List;
 
-    private static final long serialVersionUID = 1L;
+public interface UIComponentTree {
 
-    public OIMAdminException(String message, Exception exception) {
-        super(message, exception);
-    }
+    public void addChildNode(OIMAdminTreeNode parent, OIMAdminTreeNode child);
+
+    public List<OIMAdminTreeNode> getChildNodes(OIMAdminTreeNode parent);
+
+    public void removeChildNode(OIMAdminTreeNode parent, OIMAdminTreeNode child);
+
+    public OIMAdminTreeNode getRootNode();
+
 }

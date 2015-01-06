@@ -20,6 +20,5 @@ public class MacOSXHandler {
     public static void initialize(OIMAdmin admin) {
         com.apple.eawt.Application application = com.apple.eawt.Application.getApplication();
         application.setQuitStrategy(com.apple.eawt.QuitStrategy.CLOSE_ALL_WINDOWS);
-
     }
 }

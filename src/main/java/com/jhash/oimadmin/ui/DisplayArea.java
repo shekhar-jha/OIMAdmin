@@ -13,13 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jhash.oimadmin;
 
-public class OIMAdminException extends RuntimeException {
+package com.jhash.oimadmin.ui;
 
-    private static final long serialVersionUID = 1L;
+import com.jhash.oimadmin.UIComponent;
 
-    public OIMAdminException(String message, Exception exception) {
-        super(message, exception);
-    }
+import javax.swing.*;
+
+public interface DisplayArea {
+
+    public void add(UIComponent<? extends JComponent> component);
+
+    public void remove(UIComponent<? extends JComponent> component);
+
 }

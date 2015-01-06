@@ -17,230 +17,106 @@
 package com.jhash.oimadmin.ui;
 
 import com.jhash.oimadmin.Config;
-import com.jhash.oimadmin.OIMAdminTreeNode;
 import com.jhash.oimadmin.UIComponent;
+import com.jhash.oimadmin.UIComponentTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
-import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreePath;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
-public abstract class AbstractUIComponent implements UIComponent {
+public abstract class AbstractUIComponent<T extends JComponent> extends JPanel implements UIComponent<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractUIComponent.class);
-    protected static ThreadFactory threadFactory = Executors.defaultThreadFactory();
-
-    protected Config config = null;
-    protected boolean isInitialized = false;
-
-    public static OIMAdminTreeNode getNode(Object nodeObject) {
-        logger.debug("Trying to validate whether we have received identifiable node detail");
-        if (nodeObject != null && nodeObject instanceof OIMAdminTreeNode) {
-            return ((OIMAdminTreeNode) nodeObject);
-        } else {
-            logger.warn(
-                    "Failed to locate the node {} (Class: {}) being expanded. Ignoring expansion event.",
-                    nodeObject, nodeObject == null ? "null" : nodeObject.getClass());
-            return null;
-        }
+    protected final String name;
+    protected final Config.Configuration configuration;
+    protected final UIComponentTree selectionTree;
+    protected final DisplayArea displayArea;
+    protected final boolean publish;
+    private COMPONENT_STATE status = COMPONENT_STATE.NOT_INITIALIZED;
+    public AbstractUIComponent(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+        this(name, true, configuration, selectionTree, displayArea);
     }
 
-    public static OIMAdminTreeNode addUninitializedNode(OIMAdminTreeNode parentNode, OIMAdminTreeNode treeNode, DefaultTreeModel model) {
-        treeNode.add(new OIMAdminTreeNode.OIMAdminTreeNodeNoAction(OIMAdmin.DUMMY_LEAF_NODE_NAME, OIMAdminTreeNode.NODE_TYPE.DUMMY,
-                treeNode.configuration));
-        model.insertNodeInto(treeNode, parentNode, parentNode.getChildCount());
-        return treeNode;
 
-    }
-
-    public static void executeLoaderService(OIMAdminTreeNode node, JTree connectionTree, Runnable loader) {
-        if (node == null)
-            throw new NullPointerException("Can not run loader since node that needs to be loaded is null.");
-        if (connectionTree == null)
-            throw new NullPointerException("Can not run loader since no connection tree is available.");
-        if (loader == null)
-            throw new NullPointerException("Can not run loader since loader is null.");
-        DefaultTreeModel model = (DefaultTreeModel) connectionTree.getModel();
-        logger.debug("Trying to check if node {} is not initialized", node.name);
-        if (node.getStatus() == OIMAdminTreeNode.NODE_STATE.NOT_INITIALIZED) {
-            logger.debug("Setting the status to {} to avoid multiple triggers of loading",
-                    OIMAdminTreeNode.NODE_STATE.INITIALIZATION_IN_PROGRESS);
-            node.setStatus(OIMAdminTreeNode.NODE_STATE.INITIALIZATION_IN_PROGRESS);
-            logger.debug("Setting up the initialization of {}", node.name);
-            Thread oimConnectionThread = threadFactory.newThread(new Runnable() {
-
-                @Override
-                public void run() {
-                    try {
-                        logger.debug("Trying to run process to initialize node {}", node);
-                        loader.run();
-                        logger.debug(
-                                "Completed the process to initialize node {}. Trying to remove {} leaf node since the loading was successful.",
-                                node, OIMAdmin.DUMMY_LEAF_NODE_NAME);
-                        if (node.getChildCount() > 0) {
-                            if (node.getFirstChild() instanceof OIMAdminTreeNode
-                                    && ((OIMAdminTreeNode) node.getFirstChild()).name.equals(OIMAdmin.DUMMY_LEAF_NODE_NAME)) {
-                                logger.debug("Removing {} from node {}", OIMAdmin.DUMMY_LEAF_NODE_NAME, node);
-                                model.removeNodeFromParent((OIMAdminTreeNode) node.getFirstChild());
-                            } else {
-                                logger.debug(
-                                        "The first entry {} in the loaded node {} is not instance of OIMAdminTreeNode or is not {}",
-                                        new Object[]{node.getFirstChild(), node, OIMAdmin.DUMMY_LEAF_NODE_NAME});
-                            }
-                        } else {
-                            logger.debug(
-                                    "Nothing was loaded and the node {} does not have any dummy child node to remove though expected.",
-                                    node);
-                        }
-                        node.setStatus(OIMAdminTreeNode.NODE_STATE.INITIALIZED);
-                    } catch (Exception exception) {
-                        logger.warn("Failed to initialize OIM Connection for " + node.name, exception);
-                        logger.debug("Trying to delete all the child nodes of node");
-                        while (node.getChildCount() > 0) {
-                            model.removeNodeFromParent((OIMAdminTreeNode) node.getFirstChild());
-                        }
-                        logger.debug("Adding {} node as child node to inform user", OIMAdmin.DUMMY_LEAF_NODE_NAME_ERROR);
-                        model.insertNodeInto(new OIMAdminTreeNode.OIMAdminTreeNodeNoAction(OIMAdmin.DUMMY_LEAF_NODE_NAME_ERROR, node.type,
-                                node.configuration), node, node.getChildCount());
-                        logger.debug("Setting node status as ", OIMAdminTreeNode.NODE_STATE.FAILED);
-                        node.setStatus(OIMAdminTreeNode.NODE_STATE.FAILED);
-                        logger.debug("Triggering the node expansion due to way tree expansion behaves once it looses all the nodes ");
-                        connectionTree.expandPath(new TreePath(node.getPath()));
-                    }
-                }
-            });
-            oimConnectionThread.setDaemon(false);
-            oimConnectionThread.setName("Loading " + node.type + "(" + node.name + ")");
-            oimConnectionThread.start();
-            logger.debug("Completed setup of {} node's initialization", node.name);
-        } else {
-            logger.debug("Nothing to do since the node is already initialized.");
-        }
-    }
-
-    public static void executeDisplayService(OIMAdminTreeNode node, JTabbedPane displayTabbedPane, ExecuteCommand<? extends JComponent> displayUIComponent) {
-        if (node == null)
-            throw new NullPointerException("Can not execute display service since node that needs to be displayed is null.");
-        if (displayTabbedPane == null)
-            throw new NullPointerException("Can not run display service since tabbed pane for the display is null.");
-        if (displayUIComponent == null)
-            throw new NullPointerException("Can not run display service since displayUIComponent function is null.");
-        logger.debug("Trying to check if node {} is initialized", node.name);
-        if (node.isDisplayable()) {
-            logger.debug("Setting up the display of {}", node.name);
-            Thread displayThread = threadFactory.newThread(new Runnable() {
-
-                @Override
-                public void run() {
-                    logger.debug("Trying to run process to display node {}", node);
-                    try {
-                        JComponent displayComponent = displayUIComponent.run();
-                        if (displayComponent == null) {
-                            logger.debug("Nothing was returned by display setup function to display");
-                        } else {
-                            logger.debug("Trying to add returned component {} as tab {}", displayComponent, node.name);
-                            displayTabbedPane.addTab(node.name, displayComponent);
-                            displayTabbedPane.setSelectedComponent(displayComponent);
-                        }
-                    } catch (Exception exception) {
-                        logger.warn("Failed to initialize OIM Connection for " + node.name, exception);
-                    }
-                    logger.debug("Completed the process to display node {}", node);
-                }
-            });
-            displayThread.setDaemon(false);
-            displayThread.setName("Displaying " + node.type + "(" + node.name + ")");
-            displayThread.start();
-            logger.debug("Completed setup of {} node's display", node.name);
-        } else {
-            logger.debug("Nothing to do since the node is not in displayable state.");
-        }
-    }
-
-    public static void resetNode(OIMAdminTreeNode node, DefaultTreeModel model) {
-        logger.debug("Trying to delete all the child nodes of node");
-        while (node.getChildCount() > 0) {
-            model.removeNodeFromParent((OIMAdminTreeNode) node.getFirstChild());
-        }
-        logger.debug("Setting the node status to {}", OIMAdminTreeNode.NODE_STATE.NOT_INITIALIZED);
-        node.setStatus(OIMAdminTreeNode.NODE_STATE.NOT_INITIALIZED);
-    }
-
-    public static void runOperation(JComponent displayComponent, Runnable executor) {
-        if (executor == null)
-            throw new NullPointerException("Can not run tab operation since executor function is null.");
-        logger.debug("Executing {}. Associated displayed component {}", new Object[]{executor,
-                displayComponent});
-        Thread displayerThread = threadFactory.newThread(new Runnable() {
-
-            @Override
-            public void run() {
-                try {
-                    logger.debug("Trying to execute command");
-                    if (displayComponent != null)
-                        displayComponent.setEnabled(false);
-                    executor.run();
-                    if (displayComponent != null)
-                        displayComponent.setEnabled(true);
-                    logger.debug("Completed execution of command");
-                } catch (Exception exception) {
-                    logger.warn("Failed to execute command " + executor, exception);
-                }
-            }
-        });
-        displayerThread.setDaemon(false);
-        displayerThread.setName("Command run: " + executor);
-        displayerThread.start();
-        logger.debug("Completed setup of command execution for node");
+    public AbstractUIComponent(String name, boolean publish, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+        this.name = name;
+        this.configuration = configuration;
+        this.selectionTree = selectionTree;
+        this.displayArea = displayArea;
+        this.publish = publish;
     }
 
     @Override
-    public String toString() {
-        return getStringRepresentation();
+    public String getName() {
+        return name;
     }
 
     @Override
     public Config.Configuration getConfiguration() {
-        return null;
+        return configuration;
+    }
+
+    public COMPONENT_STATE getStatus() {
+        return status;
+    }
+
+    public void setStatus(COMPONENT_STATE status) {
+        this.status = status;
     }
 
     @Override
-    public void initialize(Config config) {
+    public void initialize() {
         logger.debug("Trying to initialize UI Component");
-        if (config != null) {
-            if (isInitialized) {
-                logger.debug("Destroying existing component since it is already initialized.");
-                destroy();
-            }
-            this.config = config;
-            initializeComponent();
-            isInitialized = true;
-        } else {
-            throw new NullPointerException(
-                    "No configuration available for initialization. Please pass the configuration method.");
+        if (getStatus() == COMPONENT_STATE.INITIALIZATION_IN_PROGRESS) {
+            logger.warn("Trying to initialize UI Component {} which is already being initialized, ignoring the trigger", this);
+            return;
         }
-        logger.debug("Initialized UI Component");
+        if (getStatus() == COMPONENT_STATE.INITIALIZED) {
+            logger.debug("Nothing to do since component {} is already initialized.", this);
+            return;
+        }
+        setStatus(COMPONENT_STATE.INITIALIZATION_IN_PROGRESS);
+        try {
+            initializeComponent();
+            if (publish)
+                displayArea.add(this);
+            setStatus(COMPONENT_STATE.INITIALIZED);
+            logger.debug("Initialized UI Component");
+        } catch (Exception exception) {
+            logger.debug("Setting node status as {}", COMPONENT_STATE.FAILED);
+            setStatus(COMPONENT_STATE.FAILED);
+        }
     }
-
-    @Override
-    public abstract String getName();
 
     public abstract void initializeComponent();
 
     public abstract void destroyComponent();
 
-    public abstract String getStringRepresentation();
+    @Override
+    public abstract T getComponent();
 
     @Override
     public void destroy() {
-        isInitialized = false;
-        destroyComponent();
+        logger.debug("Trying to destroy {}", this);
+        if (getStatus() == COMPONENT_STATE.INITIALIZED) {
+            logger.debug("Component in {} state, setting status to {} before destroying", getStatus(), COMPONENT_STATE.DESTRUCTION_IN_PROGRESS);
+            setStatus(COMPONENT_STATE.DESTRUCTION_IN_PROGRESS);
+            try {
+                if (publish)
+                    displayArea.remove(this);
+                destroyComponent();
+                logger.debug("Completed component destruction");
+            } catch (Exception exception) {
+                logger.warn("Failed to complete the component specific destruction process", exception);
+            }
+            logger.debug("Setting status to {}", COMPONENT_STATE.NOT_INITIALIZED);
+            setStatus(COMPONENT_STATE.NOT_INITIALIZED);
+        } else {
+            logger.debug("Skipping destroy since the component is not in {} state", COMPONENT_STATE.INITIALIZED);
+        }
     }
 
-    public static interface EventProcessor {
-        public void processEvent(OIMAdminTreeNode node, OIMAdminTreeNode.EVENT_TYPE event);
+    public enum COMPONENT_STATE {
+        NOT_INITIALIZED, INITIALIZED, INITIALIZED_NO_OP, FAILED, INITIALIZATION_IN_PROGRESS, DESTRUCTION_IN_PROGRESS
     }
 }

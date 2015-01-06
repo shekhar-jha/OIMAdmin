@@ -15,12 +15,14 @@
  */
 package com.jhash.oimadmin;
 
-public interface UIComponent {
+public interface UIComponent<T> {
     public String getName();
 
     public Config.Configuration getConfiguration();
 
-    public void initialize(Config config);
+    public void initialize();
+
+    public abstract T getComponent();
 
     public void destroy();
 

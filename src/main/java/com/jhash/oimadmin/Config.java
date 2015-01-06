@@ -15,8 +15,6 @@
  */
 package com.jhash.oimadmin;
 
-import com.jhash.oimadmin.ui.OIMAdmin;
-import com.jhash.oimadmin.ui.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +23,7 @@ import java.security.InvalidParameterException;
 import java.util.*;
 
 public class Config {
+
     public static final String DEF_CONFIG_LOC = "config.properties";
     public static final String ATTR_NAME_PREFIX = "sysadmin.";
     public static final String ATTR_NAME_WORK_AREA = "workhome";
@@ -40,43 +39,46 @@ public class Config {
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
     private Map<String, Properties> oimConnectionConfiguration = new HashMap<String, Properties>();
     private List<String> oimConnectionNames = new ArrayList<>();
-    private OIMAdmin oimAdmin;
     private String workArea = null;
     private String configurationLocation = null;
 
-    public void load(OIMAdmin oimAdmin) {
-        this.oimAdmin = oimAdmin;
-        logger.debug("Trying to setup the work area for application");
+    public List<String> getConnectionNames() {
+        return new ArrayList<String>(oimConnectionConfiguration.keySet());
+    }
+
+    public Configuration getConnectionDetails(String oimConnectionName) {
+        Properties properties = oimConnectionConfiguration.get(oimConnectionName);
+        if (properties == null)
+            properties = new Properties();
+        Configuration configuration = new Configuration(properties, this);
+        return configuration;
+    }
+
+    public void load() {
+        logger.debug("Starting Configuration loading....");
         workArea = setupWorkArea();
         if (workArea == null || workArea.isEmpty())
             throw new NullPointerException("Failed to setup work area for the application");
-        logger.debug("Trying to load configuration");
-        configurationLocation = load();
-        logger.debug("Loaded configuration");
-    }
-
-    private String load() {
-        logger.debug("Trying to load configuration");
         InputStream propertyFileStream = null;
         String configLocation = DEF_CONFIG_LOC;
         try {
             String userConfigurationFileLocation = workArea + File.separator + VAL_WORK_AREA_CONF + File.separator + VAL_CONFIG_PROP_FILE_NAME;
             File userConfigurationFile = new File(userConfigurationFileLocation);
-            logger.debug("Trying to validate whether configuration file {} exists and is readable");
+            logger.debug("Trying to validate whether configuration file {} exists and is readable", userConfigurationFileLocation);
             if (userConfigurationFile.exists() && userConfigurationFile.canRead()) {
-                logger.debug("Trying to read configuration file from location {}", userConfigurationFileLocation);
                 configLocation = userConfigurationFileLocation;
+                logger.debug("Trying to create input stream for file in location {}", userConfigurationFileLocation);
                 propertyFileStream = new FileInputStream(userConfigurationFile);
             } else {
-                logger.debug("Trying to read configuration from location {}", configLocation);
+                logger.debug("Trying to create input stream from location {}", configLocation);
                 propertyFileStream = ClassLoader.getSystemResourceAsStream(configLocation);
             }
             Properties configuration = new Properties();
-            logger.debug("Trying to load configuration from location {}", configLocation);
+            logger.debug("Trying to load configuration using {}", propertyFileStream);
             configuration.load(propertyFileStream);
             processOIM(configuration);
         } catch (Exception exception) {
-            throw new OIMAdminException("Failed to load configuration file " + configLocation, exception);
+            throw new OIMAdminException("Failed to load configuration.", exception);
         } finally {
             if (propertyFileStream != null) {
                 try {
@@ -87,64 +89,80 @@ public class Config {
                 }
             }
         }
+        configurationLocation = configLocation;
         logger.debug("Loaded configuration from location {}", configLocation);
-        return configLocation;
     }
 
     private void processOIM(Properties configuration) {
         int totalConnections = -1;
-        logger.debug("Trying to process the configuration information to extract OIM connection details");
+        logger.debug("Trying to extract OIM connection details from read configuration");
         Map<Integer, Properties> oimConnectionConfigurationList = new HashMap<Integer, Properties>();
-        for (Object oimPropertyNameObject : configuration.keySet()) {
-            String oimPropertyName = (String) oimPropertyNameObject;
-            logger.debug("Processing property {}", oimPropertyName);
+        for (String oimPropertyName : configuration.stringPropertyNames()) {
+            logger.trace("Processing property {}", oimPropertyName);
             if (oimPropertyName != null && oimPropertyName.startsWith(ATTR_NAME_PREFIX)) {
                 String[] keyValues = oimPropertyName.split("\\.");
                 if (keyValues.length == 3) {
-                    int configurationIndex = Integer.parseUnsignedInt(keyValues[1]);
                     Properties oimProperty = null;
-                    if (oimConnectionConfigurationList.containsKey(configurationIndex))
-                        oimProperty = oimConnectionConfigurationList.get(configurationIndex);
-                    else
-                        oimProperty = new Properties();
-                    oimProperty.setProperty(keyValues[2], configuration.getProperty(oimPropertyName));
-                    oimConnectionConfigurationList.put(configurationIndex, oimProperty);
-
-                    if (configurationIndex > totalConnections)
+                    int configurationIndex = -1;
+                    try {
+                        configurationIndex = Integer.parseUnsignedInt(keyValues[1]);
+                    }catch(NumberFormatException exception) {
+                        logger.warn("Ignoring attribute name {} in configuration ({}) since it is not in <>.<number>.<> format", new Object[]{oimPropertyName, configurationLocation});
+                        continue;
+                    }
+                    if (configurationIndex > totalConnections) {
+                        logger.trace("Resetting total number of connections to {}", configurationIndex);
                         totalConnections = configurationIndex;
+                    }
+                    if (oimConnectionConfigurationList.containsKey(configurationIndex)) {
+                        logger.trace("Located an existing configuration map for {}", configurationIndex);
+                        oimProperty = oimConnectionConfigurationList.get(configurationIndex);
+                    } else {
+                        logger.trace("Creating a new configuration map for {}", configurationIndex);
+                        oimProperty = new Properties();
+                        oimConnectionConfigurationList.put(configurationIndex, oimProperty);
+                    }
+                    String key = keyValues[2];
+                    String value = configuration.getProperty(oimPropertyName);
+                    //TODO: Remove this if password printing is an issue.
+                    logger.trace("Setting {}={}", key, value);
+                    oimProperty.setProperty(key, value);
                 } else {
-                    logger.debug("Ignoring {} key since it is not in oim.<>.<> format", oimPropertyName);
+                    logger.warn("Ignoring attribute name {} in configuration({}) since it is not in <>.<>.<> format", new Object[]{oimPropertyName, configurationLocation});
                 }
             } else {
                 logger.debug("Ignoring {} key since it does not start with {} i.e. not an OIM property",
                         oimPropertyName, ATTR_NAME_PREFIX);
             }
         }
-        logger.debug("Trying to create a list of OIM Connections in specified order");
+        logger.debug("Trying to create a list of OIM ConnectionTreeNode in specified order");
         for (int counter = 0; counter <= totalConnections; counter++) {
+            logger.trace("Trying to validate if configuration corresponding to counter {} has been loaded", counter);
             if (oimConnectionConfigurationList.containsKey(counter)) {
+                logger.trace("Located configuration, trying to validate if it contains {}", Connection.ATTR_CONN_NAME);
                 if (oimConnectionConfigurationList.get(counter) != null &&
                         oimConnectionConfigurationList.get(counter).getProperty(Connection.ATTR_CONN_NAME) != null) {
                     oimConnectionNames.add(oimConnectionConfigurationList.get(counter).getProperty(Connection.ATTR_CONN_NAME));
                 } else {
+                    logger.warn("Located configuration at index {} in configuration {} that does not contain {}", new Object[]{counter, configurationLocation, Connection.ATTR_CONN_NAME});
                     oimConnectionNames.add(null);
                 }
             } else {
+                logger.trace("Could not locate any configuration for counter {}", counter);
                 oimConnectionNames.add(null);
             }
         }
         logger.debug("Created the list of OIM Connection as {}", oimConnectionNames);
-        logger.debug(
-                "Trying to create the configuration map using the {} attribute as key from the read configuration",
-                Connection.ATTR_CONN_NAME);
+        logger.debug("Create configuration map using the {} attribute as key", Connection.ATTR_CONN_NAME);
         for (Properties oimProperty : oimConnectionConfigurationList.values()) {
+            logger.trace("Validating if property contains key {}", Connection.ATTR_CONN_NAME);
             if (oimProperty.containsKey(Connection.ATTR_CONN_NAME)) {
                 String connectionName = oimProperty.getProperty(Connection.ATTR_CONN_NAME);
-                logger.debug("Identified OIM Connection Configuration {}", connectionName);
+                logger.trace("Identified OIM Connection Configuration {}, adding it to configuration map", connectionName);
                 oimConnectionConfiguration.put(connectionName, oimProperty);
             } else {
-                logger.debug("Ignoring {} since it does not have any associated name i.e. key {}.", oimProperty,
-                        Connection.ATTR_CONN_NAME);
+                logger.warn("Ignoring configuration loaded from {} since it does not have any associated name (i.e. {} attribute). Configuration {}", new Object[]{configurationLocation,
+                        Connection.ATTR_CONN_NAME, oimProperty});
             }
         }
         logger.debug("Processed the configuration information to extract OIM connection details");
@@ -154,18 +172,18 @@ public class Config {
         logger.debug("Trying to setup work area for application");
         String userWorkArea = null;
         try {
-            logger.debug(
-                    "Trying to validate if system property {} can be used as work area out of system properties {}",
-                    VAL_WORK_AREA_BASE_PREFIX_DEFAULT, System.getProperties());
             String userHome = null;
+            logger.debug("Checking if {} or {} System property has been set and if set whether it points to valid location", ATTR_NAME_WORK_AREA, VAL_WORK_AREA_BASE_PREFIX_DEFAULT);
             if (System.getProperties().containsKey(ATTR_NAME_WORK_AREA)
                     && (userHome = System.getProperty(ATTR_NAME_WORK_AREA)) != null
                     && (new File(userHome)).exists()) {
                 userWorkArea = userHome + File.separator + VAL_WORK_AREA_BASE;
+                logger.info("Setting application work area to {}", userWorkArea);
             } else if (System.getProperties().containsKey(VAL_WORK_AREA_BASE_PREFIX_DEFAULT)
                     && (userHome = System.getProperty(VAL_WORK_AREA_BASE_PREFIX_DEFAULT)) != null
                     && (new File(userHome)).exists()) {
                 userWorkArea = userHome + File.separator + VAL_WORK_AREA_BASE;
+                logger.info("Setting application work area to {}", userWorkArea);
             } else {
                 throw new NullPointerException("Failed to locate a valid base folder (using attribute " + ATTR_NAME_WORK_AREA + " or " + VAL_WORK_AREA_BASE_PREFIX_DEFAULT + ") for managing configurations and temporary files");
             }
@@ -180,33 +198,37 @@ public class Config {
             validateBaseArea(classWorkArea);
             logger.debug("Validated class work area");
             String configWorkArea = userWorkArea;
-            logger.debug("Trying to validate the configuration work area {}", configWorkArea);
             validateBaseArea(configWorkArea);
-            logger.debug("Validated configuration work area");
             String configurationFileLocation = userWorkArea + File.separator + VAL_WORK_AREA_CONF + File.separator + VAL_CONFIG_PROP_FILE_NAME;
             File configFile = new File(configurationFileLocation);
             logger.debug("Trying to validate if configuration file {} has been initialized", configurationFileLocation);
             if (!configFile.exists()) {
+                logger.trace("Trying to find location that contains the  {} class", Config.class);
                 String jarLocation = Config.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
-                logger.debug("Trying to locate the directory of jar {} containing Config class", jarLocation);
                 File name = new File(jarLocation);
+                logger.trace("Trying to check if location is directory {} (if class is not packaged as jar)", jarLocation);
                 if (!name.isDirectory()) {
-                    logger.debug("Assuming that application is running in production mode. Trying to locate directory.");
+                    logger.trace("Since location {} is a file(jar), assuming that application is running in production mode. Trying to locate directory containing jar file.", jarLocation);
                     String jarParentDirectory = name.getParent();
+                    logger.trace("Trying to check if parent directory {} of location {} is valid", jarParentDirectory, jarLocation);
                     if (jarParentDirectory != null) {
                         String configurationZipFileLocation = jarParentDirectory + File.separator + VAL_CONF_FILE_ZIP;
                         File configurationZipFile = new File(configurationZipFileLocation);
+                        logger.trace("Trying to check if directory {} contains a readable zip file {} (contains bootstrap files)", jarParentDirectory, VAL_CONF_FILE_ZIP);
                         if (configurationZipFile.exists() && configurationZipFile.canRead()) {
+                            logger.info("Initializing application work area {} with bootstrap files {}", configWorkArea, configurationZipFileLocation);
                             Utils.extractJarFile(configWorkArea, configurationZipFileLocation);
                         } else {
-                            logger.debug("Can not locate or read configuration zip file {}. Skipping unzip process", configurationZipFileLocation);
+                            throw new FileNotFoundException("Failed to locate bootstrap file " + configurationZipFileLocation + " for setting up directory " + userWorkArea + " as work area");
                         }
                     } else {
                         throw new NullPointerException("Failed to locate the directory containing the jar file " + jarLocation);
                     }
                 } else {
-                    logger.debug("Running in test mode, will not try to setup configuration area");
+                    logger.info("Running in test mode, will not try to setup configuration area");
                 }
+            } else {
+                logger.info("Application configuration {} is already initialized.", configurationFileLocation);
             }
         } catch (Exception exception) {
             throw new OIMAdminException("Failed to setup the work area for the application in directory "
@@ -216,39 +238,27 @@ public class Config {
         return userWorkArea;
     }
 
-    private boolean validateBaseArea(String userWorkArea) {
+    private void validateBaseArea(String userWorkArea) {
+        logger.trace("Entering validateBaseArea({})", userWorkArea);
         File workAreaBaseDirectory = new File(userWorkArea);
-        if (!workAreaBaseDirectory.exists())
+        logger.trace("Trying to check if location exists");
+        if (!workAreaBaseDirectory.exists()) {
+            logger.trace("Trying to create the directory since it does not exist");
             workAreaBaseDirectory.mkdirs();
+        }
+        logger.trace("Trying to validate if given location is a directory");
         if (!workAreaBaseDirectory.isDirectory()) {
             throw new InvalidParameterException("User work area " + userWorkArea + " is not a directory");
         }
+        logger.trace("Trying to validate if given location can be read");
         if (!workAreaBaseDirectory.canRead()) {
             throw new InvalidParameterException("User work area " + userWorkArea + " can not be read");
         }
+        logger.trace("Trying to validate if given location can be written to");
         if (!workAreaBaseDirectory.canWrite()) {
             throw new InvalidParameterException("User work area " + userWorkArea + " can not be written into.");
         }
-        return true;
-    }
-
-    public Configuration getConnectionDetails(String name) {
-        if (oimConnectionConfiguration != null && oimConnectionConfiguration.containsKey(name))
-            return new Configuration(oimConnectionConfiguration.get(name), this);
-        else
-            return new Configuration(new Properties(), this);
-    }
-
-    public Set<String> getConnectionNames() {
-        if (oimConnectionConfiguration != null) {
-            return oimConnectionConfiguration.keySet();
-        } else {
-            return new HashSet<String>();
-        }
-    }
-
-    public <T extends UIComponent> T getUIComponent(Class<T> componentId) {
-        return (T) oimAdmin.getUIComponent(componentId);
+        logger.trace("Leaving validateBaseArea()");
     }
 
     public String getWorkArea() {
@@ -339,20 +349,34 @@ public class Config {
         }
 
         public String getProperty(String propertyName) {
-            return configuration.getProperty(propertyName);
+            return getProperty(propertyName, null);
         }
 
         public String getProperty(String propertyName, String defaultValue) {
             return configuration.getProperty(propertyName, defaultValue);
         }
 
-        public void setProperty(String propertyName, String value) {
-            configuration.setProperty(propertyName, value);
-        }
-
         public Config getConfig() {
             return config;
         }
 
+    }
+
+    public static class EditableConfiguration extends Configuration {
+
+        private final Properties editableConfiguration;
+
+        public EditableConfiguration(Configuration configuration) {
+            super(null ,configuration.config);
+            editableConfiguration =new Properties(configuration.configuration);
+        }
+
+        public String getProperty(String propertyName, String defaultValue) {
+            return editableConfiguration.getProperty(propertyName, defaultValue);
+        }
+
+        public void setProperty(String propertyName, String value) {
+            editableConfiguration.setProperty(propertyName, value);
+        }
     }
 }

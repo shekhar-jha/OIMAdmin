@@ -202,12 +202,12 @@ public class OIMJMXWrapper extends AbstractConnection {
             }
         }
 
-        public Details getEventHandlers(OperationDetail operation) {
-            return connection.getEventHandlers(operation);
+        public static Map<String, Set<String>> getOperationDetails(OIMJMXWrapper connection) {
+            return allowedOperations.get(connection);
         }
 
-        public Map<String, Set<String>> getOperationDetails() {
-            return allowedOperations.get(connection);
+        public Details getEventHandlers(OperationDetail operation) {
+            return connection.getEventHandlers(operation);
         }
     }
 
@@ -247,10 +247,9 @@ public class OIMJMXWrapper extends AbstractConnection {
         // beanNames should come before CONFIG_QUERY_MBEAN_NAME;
         private static final Set<String> beanNames = new HashSet<String>();
         private static final Map<String, OIM_JMX_BEANS> beanMapping = new HashMap<String, OIM_JMX_BEANS>();
-        public final String name;
-
         public static final OIM_JMX_BEANS CONFIG_QUERY_MBEAN_NAME = new OIM_JMX_BEANS("ConfigQueryMBeanName");
         public static final OIM_JMX_BEANS OPERATION_CONFIG_MBEAN_NAME = new OIM_JMX_BEANS("OperationConfigMXBean");
+        public final String name;
 
         private OIM_JMX_BEANS(String name) {
             this.name = name;

@@ -16,24 +16,40 @@
 package com.jhash.oimadmin;
 
 import com.jhash.oimadmin.Config.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 
-public abstract class OIMAdminTreeNode extends DefaultMutableTreeNode {
+public abstract class OIMAdminTreeNode  extends DefaultMutableTreeNode {
 
+    public static final String DUMMY_LEAF_NODE_NAME = "Loading...";
     private static final long serialVersionUID = 1L;
-    public final String name;
-    public final OIMAdminTreeNode.NODE_TYPE type;
-    public final Configuration configuration;
+    private static final Logger logger = LoggerFactory.getLogger(OIMAdminTreeNode.class);
+    protected final String name;
+    protected final Configuration configuration;
+    protected UIComponentTree selectionTree;
+    //TODO: Should status be moved to Abstract class where the lifecycle actually is managed?
     private OIMAdminTreeNode.NODE_STATE status = OIMAdminTreeNode.NODE_STATE.NOT_INITIALIZED;
 
-    public OIMAdminTreeNode(String name, OIMAdminTreeNode.NODE_TYPE type, Configuration configuration) {
+    public OIMAdminTreeNode(String name, Configuration configuration, UIComponentTree selectionTree, NODE_STATE status) {
         super(name);
+        logger.trace("Entering OIMAdminTreeNode({}, {}, {})", new Object[]{name, configuration, selectionTree});
         if (name == null || name.isEmpty())
             throw new NullPointerException("Can not create a tree node with value " + name);
         this.name = name;
-        this.type = type;
         this.configuration = configuration;
+        this.selectionTree = selectionTree;
+        this.status = status;
+        logger.trace("Leaving OIMAdminTreeNode({}, {}, {})", new Object[]{name, configuration, selectionTree});
+    }
+
+    public Config.Configuration getConfiguration() {
+        return configuration;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public OIMAdminTreeNode.NODE_STATE getStatus() {
@@ -44,20 +60,19 @@ public abstract class OIMAdminTreeNode extends DefaultMutableTreeNode {
         this.status = status;
     }
 
-    public abstract <T> T getValue();
-
     public abstract void handleEvent(EVENT_TYPE event);
 
-    public boolean isDisplayable() {
-        return getStatus() == OIMAdminTreeNode.NODE_STATE.INITIALIZED;
-    }
+    public boolean isLoadable() {return getStatus() == OIMAdminTreeNode.NODE_STATE.NOT_INITIALIZED;}
 
-    public enum NODE_TYPE {
-        CONNECTION, DUMMY, ROOT, SCHEDULED_TASK, MDS, MDS_PARTITION, MDS_FILE, EVENT_HANDLER, EVENT_HANDLER_OPERATION
+    public abstract String getStringRepresentation();
+
+    @Override
+    public String toString() {
+        return getStringRepresentation();
     }
 
     public enum NODE_STATE {
-        NOT_INITIALIZED, INITIALIZED, INITIALIZED_NO_OP, FAILED, INITIALIZATION_IN_PROGRESS
+        NOT_INITIALIZED, INITIALIZED, INITIALIZED_NO_OP, FAILED, INITIALIZATION_IN_PROGRESS, DESTRUCTION_IN_PROGRESS
     }
 
     public enum EVENT_TYPE {
@@ -66,16 +81,39 @@ public abstract class OIMAdminTreeNode extends DefaultMutableTreeNode {
 
     public static class OIMAdminTreeNodeNoAction extends OIMAdminTreeNode {
 
-        public OIMAdminTreeNodeNoAction(String name, OIMAdminTreeNode.NODE_TYPE type, Configuration configuration) {
-            super(name, type, configuration);
+        private static final Logger logger = LoggerFactory.getLogger(OIMAdminTreeNodeNoAction.class);
+        private String stringRepresentation;
+        public OIMAdminTreeNodeNoAction(String name, OIMAdminTreeNode parentNode, UIComponentTree selectionTree) {
+            super(name, parentNode.configuration, selectionTree, NODE_STATE.INITIALIZED_NO_OP);
+            logger.trace("Entering OIMAdminTreeNodeNoAction({},{},{})", new java.lang.Object[]{name, parentNode, selectionTree});
+            stringRepresentation = "OIMAdminTreeNodeNoAction[" + name+ "]";
+            logger.trace("Completed OIMAdminTreeNodeNoAction({},{},{})", new java.lang.Object[]{name, parentNode, selectionTree});
         }
 
         @Override
         public void handleEvent(EVENT_TYPE event) {
+            logger.trace("Ignoring event {}", event);
         }
 
-        public <Object> Object getValue() {
+        @Override
+        public String getStringRepresentation() {
+            return stringRepresentation;
+        }
+
+        public Object getComponent() {
+            logger.trace("Returning null value");
             return null;
         }
     }
+
+    public static class DUMMYAdminTreeNode extends OIMAdminTreeNodeNoAction {
+
+        private static final Logger logger = LoggerFactory.getLogger(DUMMYAdminTreeNode.class);
+
+        public DUMMYAdminTreeNode(OIMAdminTreeNode parentNode, UIComponentTree selectionTree) {
+            super(DUMMY_LEAF_NODE_NAME, parentNode, selectionTree);
+            logger.trace("DUMMYAdminTreeNode({},{})", new Object[]{parentNode, selectionTree});
+        }
+    }
+
 }
