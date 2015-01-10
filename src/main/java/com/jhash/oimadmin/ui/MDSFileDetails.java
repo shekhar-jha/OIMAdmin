@@ -72,7 +72,7 @@ public class MDSFileDetails extends AbstractUIComponent<JPanel> {
                     });
                     logger.debug("Completed setup of MDS File saving.");
                 } catch (Exception exception) {
-                    logger.warn("Failed to setup Saving of MDS File {}",
+                    logger.warn("Failed to setup Saving of MDS File " +
                             name, exception);
                 }
             }

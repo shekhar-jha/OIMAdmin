@@ -65,15 +65,17 @@ public abstract class AbstractUIComponent<T extends JComponent> extends JPanel i
     }
 
     @Override
-    public void initialize() {
+    public UIComponent initialize() {
         logger.debug("Trying to initialize UI Component");
         if (getStatus() == COMPONENT_STATE.INITIALIZATION_IN_PROGRESS) {
             logger.warn("Trying to initialize UI Component {} which is already being initialized, ignoring the trigger", this);
-            return;
+            return this;
         }
         if (getStatus() == COMPONENT_STATE.INITIALIZED) {
+            if (publish)
+                displayArea.add(this);
             logger.debug("Nothing to do since component {} is already initialized.", this);
-            return;
+            return this;
         }
         setStatus(COMPONENT_STATE.INITIALIZATION_IN_PROGRESS);
         try {
@@ -83,9 +85,11 @@ public abstract class AbstractUIComponent<T extends JComponent> extends JPanel i
             setStatus(COMPONENT_STATE.INITIALIZED);
             logger.debug("Initialized UI Component");
         } catch (Exception exception) {
-            logger.debug("Setting node status as {}", COMPONENT_STATE.FAILED);
+            logger.warn("Failed to initialize the component " + this, exception);
+            logger.debug("Setting node status as ", COMPONENT_STATE.FAILED);
             setStatus(COMPONENT_STATE.FAILED);
         }
+        return this;
     }
 
     public abstract void initializeComponent();

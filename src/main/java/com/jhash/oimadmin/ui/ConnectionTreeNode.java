@@ -19,33 +19,57 @@ package com.jhash.oimadmin.ui;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.OIMAdminTreeNode;
 import com.jhash.oimadmin.UIComponentTree;
+import com.jhash.oimadmin.Utils;
 import com.jhash.oimadmin.oim.OIMConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.Map;
 
-public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnection> implements DisplayableNode<ConnectionDetails> {
+public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnection> implements DisplayableNode<ConnectionDetails>, ContextMenuEnabledNode{
 
     private static final Logger logger = LoggerFactory.getLogger(ConnectionTreeNode.class);
-    private OIMConnection connection = new OIMConnection();
+    private OIMConnection connection;
     private ConnectionDetails connectionDetailsUI;
+    private JPopupMenu popupMenu;
+    private JMenuItem refreshMenu;
 
     public ConnectionTreeNode(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
+        connectionDetailsUI = new ConnectionDetails(name, configuration, selectionTree, displayArea);
+        refreshMenu = new JMenuItem("Reconnect");
+        refreshMenu.setEnabled(false);
+        refreshMenu.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                logger.debug("Started Reconnect Trigger");
+                Utils.executeAsyncOperation("Reconnecting Connection", new Runnable() {
+                    @Override
+                    public void run() {
+                        ConnectionTreeNode.this.destroy();
+                        ConnectionTreeNode.this.initialize();
+                    }
+                });
+                logger.debug("Completed Reconnect Trigger");
+            }
+        });
+        popupMenu = new JPopupMenu();
+        popupMenu.add(refreshMenu);
     }
 
     @Override
     public void initializeComponent() {
         logger.debug("Initializing {} ...", this);
+        connection = new OIMConnection();
         connection.initialize(configuration);
         connection.login();
         selectionTree.addChildNode(this, new MDSTreeNode("MDS Repository", configuration, selectionTree, displayArea));
-        selectionTree.addChildNode(this, new EventHandlersTreeNode("Event Handlers", configuration, selectionTree, displayArea));
+        selectionTree.addChildNode(this, new EventHandlersTreeNode("Event Handlers", connection, configuration, selectionTree, displayArea));
         selectionTree.addChildNode(this, new OIMAdminTreeNode.OIMAdminTreeNodeNoAction("Scheduled Tasks", this, selectionTree));
-        connectionDetailsUI = new ConnectionDetails(name, configuration, selectionTree, displayArea);
+        refreshMenu.setEnabled(true);
         logger.debug("Initialized {}", this);
     }
 
@@ -65,6 +89,16 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
     }
 
     @Override
+    public boolean hasContextMenu() {
+        return true;
+    }
+
+    @Override
+    public JPopupMenu getContextMenu() {
+        return popupMenu;
+    }
+
+    @Override
     public void destroyComponent() {
         logger.debug("Destroying {} ...", this);
         if (connection != null) {
@@ -79,7 +113,7 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
         }
         if (connectionDetailsUI != null) {
             connectionDetailsUI.destroy();
-            connectionDetailsUI = null;
+            connectionDetailsUI = new ConnectionDetails(name, configuration, selectionTree, displayArea);
         }
         logger.debug("Destroyed {}", this);
     }
@@ -94,7 +128,9 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         logger.trace("Processing action on menu {} ", newConnectionMenuItem);
-                        displayArea.add(new ConnectionDetails("New Connection...", configuration.getConnectionDetails(""), selectionTree, displayArea));
+                        ConnectionDetails connectionDetailUI = new ConnectionDetails("New Connection...", configuration.getConnectionDetails(""), selectionTree, displayArea);
+                        connectionDetailUI.initialize();
+                        displayArea.add(connectionDetailUI);
                         logger.trace("Processed action on menu {} ", newConnectionMenuItem);
                     }
                 });

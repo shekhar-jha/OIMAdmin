@@ -61,6 +61,7 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
 
     @Override
     public void initializeComponent() {
+        logger.debug("Initializing {}...", this);
         nameLabel.getDocument().addDocumentListener(new StandardDocumentListener(nameLabel, connectionDetails, OIMConnection.ATTR_CONN_NAME));
         nameLabel.setText(connectionDetails.getProperty(OIMConnection.ATTR_CONN_NAME));
         oimHome.getDocument().addDocumentListener(new StandardDocumentListener(oimHome, connectionDetails, OIMConnection.ATTR_OIM_HOME));
@@ -94,6 +95,7 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
         logger.debug("Selected Item index {}", selectedItemIndex);
         platform.setSelectedIndex(selectedItemIndex);
         displayComponent = buildComponent();
+        logger.debug("Initialized {}", this);
     }
 
     @Override

@@ -51,8 +51,8 @@ public class EventHandlerDetails extends AbstractUIComponent<JPanel> {
     private JLabel customLabel = JGComponentFactory.getCurrent().createLabel();
     private JLabel conditionalLabel = JGComponentFactory.getCurrent().createLabel();
     private JLabel offBandLabel = JGComponentFactory.getCurrent().createLabel();
-    private JLabel classNameLabel = JGComponentFactory.getCurrent().createLabel();
-    private JLabel locationLabel = JGComponentFactory.getCurrent().createLabel();
+    private JTextField classNameLabel = JGComponentFactory.getCurrent().createTextField();
+    private JTextField locationLabel = JGComponentFactory.getCurrent().createTextField();
 
     public EventHandlerDetails(String name, OIMJMXWrapper.OperationDetail eventHandlerDetails, OIMJMXWrapper connection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
@@ -62,6 +62,12 @@ public class EventHandlerDetails extends AbstractUIComponent<JPanel> {
 
     @Override
     public void initializeComponent() {
+        classNameLabel.setEditable(false);
+        classNameLabel.setBackground(null);
+        classNameLabel.setBorder(null);
+        locationLabel.setEditable(false);
+        locationLabel.setBackground(null);
+        locationLabel.setBorder(null);
         OIMJMXWrapper.Details details = connection.getEventHandlers(eventHandlerDetails);
         DefaultTableModel tableModel = new DefaultTableModel(details.getData(), details.getColumns());
         table = JGComponentFactory.getCurrent().createReadOnlyTable(tableModel);

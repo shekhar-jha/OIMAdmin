@@ -68,7 +68,7 @@ public abstract class OIMAdminTreeNode  extends DefaultMutableTreeNode {
 
     @Override
     public String toString() {
-        return getStringRepresentation();
+        return name; //getStringRepresentation();
     }
 
     public enum NODE_STATE {

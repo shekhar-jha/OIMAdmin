@@ -95,10 +95,13 @@ public class MDSPartitionTreeNode extends AbstractUIComponentTreeNode<MDSConnect
                         logger.debug("Trying to check if file is a directory or directory in name of file.");
                         if (jarEntry.isDirectory() || depthCounter < (filePathComponents.length - 1)) {
                             logger.debug("Creating as directory node with {} status", OIMAdminTreeNode.NODE_STATE.INITIALIZED_NO_OP);
-                            identifiedChildNode = new MDSFileTreeNode(filePathElement, MDSPartitionTreeNode.this, new MDSConnectionJMX.MDSFile(partition, jarFile, jarEntry), configuration, selectionTree, displayArea, NODE_STATE.INITIALIZED_NO_OP);
+                            identifiedChildNode = new MDSFileTreeNode(filePathElement, MDSPartitionTreeNode.this, new MDSConnectionJMX.MDSFile(partition, jarFile, jarEntry), configuration, selectionTree, displayArea);
+                            identifiedChildNode.initialize();
+                            identifiedChildNode.setStatus(NODE_STATE.INITIALIZED_NO_OP);
                         } else {
                             logger.debug("Creating as file node with {} status", NODE_STATE.INITIALIZED);
-                            identifiedChildNode = new MDSFileTreeNode(filePathElement, MDSPartitionTreeNode.this, new MDSConnectionJMX.MDSFile(partition, jarFile, jarEntry), configuration, selectionTree, displayArea, NODE_STATE.INITIALIZED);
+                            identifiedChildNode = new MDSFileTreeNode(filePathElement, MDSPartitionTreeNode.this, new MDSConnectionJMX.MDSFile(partition, jarFile, jarEntry), configuration, selectionTree, displayArea);
+                            identifiedChildNode.initialize();
                         }
                         logger.debug("Adding the child node {} to parent {}", identifiedChildNode, parentNode);
                         parentNode.add(identifiedChildNode);
@@ -124,7 +127,7 @@ public class MDSPartitionTreeNode extends AbstractUIComponentTreeNode<MDSConnect
                     exportFile.delete();
                     logger.debug("Deleted file");
                 } catch (Exception exception) {
-                    logger.warn("Failed to delete file {}", partitionExportFileName, exception);
+                    logger.warn("Failed to delete file " + partitionExportFileName, exception);
                 }
             } else {
                 logger.warn("Expected file {} containing export for MDS Partition {} to be a file.", partitionExportFileName, partition);

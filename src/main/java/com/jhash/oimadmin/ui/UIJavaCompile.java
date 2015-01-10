@@ -43,7 +43,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel> {
     private JTextArea sourceCode = JGComponentFactory.getCurrent().createTextArea();
     private JTextArea compileResultTextArea = JGComponentFactory.getCurrent().createReadOnlyTextArea();
     private JButton compileButton = JGComponentFactory.getCurrent().createButton("Compile..");
-    private JGTextField classNameText = new JGTextField(80);
+    final JGTextField classNameText = new JGTextField();
     private JPanel javaCompileUI;
     private String outputDirectory;
 
@@ -93,7 +93,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel> {
         sourceCodeTextPanel.add(new JideScrollPane(sourceCode), BorderLayout.CENTER);
         JPanel sourceCodeTextButtonPanel = new JPanel();
         sourceCodeTextButtonPanel.add(classNameText);
-        sourceCodeTextPanel.add(sourceCodeTextButtonPanel);
+        sourceCodeTextPanel.add(sourceCodeTextButtonPanel, BorderLayout.NORTH);
 
         JPanel sourceCodeControlPanel = new JPanel(new BorderLayout());
         JPanel sourceCodeButtonPanel = new JPanel();
@@ -127,7 +127,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel> {
                     FileUtils.forceDelete(outputDirectoryFile);
                 }
             } catch (Exception exception) {
-                logger.warn("Failed to delete directory {}. Ignoring error", outputDirectory, exception);
+                logger.warn("Failed to delete directory " + outputDirectory +". Ignoring error", exception);
             }
             outputDirectory = null;
         }

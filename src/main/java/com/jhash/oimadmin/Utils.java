@@ -279,9 +279,13 @@ public class Utils {
 
             @Override
             public void run() {
-                logger.debug("Trying to run operation {}", operationName);
-                operation.run();
-                logger.debug("Completed operation {}.", operationName);
+                try {
+                    logger.debug("Trying to run operation {}", operationName);
+                    operation.run();
+                    logger.debug("Completed operation {}.", operationName);
+                }catch(Exception exception){
+                    logger.warn("Failed to run operation " + operationName, exception);
+                }
             }
         });
         oimConnectionThread.setDaemon(false);

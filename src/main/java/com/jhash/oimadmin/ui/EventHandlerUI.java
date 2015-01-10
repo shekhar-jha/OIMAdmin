@@ -35,6 +35,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -95,6 +97,28 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                 .setToolTipText("The tx attribute indicates whether or not the event handler should run in its own transaction.\n Supported values are TRUE or FALSE. By default, the value is FALSE.");
         classNameText.setText("com.jhash.oim.eventhandler.CustomEventHandler");
         classNameText.setToolTipText("Full package name of the Java class that implements the event handler");
+        classNameText.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                if (javaCompiler != null) {
+                    javaCompiler.classNameText.setText(classNameText.getText());
+                }
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                if (javaCompiler != null) {
+                    javaCompiler.classNameText.setText(classNameText.getText());
+                }
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                if (javaCompiler != null) {
+                    javaCompiler.classNameText.setText(classNameText.getText());
+                }
+            }
+        });
         orderField
                 .setToolTipText("Identifies the order (or sequence) in which the event handler is executed.\n Order value is in the scope of entity, operation, and stage. Order value for each event handler in this scope must be unique. If there is a conflict, then the order in which these conflicted event handlers are executed is arbitrary."
                         + "\nSupported values are FIRST (same as Integer.MIN_VALUE), LAST (same as Integer.MAX_VALUE), or a numeral.");
@@ -137,7 +161,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
 
                 JComponent comp = (JComponent) super.getListCellRendererComponent(list, value, index, isSelected,
                         cellHasFocus);
-                if (index < EVENT_HANDLER_TYPES_TOOL_TIPS.length) {
+                if (index >= 0 && index < EVENT_HANDLER_TYPES_TOOL_TIPS.length) {
                     list.setToolTipText(EVENT_HANDLER_TYPES_TOOL_TIPS[index]);
                 } else {
                     list.setToolTipText("");
@@ -187,6 +211,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
         eventHandlerTypes.setSelectedItem(EVENT_HANDLER_TYPES[0]);
         javaCompiler = new UIJavaCompile("Source Code", configuration, selectionTree, displayArea);
         javaCompiler.initialize();
+        javaCompiler.classNameText.setText(classNameText.getText());
         configurationPanel = new EventHandlerConfigurationPanel("Configure");
         configurationPanel.initialize();
         packagePanel = new EventHandlerPackagePanel("Package");
@@ -241,8 +266,8 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
         newEventHandlerControlPane.setBoldActiveTab(true);
         newEventHandlerControlPane.setShowCloseButtonOnTab(true);
         newEventHandlerControlPane.addTab(javaCompiler.getName(), javaCompiler.getComponent());
-        newEventHandlerControlPane.addTab("Configure", configurationPanel);
-        newEventHandlerControlPane.addTab("Package", packagePanel);
+        newEventHandlerControlPane.addTab("Configure", configurationPanel.getComponent());
+        newEventHandlerControlPane.addTab("Package", packagePanel.getComponent());
 
         JideSplitPane eventHandlerSplitPane = new JideSplitPane(JideSplitPane.VERTICAL_SPLIT);
         eventHandlerSplitPane.add(builder.build(), 0);
@@ -353,10 +378,12 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
     public class EventHandlerPackagePanel extends AbstractUIComponent<JPanel> {
 
         JLabel jarFileLocationLabel = new JLabel();
+        JLabel pluginFileLocationLabel = new JLabel();
         JButton generateJarFromClass = JGComponentFactory.getCurrent().createButton("Generate Jar");
         JButton selectJarButton = JGComponentFactory.getCurrent().createButton("Select existing jar");
         JFileChooser selectJar;
         JButton prepareButton = JGComponentFactory.getCurrent().createButton("Create Plugin");
+        JButton selectPrepareButton = JGComponentFactory.getCurrent().createButton("Select existing plugin");
         JButton registerPlugin = JGComponentFactory.getCurrent().createButton("Register");
         JPanel packagePanel;
         JButton unregisterPlugin = JGComponentFactory.getCurrent().createButton("Unregister");
@@ -386,7 +413,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                         Utils.createJarFileFromDirectory(javaCompiler.getOutputDirectory(), eventHandlerCodeJar);
                         jarFileLocationLabel.setText(eventHandlerCodeJar);
                     } catch (Exception exception) {
-                        logger.warn("Failed to create jar {} with Event Handler code available in {} directory", new Object[]{eventHandlerCodeJar, javaCompiler.getOutputDirectory()}, exception);
+                        logger.warn("Failed to create jar " + eventHandlerCodeJar +" with Event Handler code available in " + javaCompiler.getOutputDirectory() +" directory", exception);
                     }
                 }
             });
@@ -403,8 +430,20 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                     }
                 }
             });
+            selectPrepareButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    int returnCode = selectJar.showDialog(null, "Select Plugin File");
+                    switch (returnCode) {
+                        case JFileChooser.APPROVE_OPTION:
+                            pluginFileLocationLabel.setText(selectJar.getSelectedFile().getAbsolutePath());
+                            break;
+                    }
+                }
+            });
             eventHandlerPluginZip = configuration.getWorkArea() + File.separator + Config.VAL_WORK_AREA_TMP + File.separator
                     + "EventHandlerPlugin" + System.currentTimeMillis() + ".zip";
+            pluginFileLocationLabel.setText(eventHandlerPluginZip);
             prepareButton.addActionListener(new ActionListener() {
 
                 @Override
@@ -422,7 +461,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                         content.put(eventHandlerDetailFile, configurationPanel.eventHandlerXMLTextArea.getText().getBytes());
                         Utils.createJarFileFromContent(content, new String[]{"plugin.xml", "lib/EventHandler.jar", eventHandlerDetailFile}, eventHandlerPluginZip);
                     } catch (Exception exception) {
-                        logger.warn("Failed to create Event Handler Plugin zip file {}", eventHandlerPluginZip, exception);
+                        logger.warn("Failed to create Event Handler Plugin zip file " + eventHandlerPluginZip, exception);
                     }
                 }
             });
@@ -431,9 +470,9 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     try {
-                        oimConnection.registerPlugin(FileUtils.readFileToByteArray(new File(eventHandlerPluginZip)));
+                        oimConnection.registerPlugin(FileUtils.readFileToByteArray(new File(pluginFileLocationLabel.getText())));
                     } catch (Exception exception) {
-                        logger.warn("Failed to register plugin {}", eventHandlerPluginZip, exception);
+                        logger.warn("Failed to register plugin " + pluginFileLocationLabel.getText(), exception);
                     }
                 }
             });
@@ -445,15 +484,16 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                     try {
                         oimConnection.unregisterPlugin(pluginName);
                     } catch (Exception exception) {
-                        logger.warn("Failed to unregister plugin {}", pluginName, exception);
+                        logger.warn("Failed to unregister plugin " + pluginName, exception);
                     }
                 }
             });
 
             packagePanel = FormBuilder.create().columns("right:pref, 3dlu, pref:grow")
-                    .rows("p, 5dlu, p, 5dlu, p, 5dlu, p, 5dlu, p, 5dlu, p").border(Borders.DIALOG)
+                    .rows("p, 5dlu, p, 5dlu, p, 5dlu, p, 5dlu, p, 5dlu, p, 5dlu, p").border(Borders.DIALOG)
                     .add(generateJarFromClass).xy(1, 1).add(selectJarButton).xy(1, 3).add(jarFileLocationLabel).xy(3, 3)
-                    .add(prepareButton).xy(1, 5).add(registerPlugin).xy(1, 7).add(unregisterPlugin).xy(1, 9).build();
+                    .add(prepareButton).xy(1, 5).add(selectPrepareButton).xy(1,7).add(pluginFileLocationLabel).xy(3,7)
+                    .add(registerPlugin).xy(1, 9).add(unregisterPlugin).xy(1, 11).build();
             logger.debug("Initialized {}", this);
         }
 
@@ -472,7 +512,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                         eventHandlerCodeJarFile.delete();
                     }
                 } catch (Exception exception) {
-                    logger.warn("Could not delete jar file {} that contains event handler's compiled code", eventHandlerCodeJar, exception);
+                    logger.warn("Could not delete jar file " + eventHandlerCodeJar +" that contains event handler's compiled code", exception);
                 }
                 eventHandlerCodeJar = null;
             }
@@ -483,7 +523,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                         eventHandlerPluginZipFile.delete();
                     }
                 } catch (Exception exception) {
-                    logger.warn("Could not delete event handler plugin zip file {}", eventHandlerPluginZip, exception);
+                    logger.warn("Could not delete event handler plugin zip file " + eventHandlerPluginZip, exception);
                 }
                 eventHandlerPluginZip = null;
             }

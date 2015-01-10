@@ -169,7 +169,7 @@ public class OIMAdmin extends JFrame {
                     }
                     logger.trace("Processed tree expansion event", event);
                 } catch (Exception exception) {
-                    logger.warn("Failed to process tree expansion event {} on tree {}", new Object[]{event, localConnectionTree}, exception);
+                    logger.warn("Failed to process tree expansion event " + event +" on tree "+ localConnectionTree, exception);
                 }
             }
 
@@ -188,7 +188,7 @@ public class OIMAdmin extends JFrame {
                     if (selRow != -1) {
                         logger.trace("Trying to check whether number of clicks {} is 2 i.e. it is a double click event",
                                 event.getClickCount());
-                        if (event.getClickCount() == 2) {
+                        if (event.getClickCount() >= 2) {
                             Object clickedNodeObject = selPath.getLastPathComponent();
                             NODE_STATE status = null;
                             logger.trace("Trying to validate whether we have received identifiable node detail");
@@ -200,13 +200,35 @@ public class OIMAdmin extends JFrame {
                         } else {
                             logger.trace("The number of clicks {} is not 2 i.e. double click. Ignoring event",
                                     event.getClickCount());
+                            logger.trace("Trying to check whether the event is a popup menu event");
+                            if (event.isPopupTrigger()) {
+                                Object clickedNodeObject = selPath.getLastPathComponent();
+                                NODE_STATE status = null;
+                                logger.trace("Trying to validate whether we have received identifiable node detail");
+                                if (clickedNodeObject != null && clickedNodeObject instanceof OIMAdminTreeNode) {
+                                    if (clickedNodeObject instanceof ContextMenuEnabledNode) {
+                                        ContextMenuEnabledNode menuEnabledNode = (ContextMenuEnabledNode) clickedNodeObject;
+                                        if (menuEnabledNode.hasContextMenu()) {
+                                            JPopupMenu popupMenu = menuEnabledNode.getContextMenu();
+                                            if (popupMenu != null) {
+                                                popupMenu.show(event.getComponent(), event.getX(), event.getY());
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    logger.trace("Failed to locate OIMAdminTreeNode node {} that was clicked", clickedNodeObject);
+                                }
+
+                            } else {
+                                logger.trace("No popup event was detected. Ignoring event");
+                            }
                         }
                     } else {
                         logger.trace("The event occurred at a location that did not correspond to a row. Ignoring the event");
                     }
                     logger.trace("Processed mouse pressed event {} on tree {}", event, localConnectionTree);
                 } catch (Exception exception) {
-                    logger.warn("Failed to process mouse pressed event {} on tree {}", new Object[]{event, localConnectionTree}, exception);
+                    logger.warn("Failed to process mouse pressed event " + event +" on tree " + localConnectionTree, exception);
                 }
             }
         });
@@ -278,26 +300,50 @@ public class OIMAdmin extends JFrame {
 
     public static class DisplayAreaImpl implements DisplayArea {
 
+        private static final Logger logger = LoggerFactory.getLogger(DisplayAreaImpl.class);
         private JTabbedPane displayArea;
-        private Set<UIComponent<? extends JComponent>> addedComponents;
+        private Set<UIComponent<? extends JComponent>> addedComponents = new HashSet<>();
 
         public DisplayAreaImpl(JTabbedPane displayArea) {
             this.displayArea = displayArea;
         }
 
         public void add(UIComponent<? extends JComponent> component) {
-            if (addedComponents.contains(component)) {
-                displayArea.setSelectedComponent(component.getComponent());
-            } else {
-                displayArea.addTab(component.getName(), component.getComponent());
-                addedComponents.add(component);
+            if (component != null) {
+                JComponent uiComponent = component.getComponent();
+                String name = component.getName();
+                if (addedComponents.contains(component)) {
+                    logger.trace("Component {} is known to display area. Validating if the associated UI Component {} is being displayed", component, uiComponent);
+                    if (displayArea.indexOfComponent(uiComponent)== -1) {
+                        logger.trace("Adding the component {} with name {}", uiComponent, name);
+                        displayArea.addTab(name, uiComponent);
+                        displayArea.setSelectedComponent(uiComponent);
+                    }else {
+                        logger.trace("Component already present in tabbed pane, activating it ");
+                        displayArea.setSelectedComponent(uiComponent);
+                    }
+                } else {
+                    logger.trace("Adding the new component {} with name {}", component.getComponent(), component.getName());
+                    displayArea.addTab(component.getName(), component.getComponent());
+                    displayArea.setSelectedComponent(uiComponent);
+                    logger.trace("Adding component to set of displayed components {}", addedComponents);
+                    addedComponents.add(component);
+                }
+            }else {
+                logger.debug("Nothing to do since no component was passed for adding to display area.");
             }
         }
 
         @Override
         public void remove(UIComponent<? extends JComponent> component) {
-            displayArea.remove(component.getComponent());
-            addedComponents.remove(component);
+            if (component != null) {
+                logger.trace("Trying to remove UI component {}", component.getComponent());
+                displayArea.remove(component.getComponent());
+                logger.trace("Removing component {} from the set of active components ", component, addedComponents);
+                addedComponents.remove(component);
+            } else {
+                logger.debug("Nothing to do since no component was passed to be removed from display area");
+            }
         }
 
     }

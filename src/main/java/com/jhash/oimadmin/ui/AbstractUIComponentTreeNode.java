@@ -20,6 +20,7 @@ import com.jhash.oimadmin.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Arrays;
 import java.util.List;
 
 public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode implements UIComponent<T> {
@@ -44,12 +45,16 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
     }
 
     public void executeOperationService(UIComponent component) {
-        Utils.executeAsyncOperation("Component " + component.getName() + " [Initialization]", new Runnable() {
-            @Override
-            public void run() {
-                component.initialize();
-            }
-        });
+        if (component != null) {
+            Utils.executeAsyncOperation("Component " + component.getName() + " [Initialization]", new Runnable() {
+                @Override
+                public void run() {
+                    component.initialize();
+                }
+            });
+        } else {
+            logger.warn("No UI Component was passed for initialization.");
+        }
     }
 
     public boolean isDisplayable() {
@@ -57,15 +62,15 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
     }
 
     @Override
-    public void initialize() {
+    public UIComponent<T> initialize() {
         logger.debug("Trying to initialize UI Component");
         if (getStatus() == NODE_STATE.INITIALIZATION_IN_PROGRESS) {
             logger.warn("Node {} is already being initialized, ignoring the trigger", this);
-            return;
+            return this;
         }
         if (getStatus() == NODE_STATE.INITIALIZED) {
             logger.debug("Nothing to do since node {} is already initialized.", this);
-            return;
+            return this;
         }
         setStatus(NODE_STATE.INITIALIZATION_IN_PROGRESS);
         List<OIMAdminTreeNode> childNodes = this.selectionTree.getChildNodes(this);
@@ -77,10 +82,12 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
             setStatus(NODE_STATE.INITIALIZED);
             logger.debug("Initialized UI Component");
         } catch (Exception exception) {
+            logger.warn("Failed to initialize component " +this, exception);
             destroyChildNodes();
             logger.debug("Setting node status as {}", OIMAdminTreeNode.NODE_STATE.FAILED);
             setStatus(OIMAdminTreeNode.NODE_STATE.FAILED);
         }
+        return this;
     }
 
     public abstract void initializeComponent();
@@ -110,9 +117,10 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
     @Override
     public void destroy() {
         logger.debug("Trying to destroy {}", this);
-        if (getStatus() == NODE_STATE.INITIALIZED) {
+        if (getStatus() == NODE_STATE.INITIALIZED || getStatus() ==NODE_STATE.INITIALIZED_NO_OP) {
             logger.debug("Node in {} state, setting status to {} before destroying", getStatus(), NODE_STATE.DESTRUCTION_IN_PROGRESS);
             setStatus(NODE_STATE.DESTRUCTION_IN_PROGRESS);
+            destroyChildNodes();
             try {
                 destroyComponent();
                 logger.debug("Completed node specific destruction");
@@ -121,9 +129,8 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
             }
             logger.debug("Setting status to {}", NODE_STATE.NOT_INITIALIZED);
             setStatus(NODE_STATE.NOT_INITIALIZED);
-            destroyChildNodes();
         } else {
-            logger.debug("Skipping destroy since the node is not in {} state", NODE_STATE.INITIALIZED);
+            logger.debug("Skipping destroy since the node is not in {} state", Arrays.asList(new Object[]{NODE_STATE.INITIALIZED, NODE_STATE.INITIALIZED_NO_OP}));
         }
     }
 
@@ -136,10 +143,10 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
                     ((UIComponent) childNode).destroy();
                     logger.trace("Destroyed child node {}", childNode);
                 } catch (Exception exception) {
-                    logger.warn("Error occurred while destroying child node {} of node {}. Ignoring error", new Object[]{childNode, this,}, exception);
+                    logger.warn("Error occurred while destroying child node " + childNode +" of node "+this + ". Ignoring error", exception);
                 }
-                selectionTree.removeChildNode(this, childNode);
             }
+            selectionTree.removeChildNode(this, childNode);
         }
         logger.debug("Destroyed all child nodes of {}", this);
     }

@@ -29,15 +29,15 @@ public class MDSFileTreeNode extends AbstractUIComponentTreeNode<MDSConnectionJM
 
     private MDSFileDetails mdsFileDetails;
 
-    public MDSFileTreeNode(String name, MDSPartitionTreeNode associatedPartition, MDSConnectionJMX.MDSFile mdsFile, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea, NODE_STATE status) {
-        super(name, configuration, selectionTree, displayArea, status);
+    public MDSFileTreeNode(String name, MDSPartitionTreeNode associatedPartition, MDSConnectionJMX.MDSFile mdsFile, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+        super(name, configuration, selectionTree, displayArea);
         this.mdsFile = mdsFile;
         this.associatedPartition = associatedPartition;
     }
 
     @Override
     public void initializeComponent() {
-        logger.debug("Initializing {}", this);
+        logger.debug("Initializing MDS File UI {}", this);
         mdsFileDetails = new MDSFileDetails(name, associatedPartition, mdsFile, configuration, selectionTree, displayArea);
         logger.debug("Initialized MDS File UI {} ...", this);
     }
@@ -59,7 +59,7 @@ public class MDSFileTreeNode extends AbstractUIComponentTreeNode<MDSConnectionJM
             try {
                 mdsFileDetails.destroy();
             } catch (Exception exception) {
-                logger.warn("Failed to destroy MDS File UI {}", this, exception);
+                logger.warn("Failed to destroy MDS File UI " + this, exception);
             }
             mdsFileDetails = null;
         }

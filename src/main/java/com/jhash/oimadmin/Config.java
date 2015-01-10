@@ -107,7 +107,7 @@ public class Config {
                     try {
                         configurationIndex = Integer.parseUnsignedInt(keyValues[1]);
                     }catch(NumberFormatException exception) {
-                        logger.warn("Ignoring attribute name {} in configuration ({}) since it is not in <>.<number>.<> format", new Object[]{oimPropertyName, configurationLocation});
+                        logger.warn("Ignoring attribute name " + oimPropertyName + " in configuration (" + configurationLocation +") since it is not in <>.<number>.<> format", exception);
                         continue;
                     }
                     if (configurationIndex > totalConnections) {
@@ -367,7 +367,7 @@ public class Config {
         private final Properties editableConfiguration;
 
         public EditableConfiguration(Configuration configuration) {
-            super(null ,configuration.config);
+            super(configuration.configuration ,configuration.config);
             editableConfiguration =new Properties(configuration.configuration);
         }
 

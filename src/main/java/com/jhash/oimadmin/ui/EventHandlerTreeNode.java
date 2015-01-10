@@ -29,8 +29,8 @@ public class EventHandlerTreeNode extends AbstractUIComponentTreeNode<OIMJMXWrap
     private final OIMJMXWrapper connection;
     private EventHandlerDetails eventHandlerDetailsUI;
 
-    public EventHandlerTreeNode(String name, OIMJMXWrapper.OperationDetail eventHandlerDetails, OIMJMXWrapper connection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea, NODE_STATE status) {
-        super(name, configuration, selectionTree, displayArea, status);
+    public EventHandlerTreeNode(String name, OIMJMXWrapper.OperationDetail eventHandlerDetails, OIMJMXWrapper connection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+        super(name, configuration, selectionTree, displayArea);
         this.eventHandlerDetails = eventHandlerDetails;
         this.connection = connection;
     }
@@ -59,7 +59,7 @@ public class EventHandlerTreeNode extends AbstractUIComponentTreeNode<OIMJMXWrap
             try {
                 eventHandlerDetailsUI.destroy();
             } catch (Exception exception) {
-                logger.warn("Failed to destroy Event Handler Details UI {}", eventHandlerDetailsUI, exception);
+                logger.warn("Failed to destroy Event Handler Details UI " + eventHandlerDetailsUI, exception);
             }
             eventHandlerDetailsUI = null;
         }

@@ -59,7 +59,7 @@ public class MDSTreeNode extends AbstractUIComponentTreeNode<MDSConnectionJMX> {
                 try {
                     partition.destroy();
                 } catch (Exception exception) {
-                    logger.warn("Failed to destroy MDS Partition {}. Ignoring error", partition, exception);
+                    logger.warn("Failed to destroy MDS Partition " + partition +". Ignoring error", exception);
                 }
             }
             partitions = null;

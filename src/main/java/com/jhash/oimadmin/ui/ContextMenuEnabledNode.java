@@ -13,22 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jhash.oimadmin;
 
-public interface UIComponent<T> {
-    public String getName();
+package com.jhash.oimadmin.ui;
 
-    public Config.Configuration getConfiguration();
+import javax.swing.*;
 
-    public UIComponent initialize();
+public interface ContextMenuEnabledNode <T extends JPopupMenu>{
 
-    public abstract T getComponent();
+    public boolean hasContextMenu();
 
-    public void destroy();
-
-    @FunctionalInterface
-    public static interface ExecuteCommand<T> {
-        public T run();
-    }
+    public T getContextMenu();
 
 }
