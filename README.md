@@ -10,9 +10,12 @@ Getting started
 2. Download the latest release from https://github.com/shekhar-jha/OIMAdmin/releases
 3. unzip it in any folder e.g. C:\apps
 4. Run the application by double clicking the OIMAdmin.jar file or by using following command<br/>
+```
 &lt;JDK 1.8 Home&gt;\bin\java -jar C:\apps\dist\OIMAdmin.jar
+```
 
 **Notes:**
+
 1. Please note that application manages temporary files and configuration in {user.home}/.oimadm by default.
 This location can be changed by passing java system property "workhome" (-Dworkhome=C:\apps\dist) on the command line.
 2. Even though the application is shipped with all required files, if needed, java system property
