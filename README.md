@@ -11,7 +11,7 @@ Getting started
 3. unzip it in any folder e.g. C:\apps
 4. Run the application by double clicking the OIMAdmin.jar file or by using following command<br/>
 ```
-&lt;JDK 1.8 Home&gt;\bin\java -jar C:\apps\dist\OIMAdmin.jar
+<JDK 1.8 Home>\bin\java -jar C:\apps\dist\OIMAdmin.jar
 ```
 
 **Notes:**
