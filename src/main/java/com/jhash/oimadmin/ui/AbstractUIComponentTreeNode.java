@@ -73,13 +73,13 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
             return this;
         }
         setStatus(NODE_STATE.INITIALIZATION_IN_PROGRESS);
-        List<OIMAdminTreeNode> childNodes = this.selectionTree.getChildNodes(this);
-        if (childNodes.size() == 1 && childNodes.get(0) instanceof DUMMYAdminTreeNode) {
-            selectionTree.removeChildNode(this, childNodes.get(0));
-        }
         try {
             initializeComponent();
             setStatus(NODE_STATE.INITIALIZED);
+            List<OIMAdminTreeNode> childNodes = this.selectionTree.getChildNodes(this);
+            if (childNodes.get(0) instanceof DUMMYAdminTreeNode) {
+                selectionTree.removeChildNode(this, childNodes.get(0));
+            }
             logger.debug("Initialized UI Component");
         } catch (Exception exception) {
             logger.warn("Failed to initialize component " +this, exception);
