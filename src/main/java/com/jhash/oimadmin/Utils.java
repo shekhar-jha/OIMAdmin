@@ -288,7 +288,7 @@ public class Utils {
                 }
             }
         });
-        oimConnectionThread.setDaemon(false);
+        oimConnectionThread.setDaemon(true);
         oimConnectionThread.setName(operationName);
         oimConnectionThread.start();
         logger.debug("Completed setup of execution of {} in separate thread", operationName);
