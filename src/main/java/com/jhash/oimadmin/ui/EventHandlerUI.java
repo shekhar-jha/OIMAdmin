@@ -443,7 +443,6 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
             });
             eventHandlerPluginZip = configuration.getWorkArea() + File.separator + Config.VAL_WORK_AREA_TMP + File.separator
                     + "EventHandlerPlugin" + System.currentTimeMillis() + ".zip";
-            pluginFileLocationLabel.setText(eventHandlerPluginZip);
             prepareButton.addActionListener(new ActionListener() {
 
                 @Override
@@ -460,6 +459,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                         String eventHandlerDetailFile = "META-INF/" + nameField.getText() + ".xml";
                         content.put(eventHandlerDetailFile, configurationPanel.eventHandlerXMLTextArea.getText().getBytes());
                         Utils.createJarFileFromContent(content, new String[]{"plugin.xml", "lib/EventHandler.jar", eventHandlerDetailFile}, eventHandlerPluginZip);
+                        pluginFileLocationLabel.setText(eventHandlerPluginZip);
                     } catch (Exception exception) {
                         logger.warn("Failed to create Event Handler Plugin zip file " + eventHandlerPluginZip, exception);
                     }
