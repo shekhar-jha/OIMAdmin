@@ -18,6 +18,7 @@ package com.jhash.oimadmin.ui;
 
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
+import com.jhash.oimadmin.Utils;
 import com.jhash.oimadmin.oim.OIMConnection;
 import com.jhash.oimadmin.oim.OIMJMXWrapper;
 import org.slf4j.Logger;
@@ -33,11 +34,12 @@ public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<OIMJMXWra
     private static final Logger logger = LoggerFactory.getLogger(EventHandlersTreeNode.class);
 
     private final OIMConnection oimConnection;
+    private final JPopupMenu eventHandlerMenu;
+    private final JMenuItem newEventHandlerMenu;
+    private final JMenuItem refreshMenu;
+    private final List<EventHandlerUI> openedNewEventHandlers = new ArrayList<>();
     private OIMJMXWrapper connection;
     private Set<OIMJMXWrapper.OperationDetail> operations;
-    private JPopupMenu eventHandlerMenu;
-    private JMenuItem newEventHandlerMenu;
-    private List<EventHandlerUI> openedNewEventHandlers = new ArrayList<>();
 
     public EventHandlersTreeNode(String name, OIMConnection oimConnection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
@@ -54,7 +56,25 @@ public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<OIMJMXWra
                 displayArea.add(eventHandlerUI);
             }
         });
+        refreshMenu = new JMenuItem("Reload..");
+        refreshMenu.setEnabled(true);
+        refreshMenu.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                logger.debug("Started Reconnect Trigger");
+                Utils.executeAsyncOperation("Reconnecting Connection", new Runnable() {
+                    @Override
+                    public void run() {
+                        EventHandlersTreeNode.this.destroy();
+                        EventHandlersTreeNode.this.initialize();
+                    }
+                });
+                logger.debug("Completed Reconnect Trigger");
+
+            }
+        });
         eventHandlerMenu.add(newEventHandlerMenu);
+        eventHandlerMenu.add(refreshMenu);
     }
 
     @Override
