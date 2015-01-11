@@ -85,6 +85,11 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
     }
 
     @Override
+    public boolean destroyComponentOnClose() {
+        return true;
+    }
+
+    @Override
     public void initializeComponent() {
         logger.debug("Initializing {} ...", this);
         nameField.setText("CustomEventHandler");
@@ -480,7 +485,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
 
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    String pluginName = nameField.getText();
+                    String pluginName = classNameText.getText();
                     try {
                         oimConnection.unregisterPlugin(pluginName);
                     } catch (Exception exception) {

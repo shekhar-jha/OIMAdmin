@@ -31,10 +31,7 @@ import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.event.*;
 import java.util.*;
 
 public class OIMAdmin extends JFrame {
@@ -126,15 +123,7 @@ public class OIMAdmin extends JFrame {
     }
 
     private DisplayAreaImpl initializeDisplayPane() {
-        // Setup the tabbed pane for displaying details
-        JideTabbedPane displayTabbedPane = new JideTabbedPane();
-        displayTabbedPane.setTabShape(JideTabbedPane.SHAPE_ROUNDED_FLAT);
-        displayTabbedPane.setColorTheme(JideTabbedPane.COLOR_THEME_OFFICE2003);
-        displayTabbedPane.setTabResizeMode(JideTabbedPane.RESIZE_MODE_NONE);
-        displayTabbedPane.setUseDefaultShowCloseButtonOnTab(false);
-        displayTabbedPane.setBoldActiveTab(true);
-        displayTabbedPane.setShowCloseButtonOnTab(true);
-        return new DisplayAreaImpl(displayTabbedPane);
+        return new DisplayAreaImpl();
     }
 
     private JideTabbedPane initializeSelectionPane() {
@@ -305,19 +294,51 @@ public class OIMAdmin extends JFrame {
     public static class DisplayAreaImpl implements DisplayArea {
 
         private static final Logger logger = LoggerFactory.getLogger(DisplayAreaImpl.class);
-        private JTabbedPane displayArea;
-        private Set<UIComponent<? extends JComponent>> addedComponents = new HashSet<>();
+        private JideTabbedPane displayArea;
+        private Map<JComponent, UIComponent<? extends JComponent>> uiComponentToObjectMap = new HashMap<>();
+        private Map<UIComponent<? extends JComponent>, JComponent> objectToUIComponentMap = new HashMap<>();
 
-        public DisplayAreaImpl(JTabbedPane displayArea) {
-            this.displayArea = displayArea;
+        public DisplayAreaImpl() {
+            // Setup the tabbed pane for displaying details
+            displayArea = new JideTabbedPane();
+            displayArea.setTabShape(JideTabbedPane.SHAPE_ROUNDED_FLAT);
+            displayArea.setColorTheme(JideTabbedPane.COLOR_THEME_OFFICE2003);
+            displayArea.setTabResizeMode(JideTabbedPane.RESIZE_MODE_NONE);
+            displayArea.setUseDefaultShowCloseButtonOnTab(false);
+            displayArea.setBoldActiveTab(true);
+            displayArea.setShowCloseButtonOnTab(true);
+            displayArea.setCloseAction(new AbstractAction() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    Object source = e.getSource();
+                    logger.trace("Triggering close action on tab {}...", source);
+                    if (uiComponentToObjectMap.containsKey(source)) {
+                        UIComponent<? extends JComponent> uiComponentObject = uiComponentToObjectMap.get(source);
+                        if (uiComponentObject instanceof AbstractUIComponent) {
+                            if (((AbstractUIComponent)uiComponentObject).destroyComponentOnClose()) {
+                                ((AbstractUIComponent)uiComponentObject).destroy();
+                            } else {
+                                logger.trace("Component should not be destroyed on close. Just removing the component from display");
+                                displayArea.remove((JComponent) source);
+                            }
+                        } else {
+                            logger.trace("Even though expected, the object {} is not an instance of {}", uiComponentObject, AbstractUIComponent.class);
+                        }
+                    } else {
+                        logger.trace("Could not locate UI component in {}", uiComponentToObjectMap);
+                    }
+                    logger.trace("Triggered close action on tab {}", source);
+                }
+            });
+
         }
 
         @Override
         public void add(UIComponent<? extends JComponent> component) {
             if (component != null) {
-                JComponent uiComponent = component.getComponent();
                 String name = component.getName();
-                if (addedComponents.contains(component)) {
+                if (objectToUIComponentMap.containsKey(component)) {
+                    JComponent uiComponent = objectToUIComponentMap.get(component);
                     logger.trace("Component {} is known to display area. Validating if the associated UI Component {} is being displayed", component, uiComponent);
                     if (displayArea.indexOfComponent(uiComponent)== -1) {
                         logger.trace("Adding the component {} with name {}", uiComponent, name);
@@ -328,11 +349,14 @@ public class OIMAdmin extends JFrame {
                         displayArea.setSelectedComponent(uiComponent);
                     }
                 } else {
-                    logger.trace("Adding the new component {} with name {}", component.getComponent(), component.getName());
-                    displayArea.addTab(component.getName(), component.getComponent());
+                    JComponent uiComponent = component.getComponent();
+                    logger.trace("Adding the new component {} with name {}", uiComponent, name);
+                    displayArea.addTab(name, uiComponent);
                     displayArea.setSelectedComponent(uiComponent);
-                    logger.trace("Adding component to set of displayed components {}", addedComponents);
-                    addedComponents.add(component);
+                    logger.trace("Adding component to set of displayed components {}", objectToUIComponentMap);
+                    objectToUIComponentMap.put(component, uiComponent);
+                    logger.trace("Adding UI to set of displayed components {}", uiComponentToObjectMap);
+                    uiComponentToObjectMap.put(uiComponent, component);
                 }
             }else {
                 logger.debug("Nothing to do since no component was passed for adding to display area.");
@@ -342,10 +366,16 @@ public class OIMAdmin extends JFrame {
         @Override
         public void remove(UIComponent<? extends JComponent> component) {
             if (component != null) {
-                logger.trace("Trying to remove UI component {}", component.getComponent());
-                displayArea.remove(component.getComponent());
-                logger.trace("Removing component {} from the set of active components ", component, addedComponents);
-                addedComponents.remove(component);
+                logger.trace("Removing component {} from {}", component, objectToUIComponentMap);
+                JComponent uiComponent = objectToUIComponentMap.remove(component);
+                if (uiComponent != null) {
+                    logger.trace("Trying to remove UI component {}", uiComponent);
+                    displayArea.remove(uiComponent);
+                    logger.trace("Removing component from the set of active components {}", component, uiComponentToObjectMap);
+                    uiComponentToObjectMap.remove(uiComponent);
+                } else {
+                    logger.trace("No component or associated UI component located");
+                }
             } else {
                 logger.debug("Nothing to do since no component was passed to be removed from display area");
             }

@@ -126,7 +126,7 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         logger.trace("Processing action on menu {} ", newConnectionMenuItem);
-                        ConnectionDetails connectionDetailUI = new ConnectionDetails("New Connection...", configuration.getConnectionDetails(""), selectionTree, displayArea);
+                        ConnectionDetails connectionDetailUI = new ConnectionDetails("New Connection...",configuration, selectionTree, displayArea);
                         connectionDetailUI.initialize();
                         displayArea.add(connectionDetailUI);
                         logger.trace("Processed action on menu {} ", newConnectionMenuItem);

@@ -53,10 +53,21 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
     private JTextField jmxUser = JGComponentFactory.getCurrent().createTextField();
     private JTextField jmxUserPassword = JGComponentFactory.getCurrent().createPasswordField();
     private JPanel displayComponent = null;
+    private boolean isNewConnection = false;
+
+    public ConnectionDetails(String name, Config configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+        super(name, configuration.getConnectionDetails(""), selectionTree, displayArea);
+        connectionDetails = new Config.EditableConfiguration(this.configuration);
+        isNewConnection = true;
+    }
 
     public ConnectionDetails(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
         connectionDetails = new Config.EditableConfiguration(configuration);
+    }
+
+    public boolean destroyComponentOnClose() {
+        return isNewConnection;
     }
 
     @Override

@@ -64,6 +64,10 @@ public abstract class AbstractUIComponent<T extends JComponent> extends JPanel i
         this.status = status;
     }
 
+    public boolean destroyComponentOnClose() {
+        return false;
+    }
+
     @Override
     public UIComponent initialize() {
         logger.debug("Trying to initialize UI Component");
