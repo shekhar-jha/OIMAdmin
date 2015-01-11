@@ -41,7 +41,6 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
         super(name, configuration, selectionTree, displayArea);
         connectionDetailsUI = new ConnectionDetails(name, configuration, selectionTree, displayArea);
         refreshMenu = new JMenuItem("Reconnect");
-        refreshMenu.setEnabled(false);
         refreshMenu.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -69,7 +68,6 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
         selectionTree.addChildNode(this, new MDSTreeNode("MDS Repository", configuration, selectionTree, displayArea));
         selectionTree.addChildNode(this, new EventHandlersTreeNode("Event Handlers", connection, configuration, selectionTree, displayArea));
         selectionTree.addChildNode(this, new OIMAdminTreeNode.OIMAdminTreeNodeNoAction("Scheduled Tasks", this, selectionTree));
-        refreshMenu.setEnabled(true);
         logger.debug("Initialized {}", this);
     }
 
