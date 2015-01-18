@@ -243,12 +243,12 @@ public class OIMJMXWrapper extends AbstractConnection {
 
     public static class OIM_JMX_BEANS {
 
+        private static final Set<String> beanNames = new HashSet<String>();
+        private static final Map<String, OIM_JMX_BEANS> beanMapping = new HashMap<String, OIM_JMX_BEANS>();
         public static final OIM_JMX_BEANS CONFIG_QUERY_MBEAN_NAME = new OIM_JMX_BEANS("ConfigQueryMBeanName");
         public static final OIM_JMX_BEANS OPERATION_CONFIG_MBEAN_NAME = new OIM_JMX_BEANS("OperationConfigMXBean");
         //TODO: There is a incorrect dependency between the static variables which is dependent on location of variable in file
         // beanNames should come before CONFIG_QUERY_MBEAN_NAME;
-        private static final Set<String> beanNames = new HashSet<String>();
-        private static final Map<String, OIM_JMX_BEANS> beanMapping = new HashMap<String, OIM_JMX_BEANS>();
         public final String name;
 
         private OIM_JMX_BEANS(String name) {
