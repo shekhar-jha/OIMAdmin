@@ -299,7 +299,7 @@ public class Config {
         }
         if (!newConfigurationSaved) {
             logger.trace("Adding the new configuration {} to configuration", configuration);
-            Properties configurationDetail = configuration.configuration;
+            Properties configurationDetail = ((configuration instanceof EditableConfiguration) ? ((EditableConfiguration) configuration).editableConfiguration : configuration.configuration);
             for (String attributeName : configurationDetail.stringPropertyNames()) {
                 configurationFile.setProperty("sysadmin." + counter + "." + attributeName, configurationDetail.getProperty(attributeName));
             }
