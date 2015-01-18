@@ -104,6 +104,10 @@ public class OIMAdmin extends JFrame {
         connectionsUI.registerSelectionTree(config, componentTree, displayArea);
         componentTree.connectionTree.expandPath(new TreePath(componentTree.connectionTree.getModel().getRoot()));
 
+        OIMClientUI.OIMClientRegisterUI clientUI = new OIMClientUI.OIMClientRegisterUI();
+        clientUI.registerMenu(config, menuBar, standardMenus, componentTree, displayArea);
+        clientUI.registerSelectionTree(config, componentTree, displayArea);
+
         // Create the menu bar
         menuBar.setOpaque(true);
         menuBar.setPreferredSize(new java.awt.Dimension(200, 20));
@@ -230,7 +234,8 @@ public class OIMAdmin extends JFrame {
         logger.debug("Trying to destroy OIMAdmin");
         ((AbstractUIComponentTreeNode.ROOTAdminTreeNode) componentTree.getRootNode()).destroy();
         componentTree = null;
-        //TODO: Destroy displayArea
+        displayArea.destroy();
+        displayArea = null;
         logger.debug("Destroyed OIMAdmin");
     }
 
@@ -381,5 +386,18 @@ public class OIMAdmin extends JFrame {
             }
         }
 
+        public void destroy() {
+            logger.debug("Destroying Display Area {}", this);
+            Set<UIComponent> activeObjects = new HashSet<UIComponent>(objectToUIComponentMap.keySet());
+            for (UIComponent component : activeObjects) {
+                try {
+                    logger.debug("Trying to destroy {}", component);
+                    component.destroy();
+                }catch (Exception exception) {
+                    logger.warn("Failed to destroy component " + component +". Ignoring error.", exception);
+                }
+            }
+            logger.debug("Destroyed {}", this);
+        }
     }
 }

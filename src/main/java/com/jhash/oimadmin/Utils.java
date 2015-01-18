@@ -15,7 +15,6 @@
  */
 package com.jhash.oimadmin;
 
-import com.jhash.oimadmin.OIMAdminException;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +23,10 @@ import javax.tools.*;
 import java.io.*;
 import java.net.URI;
 import java.security.InvalidParameterException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.jar.JarEntry;
@@ -292,5 +294,12 @@ public class Utils {
         oimConnectionThread.setName(operationName);
         oimConnectionThread.start();
         logger.debug("Completed setup of execution of {} in separate thread", operationName);
+    }
+
+    public static boolean isEmpty(String value) {
+        if (value == null || value.isEmpty())
+            return true;
+        else
+            return false;
     }
 }

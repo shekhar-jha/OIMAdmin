@@ -266,23 +266,33 @@ public class Config {
     }
 
     public void saveConfiguration(Configuration configuration) {
+        logger.debug("Trying to save configuration {}", configuration);
         Properties configurationFile = new Properties();
         boolean newConfigurationSaved = false;
         int counter;
         String configurationBeingSaved = configuration.getProperty(Connection.ATTR_CONN_NAME);
+        logger.debug("Trying to save configuration {}", configurationBeingSaved);
         for (counter = 0; counter < this.oimConnectionNames.size(); counter++) {
+            logger.trace("Processing configuration number {}", counter);
             String name = oimConnectionNames.get(counter);
-            if (name == null || name.isEmpty())
+            if (name == null || name.isEmpty()) {
+                logger.trace("Skipping configuration at {} since it has null or empty name", counter);
                 continue;
+            }
             Properties configurationDetail = null;
+            logger.trace("Validating of the configuration being processed {} = configuration being saved {}", name, configurationBeingSaved);
             if (name.equals(configurationBeingSaved)) {
-                configurationDetail = configuration.configuration;
+                logger.trace("Selecting new configuration and tracking that given configuration has been added");
+                configurationDetail = ((configuration instanceof EditableConfiguration)?((EditableConfiguration)configuration).editableConfiguration:configuration.configuration);
                 newConfigurationSaved = true;
             } else {
+                logger.trace("Using existing configuration");
                 configurationDetail = oimConnectionConfiguration.get(name);
             }
+            logger.trace("Validating whether we identified applicable configuration");
             if (configurationDetail == null)
                 throw new NullPointerException("Failed to locate configuration detail with name " + name);
+            logger.trace("Adding selected configuration {} in to new configuration file being generated", configurationDetail);
             for (String attributeName : configurationDetail.stringPropertyNames()) {
                 configurationFile.setProperty("sysadmin." + counter + "." + attributeName, configurationDetail.getProperty(attributeName));
             }
@@ -297,6 +307,7 @@ public class Config {
         File configurationFileObject = new File(configurationLocation);
         if (configurationFileObject.exists() && configurationFileObject.canWrite()) {
             try {
+                logger.debug("Trying to save configuration to {}", configurationLocation);
                 configurationFile.store(new FileWriter(configurationFileObject), "Saved on " + new Date());
             } catch (Exception exception) {
                 throw new OIMAdminException("Error occurred while saving updated configuration", exception);
@@ -304,6 +315,7 @@ public class Config {
         } else {
             throw new OIMAdminException("Error occurred while saving updated configuration", new IOException("Configuration file " + configurationLocation + " either does not exist or is not writable. Can not save the configuration."));
         }
+        logger.debug("Saved configuration {}", configuration);
     }
 
     public enum PLATFORM {
@@ -371,6 +383,7 @@ public class Config {
             editableConfiguration =new Properties(configuration.configuration);
         }
 
+        @Override
         public String getProperty(String propertyName, String defaultValue) {
             return editableConfiguration.getProperty(propertyName, defaultValue);
         }

@@ -92,6 +92,8 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
     @Override
     public void initializeComponent() {
         logger.debug("Initializing {} ...", this);
+        javaCompiler = new UIJavaCompile("Source Code", "EventHandlerSource", configuration, selectionTree, displayArea);
+        javaCompiler.initialize();
         nameField.setText("CustomEventHandler");
         nameField.setToolTipText("Name of event handler");
         orcTargetLabel
@@ -102,28 +104,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                 .setToolTipText("The tx attribute indicates whether or not the event handler should run in its own transaction.\n Supported values are TRUE or FALSE. By default, the value is FALSE.");
         classNameText.setText("com.jhash.oim.eventhandler.CustomEventHandler");
         classNameText.setToolTipText("Full package name of the Java class that implements the event handler");
-        classNameText.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                if (javaCompiler != null) {
-                    javaCompiler.classNameText.setText(classNameText.getText());
-                }
-            }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                if (javaCompiler != null) {
-                    javaCompiler.classNameText.setText(classNameText.getText());
-                }
-            }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                if (javaCompiler != null) {
-                    javaCompiler.classNameText.setText(classNameText.getText());
-                }
-            }
-        });
+        classNameText.getDocument().addDocumentListener(new UIJavaCompile.ConnectTextFieldListener(classNameText, javaCompiler.classNameText));
         orderField
                 .setToolTipText("Identifies the order (or sequence) in which the event handler is executed.\n Order value is in the scope of entity, operation, and stage. Order value for each event handler in this scope must be unique. If there is a conflict, then the order in which these conflicted event handlers are executed is arbitrary."
                         + "\nSupported values are FIRST (same as Integer.MIN_VALUE), LAST (same as Integer.MAX_VALUE), or a numeral.");
@@ -214,8 +195,6 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
         // TODO: Is this needed?
         // operationType.setSelectedItem(associatedOperationSplitDetails[1]);
         eventHandlerTypes.setSelectedItem(EVENT_HANDLER_TYPES[0]);
-        javaCompiler = new UIJavaCompile("Source Code", configuration, selectionTree, displayArea);
-        javaCompiler.initialize();
         javaCompiler.classNameText.setText(classNameText.getText());
         configurationPanel = new EventHandlerConfigurationPanel("Configure");
         configurationPanel.initialize();

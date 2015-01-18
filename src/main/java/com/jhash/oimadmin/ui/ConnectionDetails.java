@@ -179,7 +179,9 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
         saveButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                logger.debug("Trying to same configuration {}", connectionDetails);
                 connectionDetails.getConfig().saveConfiguration(connectionDetails);
+                logger.debug("Saved configuration");
             }
         });
         JButton cancelButton = JGComponentFactory.getCurrent().createButton("Cancel");
@@ -214,16 +216,22 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
 
         @Override
         public void insertUpdate(DocumentEvent e) {
-            connectionDetails.setProperty(attributeName, textField.getText());
+            String value = textField.getText();
+            logger.trace("Setting property {} to {}", attributeName, value);
+            connectionDetails.setProperty(attributeName, value);
         }
 
         @Override
         public void removeUpdate(DocumentEvent e) {
+            String value = textField.getText();
+            logger.trace("Setting property {} to {}", attributeName, value);
             connectionDetails.setProperty(attributeName, textField.getText());
         }
 
         @Override
         public void changedUpdate(DocumentEvent e) {
+            String value = textField.getText();
+            logger.trace("Setting property {} to {}", attributeName, value);
             connectionDetails.setProperty(attributeName, textField.getText());
         }
 

@@ -1,0 +1,48 @@
+
+import java.util.Hashtable;
+
+import oracle.iam.platform.OIMClient;
+
+public class Client {
+
+   private static final String OIM_URL = "t3://localhost:14000/";
+   protected static final String OIM_PASSWORD = "Demo1234";
+
+   private static final String AUTH_CONF = "conf/authwl.conf";
+   protected static final String OIM_USERNAME = "xelsysadm";
+
+   protected static final String NULL = "(null)";
+   protected static final String NL = "\n";
+   protected static final String SP = "\t";
+   protected OIMClient _oimClient = null;
+
+   public Client() throws Exception
+   {
+      Hashtable<String, String> env = new Hashtable<String, String>();
+
+      env.put(OIMClient.JAVA_NAMING_FACTORY_INITIAL, "weblogic.jndi.WLInitialContextFactory");
+      env.put(OIMClient.JAVA_NAMING_PROVIDER_URL, OIM_URL);
+
+      // System.setProperty("weblogic.Name", "oim_server1");
+      // System.setProperty("APPSERVER_TYPE", "wls");
+      // System.setProperty("java.security.auth.login.config", AUTH_CONF);
+      log("Trying to create OIM Client " + env);
+      _oimClient = new OIMClient(env);
+      log("Created OIM Client " + _oimClient + ", login as " + OIM_USERNAME);
+      _oimClient.login(OIM_USERNAME, OIM_PASSWORD.toCharArray());
+      log("Login successful");
+      return;
+   }
+
+   public static void log(String str)
+   {
+      if (str != null)
+      {
+         System.out.println("LOG: " + str);
+      }
+   }
+
+   public static void main(String[] args) throws Exception {
+      Client client = new Client();
+   }
+}
