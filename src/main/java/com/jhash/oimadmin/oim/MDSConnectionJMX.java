@@ -88,7 +88,7 @@ public class MDSConnectionJMX extends AbstractConnection {
                     partitions.add(newPartitionIdentified);
                 }
             } catch (Exception exception) {
-                logger.warn("Failed to list MDS Application Names from server "+ runtimeServer, exception);
+                logger.warn("Failed to list MDS Application Names from server " + runtimeServer, exception);
             }
             logger.debug("Created MetadataTransferManager {}", mdsTransfer);
 
@@ -272,7 +272,7 @@ public class MDSConnectionJMX extends AbstractConnection {
                         try {
                             new File(fileName).delete();
                         } catch (Exception fileDeleteException) {
-                            logger.warn("Failed to delete the file " + fileName +" after saving the MDS File ", fileDeleteException);
+                            logger.warn("Failed to delete the file " + fileName + " after saving the MDS File ", fileDeleteException);
                         }
                     }
                 }

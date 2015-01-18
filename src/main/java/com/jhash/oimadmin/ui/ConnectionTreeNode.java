@@ -29,7 +29,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Map;
 
-public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnection> implements DisplayableNode<ConnectionDetails>, ContextMenuEnabledNode{
+public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnection> implements DisplayableNode<ConnectionDetails>, ContextMenuEnabledNode {
 
     private static final Logger logger = LoggerFactory.getLogger(ConnectionTreeNode.class);
     private OIMConnection connection;
@@ -126,7 +126,7 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         logger.trace("Processing action on menu {} ", newConnectionMenuItem);
-                        ConnectionDetails connectionDetailUI = new ConnectionDetails("New Connection...",configuration, selectionTree, displayArea);
+                        ConnectionDetails connectionDetailUI = new ConnectionDetails("New Connection...", configuration, selectionTree, displayArea);
                         connectionDetailUI.initialize();
                         displayArea.add(connectionDetailUI);
                         logger.trace("Processed action on menu {} ", newConnectionMenuItem);

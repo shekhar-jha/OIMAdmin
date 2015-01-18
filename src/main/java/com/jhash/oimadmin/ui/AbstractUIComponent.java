@@ -33,6 +33,7 @@ public abstract class AbstractUIComponent<T extends JComponent> extends JPanel i
     protected final DisplayArea displayArea;
     protected final boolean publish;
     private COMPONENT_STATE status = COMPONENT_STATE.NOT_INITIALIZED;
+
     public AbstractUIComponent(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         this(name, true, configuration, selectionTree, displayArea);
     }

@@ -16,12 +16,9 @@
 
 package com.jhash.oimadmin.ui;
 
-import com.jgoodies.forms.factories.Borders;
 import com.jgoodies.jsdl.common.builder.FormBuilder;
-import com.jgoodies.jsdl.component.JGTextField;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
-import com.jidesoft.swing.JideScrollPane;
 import com.jidesoft.swing.JideSplitPane;
 import com.jidesoft.swing.JideTabbedPane;
 import org.slf4j.Logger;
@@ -36,13 +33,12 @@ import java.util.Map;
 public class OIMClientUI extends AbstractUIComponent<JPanel> {
 
     private static final Logger logger = LoggerFactory.getLogger(OIMClientUI.class);
-
-    private JideTabbedPane compileAndRunControlPanel = new JideTabbedPane();
-    private UIJavaCompile javaCompiler;
-    private UIJavaRun javaRun;
     JButton compileButton = new JButton("Compile");
     JButton executeButton = new JButton("Run..");
     JPanel oimClientUI;
+    private JideTabbedPane compileAndRunControlPanel = new JideTabbedPane();
+    private UIJavaCompile javaCompiler;
+    private UIJavaRun javaRun;
 
     public OIMClientUI(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
@@ -74,7 +70,7 @@ public class OIMClientUI extends AbstractUIComponent<JPanel> {
             public void actionPerformed(ActionEvent e) {
                 try {
                     javaRun.run();
-                }catch (Exception exception) {
+                } catch (Exception exception) {
                     logger.warn("Execution failed", exception);
                 }
             }

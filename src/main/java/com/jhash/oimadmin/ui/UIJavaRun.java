@@ -38,26 +38,28 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class UIJavaRun  extends AbstractUIComponent<JPanel> {
+public class UIJavaRun extends AbstractUIComponent<JPanel> {
 
     private static final Logger logger = LoggerFactory.getLogger(UIJavaRun.class);
 
     final JGTextField mainClass = new JGTextField();
-    JGTable vmOptions;
-    JGTable programArguments;
     final JGTextField workingDirectory = new JGTextField();
-    JGTable environmentVariable;
     final JGTextField classPaths = new JGTextField();
     final JGTextField vmLocation = new JGTextField();
     final JGTextArea output = new JGTextArea();
     final JGTextField input = new JGTextField();
     final JButton selectWorkingDirectory = new JideButton("...");
     final JButton selectVMLocation = new JideButton("...");
+    JGTable vmOptions;
+    JGTable programArguments;
+    JGTable environmentVariable;
     private JPanel uiJavaRunPanel;
 
     public UIJavaRun(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
@@ -73,7 +75,7 @@ public class UIJavaRun  extends AbstractUIComponent<JPanel> {
             if (oimClientJar.exists()) {
                 File parentDirectory = oimClientJar.getParentFile();
                 if (parentDirectory.exists() && parentDirectory.isDirectory()) {
-                    for (String jarName : new String[]{"commons-logging.jar", "eclipselink.jar","jrf-api.jar", "oimclient.jar", "spring.jar", "wlfullclient.jar"}) {
+                    for (String jarName : new String[]{"commons-logging.jar", "eclipselink.jar", "jrf-api.jar", "oimclient.jar", "spring.jar", "wlfullclient.jar"}) {
                         File jarFile = new File(parentDirectory, jarName);
                         if (jarFile.exists()) {
                             classPathBuilder.append(File.pathSeparator);
@@ -82,7 +84,7 @@ public class UIJavaRun  extends AbstractUIComponent<JPanel> {
                     }
                 }
             }
-        }catch (Exception exception) {
+        } catch (Exception exception) {
             logger.warn("Failed to generate class path", exception);
         }
         String classPath = classPathBuilder.toString();
@@ -96,19 +98,19 @@ public class UIJavaRun  extends AbstractUIComponent<JPanel> {
         DefaultTableModel vmOptionsTableModel = new DefaultTableModel(new String[][]{
                 {"-Dweblogic.Name=oim_server1"},
                 {"-DAPPSERVER_TYPE=wls"},
-                {"-Djava.security.auth.login.config=" + configuration.getWorkArea()+"/conf/authwl.conf"}
+                {"-Djava.security.auth.login.config=" + configuration.getWorkArea() + "/conf/authwl.conf"}
         }, new String[]{"VM Options"});
         vmOptionsTableModel.setRowCount(10);
         vmOptions = JGComponentFactory.getCurrent().createTable(vmOptionsTableModel);
-        programArguments = JGComponentFactory.getCurrent().createTable(new DefaultTableModel(new String[]{"Arguments"},10));
+        programArguments = JGComponentFactory.getCurrent().createTable(new DefaultTableModel(new String[]{"Arguments"}, 10));
         String classPath = generateClassPath();
         if (!Utils.isEmpty(classPath)) {
             classPaths.setText(classPath);
         }
-        DefaultTableModel tableModel = new DefaultTableModel(new String[]{"Name", "Value"},10);
+        DefaultTableModel tableModel = new DefaultTableModel(new String[]{"Name", "Value"}, 10);
         environmentVariable = JGComponentFactory.getCurrent().createTable(tableModel);
         environmentVariable.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        File javaBinaryFile = new File (System.getProperty("java.home") + File.separator + "bin" + File.separator + ((System.getProperty("os.name").toLowerCase().startsWith("win"))?"java.exe":"java"));
+        File javaBinaryFile = new File(System.getProperty("java.home") + File.separator + "bin" + File.separator + ((System.getProperty("os.name").toLowerCase().startsWith("win")) ? "java.exe" : "java"));
         if (javaBinaryFile.exists()) {
             vmLocation.setText(javaBinaryFile.getAbsolutePath());
         }
@@ -198,7 +200,7 @@ public class UIJavaRun  extends AbstractUIComponent<JPanel> {
         logger.debug("Adding JVM Location as {}", vmLocationString);
         commandArray.add(vmLocationString);
         logger.debug("Processing VM Options {}", vmOptions);
-        for (int counter=0; counter < vmOptions.getRowCount(); counter++) {
+        for (int counter = 0; counter < vmOptions.getRowCount(); counter++) {
             logger.trace("Processing row {}", counter);
             Object value = vmOptions.getValueAt(counter, 0);
             logger.trace("Value read as {}", value);
@@ -214,7 +216,7 @@ public class UIJavaRun  extends AbstractUIComponent<JPanel> {
             commandArray.add(mainClassString);
         }
         logger.debug("Processing Program arguments {}", programArguments);
-        for (int counter=0; counter < programArguments.getRowCount(); counter++) {
+        for (int counter = 0; counter < programArguments.getRowCount(); counter++) {
             logger.trace("Processing row {}", counter);
             Object value = programArguments.getValueAt(counter, 0);
             logger.trace("Value read as {}", value);
@@ -236,7 +238,7 @@ public class UIJavaRun  extends AbstractUIComponent<JPanel> {
         TableModel model = environmentVariable.getModel();
         Map<String, String> environmentProperties = processBuilder.environment();
         logger.trace("Trying to update environment variables {} with model {}", environmentProperties, model);
-        for (int rowCounter=0; rowCounter < model.getRowCount(); rowCounter++) {
+        for (int rowCounter = 0; rowCounter < model.getRowCount(); rowCounter++) {
             logger.trace("Processing row {}", rowCounter);
             Object key = model.getValueAt(rowCounter, 0);
             logger.trace("Key : {}", key);
@@ -244,7 +246,7 @@ public class UIJavaRun  extends AbstractUIComponent<JPanel> {
             logger.trace("Value: {}", value);
             if (key != null && (!key.toString().isEmpty()) && value != null) {
                 logger.debug("Adding {}={} to environment", key, value);
-                environmentProperties.put(key.toString(),value.toString());
+                environmentProperties.put(key.toString(), value.toString());
             }
         }
         logger.debug("Environment : {}", environmentProperties);
@@ -266,13 +268,13 @@ public class UIJavaRun  extends AbstractUIComponent<JPanel> {
                     String textToWrite = input.getText();
                     try {
                         runningProcess.getOutputStream().write(textToWrite.getBytes());
-                    }catch (Exception exception) {
-                        logger.warn("Failed to write the input " +textToWrite +" to input of process " + processBuilder.command(), exception);
+                    } catch (Exception exception) {
+                        logger.warn("Failed to write the input " + textToWrite + " to input of process " + processBuilder.command(), exception);
                     }
                     input.setText("");
                 }
             });
-            Utils.executeAsyncOperation("Display Process Output  [" +runningProcess +"]", new Runnable() {
+            Utils.executeAsyncOperation("Display Process Output  [" + runningProcess + "]", new Runnable() {
                 @Override
                 public void run() {
                     logger.debug("Setting up buffered reader for process input stream {}", runningProcess.getInputStream());
@@ -286,13 +288,13 @@ public class UIJavaRun  extends AbstractUIComponent<JPanel> {
                             output.append("\n");
                             logger.trace("Trying to read line");
                         }
-                    }catch (Exception exception) {
+                    } catch (Exception exception) {
                         logger.debug("Error occurred while trying to read output from process " + processBuilder.command(), exception);
                     }
                     logger.debug("Completed the reading of the process output and displaying it to text area");
                 }
             });
-        }catch (Exception exception) {
+        } catch (Exception exception) {
             throw new OIMAdminException("Failed to start process " + processBuilder.command(), exception);
         }
         logger.debug("Completed execution of the application");

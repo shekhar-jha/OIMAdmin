@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 
-public abstract class OIMAdminTreeNode  extends DefaultMutableTreeNode {
+public abstract class OIMAdminTreeNode extends DefaultMutableTreeNode {
 
     public static final String DUMMY_LEAF_NODE_NAME = "Loading...";
     private static final long serialVersionUID = 1L;
@@ -62,7 +62,9 @@ public abstract class OIMAdminTreeNode  extends DefaultMutableTreeNode {
 
     public abstract void handleEvent(EVENT_TYPE event);
 
-    public boolean isLoadable() {return getStatus() == OIMAdminTreeNode.NODE_STATE.NOT_INITIALIZED;}
+    public boolean isLoadable() {
+        return getStatus() == OIMAdminTreeNode.NODE_STATE.NOT_INITIALIZED;
+    }
 
     public abstract String getStringRepresentation();
 
@@ -83,10 +85,11 @@ public abstract class OIMAdminTreeNode  extends DefaultMutableTreeNode {
 
         private static final Logger logger = LoggerFactory.getLogger(OIMAdminTreeNodeNoAction.class);
         private String stringRepresentation;
+
         public OIMAdminTreeNodeNoAction(String name, OIMAdminTreeNode parentNode, UIComponentTree selectionTree) {
             super(name, parentNode.configuration, selectionTree, NODE_STATE.INITIALIZED_NO_OP);
             logger.trace("Entering OIMAdminTreeNodeNoAction({},{},{})", new java.lang.Object[]{name, parentNode, selectionTree});
-            stringRepresentation = "OIMAdminTreeNodeNoAction[" + name+ "]";
+            stringRepresentation = "OIMAdminTreeNodeNoAction[" + name + "]";
             logger.trace("Completed OIMAdminTreeNodeNoAction({},{},{})", new java.lang.Object[]{name, parentNode, selectionTree});
         }
 

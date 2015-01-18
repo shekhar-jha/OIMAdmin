@@ -44,11 +44,10 @@ import java.util.ArrayList;
 public class UIJavaCompile extends AbstractUIComponent<JPanel> {
 
     private static final Logger logger = LoggerFactory.getLogger(UIJavaCompile.class);
-
+    final JGTextField classNameText = new JGTextField();
     private JTextArea sourceCode = JGComponentFactory.getCurrent().createTextArea();
     private JTextArea compileResultTextArea = JGComponentFactory.getCurrent().createReadOnlyTextArea();
     private JButton compileButton = JGComponentFactory.getCurrent().createButton("Compile..");
-    final JGTextField classNameText = new JGTextField();
     private JPanel javaCompileUI;
     private String outputDirectory;
     private String templatePrefix;
@@ -57,7 +56,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel> {
 
     public UIJavaCompile(String name, String prefix, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, false, configuration, selectionTree, displayArea);
-        templatePrefix = prefix +"-";
+        templatePrefix = prefix + "-";
     }
 
     public boolean compile() {
@@ -78,7 +77,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel> {
             compileResultTextArea.setText(message.toString());
         } else {
             compileResultTextArea.setText("Compilation successful");
-            successfulCompile= true;
+            successfulCompile = true;
         }
         return successfulCompile;
     }
@@ -92,7 +91,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel> {
         logger.debug("Trying to validate template directory {} exists and is directory", templateDirectory);
         if (templateDirectory.exists() && templateDirectory.isDirectory()) {
             logger.debug("Trying to list files in directory");
-            String [] listOfFile = templateDirectory.list(new FilenameFilter() {
+            String[] listOfFile = templateDirectory.list(new FilenameFilter() {
                 @Override
                 public boolean accept(File dir, String name) {
                     logger.trace("Validating file {}", name);
@@ -151,7 +150,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel> {
         JPanel sourceCodeTextButtonPanel = FormBuilder.create().columns("right:pref, 3dlu, pref:grow")
                 .rows("p, 2dlu, p, 2dlu")
                 .addLabel("Class Name").xy(1, 1).add(classNameText).xy(3, 1)
-                .addLabel("Template").xy(1, 3).add(sourceCodeSelector==null?new JLabel("Not Available"):sourceCodeSelector).xy(3,3)
+                .addLabel("Template").xy(1, 3).add(sourceCodeSelector == null ? new JLabel("Not Available") : sourceCodeSelector).xy(3, 3)
                 .build();
         sourceCodeTextPanel.add(sourceCodeTextButtonPanel, BorderLayout.NORTH);
         sourceCodeTextPanel.add(new JLabel(), BorderLayout.SOUTH);
@@ -190,7 +189,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel> {
                     FileUtils.forceDelete(outputDirectoryFile);
                 }
             } catch (Exception exception) {
-                logger.warn("Failed to delete directory " + outputDirectory +". Ignoring error", exception);
+                logger.warn("Failed to delete directory " + outputDirectory + ". Ignoring error", exception);
             }
             outputDirectory = null;
         }
@@ -203,6 +202,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel> {
 
         private JTextField source;
         private JTextField destination;
+
         public ConnectTextFieldListener(JTextField source, JTextField destination) {
             this.source = source;
             this.destination = destination;

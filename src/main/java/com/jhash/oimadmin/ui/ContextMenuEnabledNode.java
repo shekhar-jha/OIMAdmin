@@ -18,7 +18,7 @@ package com.jhash.oimadmin.ui;
 
 import javax.swing.*;
 
-public interface ContextMenuEnabledNode <T extends JPopupMenu>{
+public interface ContextMenuEnabledNode<T extends JPopupMenu> {
 
     public boolean hasContextMenu();
 

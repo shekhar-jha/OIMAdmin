@@ -162,7 +162,7 @@ public class OIMAdmin extends JFrame {
                     }
                     logger.trace("Processed tree expansion event", event);
                 } catch (Exception exception) {
-                    logger.warn("Failed to process tree expansion event " + event +" on tree "+ localConnectionTree, exception);
+                    logger.warn("Failed to process tree expansion event " + event + " on tree " + localConnectionTree, exception);
                 }
             }
 
@@ -221,7 +221,7 @@ public class OIMAdmin extends JFrame {
                     }
                     logger.trace("Processed mouse pressed event {} on tree {}", event, localConnectionTree);
                 } catch (Exception exception) {
-                    logger.warn("Failed to process mouse pressed event " + event +" on tree " + localConnectionTree, exception);
+                    logger.warn("Failed to process mouse pressed event " + event + " on tree " + localConnectionTree, exception);
                 }
             }
         });
@@ -320,8 +320,8 @@ public class OIMAdmin extends JFrame {
                     if (uiComponentToObjectMap.containsKey(source)) {
                         UIComponent<? extends JComponent> uiComponentObject = uiComponentToObjectMap.get(source);
                         if (uiComponentObject instanceof AbstractUIComponent) {
-                            if (((AbstractUIComponent)uiComponentObject).destroyComponentOnClose()) {
-                                ((AbstractUIComponent)uiComponentObject).destroy();
+                            if (((AbstractUIComponent) uiComponentObject).destroyComponentOnClose()) {
+                                ((AbstractUIComponent) uiComponentObject).destroy();
                             } else {
                                 logger.trace("Component should not be destroyed on close. Just removing the component from display");
                                 displayArea.remove((JComponent) source);
@@ -345,11 +345,11 @@ public class OIMAdmin extends JFrame {
                 if (objectToUIComponentMap.containsKey(component)) {
                     JComponent uiComponent = objectToUIComponentMap.get(component);
                     logger.trace("Component {} is known to display area. Validating if the associated UI Component {} is being displayed", component, uiComponent);
-                    if (displayArea.indexOfComponent(uiComponent)== -1) {
+                    if (displayArea.indexOfComponent(uiComponent) == -1) {
                         logger.trace("Adding the component {} with name {}", uiComponent, name);
                         displayArea.addTab(name, uiComponent);
                         displayArea.setSelectedComponent(uiComponent);
-                    }else {
+                    } else {
                         logger.trace("Component already present in tabbed pane, activating it ");
                         displayArea.setSelectedComponent(uiComponent);
                     }
@@ -363,7 +363,7 @@ public class OIMAdmin extends JFrame {
                     logger.trace("Adding UI to set of displayed components {}", uiComponentToObjectMap);
                     uiComponentToObjectMap.put(uiComponent, component);
                 }
-            }else {
+            } else {
                 logger.debug("Nothing to do since no component was passed for adding to display area.");
             }
         }
@@ -393,8 +393,8 @@ public class OIMAdmin extends JFrame {
                 try {
                     logger.debug("Trying to destroy {}", component);
                     component.destroy();
-                }catch (Exception exception) {
-                    logger.warn("Failed to destroy component " + component +". Ignoring error.", exception);
+                } catch (Exception exception) {
+                    logger.warn("Failed to destroy component " + component + ". Ignoring error.", exception);
                 }
             }
             logger.debug("Destroyed {}", this);

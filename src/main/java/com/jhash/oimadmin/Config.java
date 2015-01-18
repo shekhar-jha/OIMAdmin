@@ -106,8 +106,8 @@ public class Config {
                     int configurationIndex = -1;
                     try {
                         configurationIndex = Integer.parseUnsignedInt(keyValues[1]);
-                    }catch(NumberFormatException exception) {
-                        logger.warn("Ignoring attribute name " + oimPropertyName + " in configuration (" + configurationLocation +") since it is not in <>.<number>.<> format", exception);
+                    } catch (NumberFormatException exception) {
+                        logger.warn("Ignoring attribute name " + oimPropertyName + " in configuration (" + configurationLocation + ") since it is not in <>.<number>.<> format", exception);
                         continue;
                     }
                     if (configurationIndex > totalConnections) {
@@ -283,7 +283,7 @@ public class Config {
             logger.trace("Validating of the configuration being processed {} = configuration being saved {}", name, configurationBeingSaved);
             if (name.equals(configurationBeingSaved)) {
                 logger.trace("Selecting new configuration and tracking that given configuration has been added");
-                configurationDetail = ((configuration instanceof EditableConfiguration)?((EditableConfiguration)configuration).editableConfiguration:configuration.configuration);
+                configurationDetail = ((configuration instanceof EditableConfiguration) ? ((EditableConfiguration) configuration).editableConfiguration : configuration.configuration);
                 newConfigurationSaved = true;
             } else {
                 logger.trace("Using existing configuration");
@@ -379,8 +379,8 @@ public class Config {
         private final Properties editableConfiguration;
 
         public EditableConfiguration(Configuration configuration) {
-            super(configuration.configuration ,configuration.config);
-            editableConfiguration =new Properties(configuration.configuration);
+            super(configuration.configuration, configuration.config);
+            editableConfiguration = new Properties(configuration.configuration);
         }
 
         @Override

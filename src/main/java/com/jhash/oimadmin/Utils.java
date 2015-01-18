@@ -37,8 +37,8 @@ import java.util.zip.ZipOutputStream;
 
 public class Utils {
 
-    private static final Logger logger = LoggerFactory.getLogger(Utils.class);
     public final static ThreadFactory threadFactory = Executors.defaultThreadFactory();
+    private static final Logger logger = LoggerFactory.getLogger(Utils.class);
 
     public static DiagnosticCollector<JavaFileObject> compileJava(String className, String code,
                                                                   String outputFileLocation) {
@@ -55,7 +55,7 @@ public class Utils {
                             exception);
                 }
             } else {
-                throw new InvalidParameterException("The location " + outputFileLocation +" was expected to be a directory but it is a file.");
+                throw new InvalidParameterException("The location " + outputFileLocation + " was expected to be a directory but it is a file.");
             }
         }
         logger.trace("Creating destination directory for compiled class file");
@@ -90,19 +90,6 @@ public class Utils {
         }
     }
 
-    private static class InMemoryJavaFileObject extends SimpleJavaFileObject {
-        private String contents = null;
-
-        public InMemoryJavaFileObject(String className, String contents) throws Exception {
-            super(URI.create("string:///" + className.replace('.', '/') + Kind.SOURCE.extension), Kind.SOURCE);
-            this.contents = contents;
-        }
-
-        public CharSequence getCharContent(boolean ignoreEncodingErrors) throws IOException {
-            return contents;
-        }
-    }
-
     public static String processString(String content, String[][] replacements) {
         if (replacements != null && replacements.length > 0) {
             for (String[] replacement : replacements) {
@@ -119,7 +106,7 @@ public class Utils {
         InputStream templateStream = null;
         File workAreaDirectory;
         logger.trace("Trying to validate whether workarea {} exists and is a directory", workArea);
-        if (workArea != null && (workAreaDirectory = new File(workArea))!= null && workAreaDirectory.exists() && workAreaDirectory.isDirectory()) {
+        if (workArea != null && (workAreaDirectory = new File(workArea)) != null && workAreaDirectory.exists() && workAreaDirectory.isDirectory()) {
             File templateFile = new File(workAreaDirectory + File.separator + fileName);
             logger.trace("Trying to validate if file {} exists", templateFile);
             if (templateFile.exists() && templateFile.canRead()) {
@@ -127,7 +114,7 @@ public class Utils {
                     logger.trace("Trying to setup {} for reading", templateFile);
                     templateStream = new FileInputStream(templateFile);
                     logger.trace("File can be read using {}", templateStream);
-                }catch (IOException exception) {
+                } catch (IOException exception) {
                     throw new OIMAdminException("Could not read " + templateFile.getAbsolutePath(), exception);
                 }
             }
@@ -252,13 +239,6 @@ public class Utils {
         }
     }
 
-    @FunctionalInterface
-    public static interface JarFileProcessor {
-
-        public void process(JarFile jarFile, JarEntry file);
-
-    }
-
     public static String readFileInJar(JarFile jarFile, JarEntry file) {
         StringBuilder readFileData = new StringBuilder();
         try (BufferedReader jarFileInputStream = new BufferedReader(new InputStreamReader(
@@ -285,7 +265,7 @@ public class Utils {
                     logger.debug("Trying to run operation {}", operationName);
                     operation.run();
                     logger.debug("Completed operation {}.", operationName);
-                }catch(Exception exception){
+                } catch (Exception exception) {
                     logger.warn("Failed to run operation " + operationName, exception);
                 }
             }
@@ -301,5 +281,25 @@ public class Utils {
             return true;
         else
             return false;
+    }
+
+    @FunctionalInterface
+    public static interface JarFileProcessor {
+
+        public void process(JarFile jarFile, JarEntry file);
+
+    }
+
+    private static class InMemoryJavaFileObject extends SimpleJavaFileObject {
+        private String contents = null;
+
+        public InMemoryJavaFileObject(String className, String contents) throws Exception {
+            super(URI.create("string:///" + className.replace('.', '/') + Kind.SOURCE.extension), Kind.SOURCE);
+            this.contents = contents;
+        }
+
+        public CharSequence getCharContent(boolean ignoreEncodingErrors) throws IOException {
+            return contents;
+        }
     }
 }

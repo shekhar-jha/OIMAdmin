@@ -35,8 +35,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -397,7 +395,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                         Utils.createJarFileFromDirectory(javaCompiler.getOutputDirectory(), eventHandlerCodeJar);
                         jarFileLocationLabel.setText(eventHandlerCodeJar);
                     } catch (Exception exception) {
-                        logger.warn("Failed to create jar " + eventHandlerCodeJar +" with Event Handler code available in " + javaCompiler.getOutputDirectory() +" directory", exception);
+                        logger.warn("Failed to create jar " + eventHandlerCodeJar + " with Event Handler code available in " + javaCompiler.getOutputDirectory() + " directory", exception);
                     }
                 }
             });
@@ -476,7 +474,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
             packagePanel = FormBuilder.create().columns("right:pref, 3dlu, pref:grow")
                     .rows("p, 5dlu, p, 5dlu, p, 5dlu, p, 5dlu, p, 5dlu, p, 5dlu, p").border(Borders.DIALOG)
                     .add(generateJarFromClass).xy(1, 1).add(selectJarButton).xy(1, 3).add(jarFileLocationLabel).xy(3, 3)
-                    .add(prepareButton).xy(1, 5).add(selectPrepareButton).xy(1,7).add(pluginFileLocationLabel).xy(3,7)
+                    .add(prepareButton).xy(1, 5).add(selectPrepareButton).xy(1, 7).add(pluginFileLocationLabel).xy(3, 7)
                     .add(registerPlugin).xy(1, 9).add(unregisterPlugin).xy(1, 11).build();
             logger.debug("Initialized {}", this);
         }
@@ -496,7 +494,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                         eventHandlerCodeJarFile.delete();
                     }
                 } catch (Exception exception) {
-                    logger.warn("Could not delete jar file " + eventHandlerCodeJar +" that contains event handler's compiled code", exception);
+                    logger.warn("Could not delete jar file " + eventHandlerCodeJar + " that contains event handler's compiled code", exception);
                 }
                 eventHandlerCodeJar = null;
             }

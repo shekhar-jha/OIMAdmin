@@ -82,7 +82,7 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
             }
             logger.debug("Initialized UI Component");
         } catch (Exception exception) {
-            logger.warn("Failed to initialize component " +this, exception);
+            logger.warn("Failed to initialize component " + this, exception);
             destroyChildNodes();
             logger.debug("Setting node status as {}", OIMAdminTreeNode.NODE_STATE.FAILED);
             setStatus(OIMAdminTreeNode.NODE_STATE.FAILED);
@@ -117,7 +117,7 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
     @Override
     public void destroy() {
         logger.debug("Trying to destroy {}", this);
-        if (getStatus() == NODE_STATE.INITIALIZED || getStatus() ==NODE_STATE.INITIALIZED_NO_OP) {
+        if (getStatus() == NODE_STATE.INITIALIZED || getStatus() == NODE_STATE.INITIALIZED_NO_OP) {
             logger.debug("Node in {} state, setting status to {} before destroying", getStatus(), NODE_STATE.DESTRUCTION_IN_PROGRESS);
             setStatus(NODE_STATE.DESTRUCTION_IN_PROGRESS);
             destroyChildNodes();
@@ -143,7 +143,7 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
                     ((UIComponent) childNode).destroy();
                     logger.trace("Destroyed child node {}", childNode);
                 } catch (Exception exception) {
-                    logger.warn("Error occurred while destroying child node " + childNode +" of node "+this + ". Ignoring error", exception);
+                    logger.warn("Error occurred while destroying child node " + childNode + " of node " + this + ". Ignoring error", exception);
                 }
             }
             selectionTree.removeChildNode(this, childNode);

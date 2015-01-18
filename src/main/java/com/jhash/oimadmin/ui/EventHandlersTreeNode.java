@@ -29,7 +29,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.*;
 
-public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<OIMJMXWrapper> implements ContextMenuEnabledNode{
+public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<OIMJMXWrapper> implements ContextMenuEnabledNode {
 
     private static final Logger logger = LoggerFactory.getLogger(EventHandlersTreeNode.class);
 
@@ -124,7 +124,7 @@ public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<OIMJMXWra
                 connection.destroy();
                 newEventHandlerMenu.setEnabled(false);
             } catch (Exception exception) {
-                logger.warn("Failed to destroy JMX Connection " + connection +". Ignoring error.", exception);
+                logger.warn("Failed to destroy JMX Connection " + connection + ". Ignoring error.", exception);
             }
             connection = null;
         }
