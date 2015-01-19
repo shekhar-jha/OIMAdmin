@@ -21,6 +21,7 @@ import com.jgoodies.forms.layout.CellConstraints;
 import com.jgoodies.forms.layout.FormLayout;
 import com.jgoodies.jsdl.component.JGComponentFactory;
 import com.jhash.oimadmin.Config;
+import com.jhash.oimadmin.Connection;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.oim.JMXConnection;
 import com.jhash.oimadmin.oim.OIMConnection;
@@ -179,8 +180,12 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
         saveButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                logger.debug("Trying to same configuration {}", connectionDetails);
-                connectionDetails.getConfig().saveConfiguration(connectionDetails);
+                logger.debug("Trying to save configuration {}", connectionDetails);
+                connectionDetails.getConfig().saveConfiguration(connectionDetails, false);
+                String connectionName = connectionDetails.getProperty(Connection.ATTR_CONN_NAME);
+                if (isNewConnection)
+                    ConnectionTreeNode.ConnectionsRegisterUI.addNewNode(connectionName, connectionDetails.getConfig(), selectionTree, displayArea);
+                destroy();
                 logger.debug("Saved configuration");
             }
         });

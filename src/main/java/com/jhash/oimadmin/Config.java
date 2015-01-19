@@ -265,7 +265,11 @@ public class Config {
         return workArea;
     }
 
-    public void saveConfiguration(Configuration configuration) {
+    public void deleteConfiguration(String configurationName) {
+        saveConfiguration(new EditableConfiguration(getConnectionDetails(configurationName)), true);
+    }
+
+    public void saveConfiguration(EditableConfiguration configuration, boolean remove) {
         logger.debug("Trying to save configuration {}", configuration);
         Properties configurationFile = new Properties();
         boolean newConfigurationSaved = false;
@@ -282,9 +286,18 @@ public class Config {
             Properties configurationDetail = null;
             logger.trace("Validating of the configuration being processed {} = configuration being saved {}", name, configurationBeingSaved);
             if (name.equals(configurationBeingSaved)) {
-                logger.trace("Selecting new configuration and tracking that given configuration has been added");
-                configurationDetail = ((configuration instanceof EditableConfiguration) ? ((EditableConfiguration) configuration).editableConfiguration : configuration.configuration);
-                newConfigurationSaved = true;
+                if (remove) {
+                    logger.trace("Removing configuration from the map");
+                    this.oimConnectionConfiguration.remove(configurationBeingSaved);
+                    logger.trace("Located configuration to be removed, setting the location to null");
+                    oimConnectionNames.set(counter, null);
+                    logger.trace("No additional processing needed for this item, so skipping");
+                    continue;
+                } else {
+                    logger.trace("Selecting new configuration and tracking that given configuration has been added");
+                    configurationDetail =configuration.editableConfiguration;
+                    newConfigurationSaved = true;
+                }
             } else {
                 logger.trace("Using existing configuration");
                 configurationDetail = oimConnectionConfiguration.get(name);
@@ -297,12 +310,15 @@ public class Config {
                 configurationFile.setProperty("sysadmin." + counter + "." + attributeName, configurationDetail.getProperty(attributeName));
             }
         }
-        if (!newConfigurationSaved) {
+        logger.trace("Trying to validate whether given configuration has already been added or needs to be removed");
+        if (!newConfigurationSaved && !remove) {
             logger.trace("Adding the new configuration {} to configuration", configuration);
-            Properties configurationDetail = ((configuration instanceof EditableConfiguration) ? ((EditableConfiguration) configuration).editableConfiguration : configuration.configuration);
+            Properties configurationDetail = configuration.editableConfiguration;
             for (String attributeName : configurationDetail.stringPropertyNames()) {
                 configurationFile.setProperty("sysadmin." + counter + "." + attributeName, configurationDetail.getProperty(attributeName));
             }
+            this.oimConnectionNames.add(counter, configurationBeingSaved);
+            this.oimConnectionConfiguration.put(configurationBeingSaved, configurationDetail);
         }
         File configurationFileObject = new File(configurationLocation);
         if (configurationFileObject.exists() && configurationFileObject.canWrite()) {
@@ -312,6 +328,8 @@ public class Config {
             } catch (Exception exception) {
                 throw new OIMAdminException("Error occurred while saving updated configuration", exception);
             }
+            logger.trace("Updating the parent configuration with new values since the save is successful.");
+            configuration.syncProperties();
         } else {
             throw new OIMAdminException("Error occurred while saving updated configuration", new IOException("Configuration file " + configurationLocation + " either does not exist or is not writable. Can not save the configuration."));
         }
@@ -352,7 +370,7 @@ public class Config {
         private final Config config;
 
         private Configuration(Properties properties, Config config) {
-            configuration = (Properties) properties.clone();
+            configuration = properties;
             this.config = config;
         }
 
@@ -390,6 +408,12 @@ public class Config {
 
         public void setProperty(String propertyName, String value) {
             editableConfiguration.setProperty(propertyName, value);
+        }
+
+        private void syncProperties() {
+            for (String attributeName: editableConfiguration.stringPropertyNames()) {
+                super.configuration.setProperty(attributeName, editableConfiguration.getProperty(attributeName));
+            }
         }
     }
 }

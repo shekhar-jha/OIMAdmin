@@ -16,10 +16,7 @@
 
 package com.jhash.oimadmin.ui;
 
-import com.jhash.oimadmin.Config;
-import com.jhash.oimadmin.OIMAdminTreeNode;
-import com.jhash.oimadmin.UIComponentTree;
-import com.jhash.oimadmin.Utils;
+import com.jhash.oimadmin.*;
 import com.jhash.oimadmin.oim.OIMConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +33,7 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
     private ConnectionDetails connectionDetailsUI;
     private JPopupMenu popupMenu;
     private JMenuItem refreshMenu;
+    private JMenuItem deleteConnectionMenuItem;
 
     public ConnectionTreeNode(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
@@ -55,8 +53,20 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
                 logger.debug("Completed Reconnect Trigger");
             }
         });
+        deleteConnectionMenuItem = new JMenuItem("Delete");
+        deleteConnectionMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                logger.debug("Started Delete Trigger");
+                ConnectionTreeNode.this.destroy();
+                configuration.getConfig().deleteConfiguration(configuration.getProperty(Connection.ATTR_CONN_NAME));
+                selectionTree.removeChildNode((OIMAdminTreeNode) getParent(), ConnectionTreeNode.this);
+                logger.debug("Completed Delete Trigger");
+            }
+        });
         popupMenu = new JPopupMenu();
         popupMenu.add(refreshMenu);
+        popupMenu.add(deleteConnectionMenuItem);
     }
 
     @Override
@@ -136,6 +146,11 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
             }
         }
 
+        public static void addNewNode(String oimConnectionName, Config configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+            OIMAdminTreeNode rootNode = selectionTree.getRootNode();
+            selectionTree.addChildNode(rootNode, new ConnectionTreeNode(oimConnectionName, configuration.getConnectionDetails(oimConnectionName), selectionTree, displayArea));
+        }
+
         @Override
         public void registerSelectionTree(Config configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
             OIMAdminTreeNode rootNode = selectionTree.getRootNode();
@@ -143,7 +158,7 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
                 throw new NullPointerException("Failed to locate the root node for selection tree. Can not add any connections.");
             for (String oimConnectionName : configuration.getConnectionNames()) {
                 logger.debug("Adding Node for connection {}", oimConnectionName);
-                selectionTree.addChildNode(rootNode, new ConnectionTreeNode(oimConnectionName, configuration.getConnectionDetails(oimConnectionName), selectionTree, displayArea));
+                addNewNode(oimConnectionName, configuration, selectionTree, displayArea);
             }
         }
 
