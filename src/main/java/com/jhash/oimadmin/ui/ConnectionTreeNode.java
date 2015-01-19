@@ -128,6 +128,11 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
 
     public static class ConnectionsRegisterUI implements RegisterUI {
 
+        public static void addNewNode(String oimConnectionName, Config configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+            OIMAdminTreeNode rootNode = selectionTree.getRootNode();
+            selectionTree.addChildNode(rootNode, new ConnectionTreeNode(oimConnectionName, configuration.getConnectionDetails(oimConnectionName), selectionTree, displayArea));
+        }
+
         @Override
         public void registerMenu(Config configuration, JMenuBar menu, Map<OIMAdmin.STANDARD_MENUS, JMenu> commonMenus, UIComponentTree selectionTree, DisplayArea displayArea) {
             if (commonMenus != null && commonMenus.containsKey(OIMAdmin.STANDARD_MENUS.NEW)) {
@@ -144,11 +149,6 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
                 });
                 commonMenus.get(OIMAdmin.STANDARD_MENUS.NEW).add(newConnectionMenuItem);
             }
-        }
-
-        public static void addNewNode(String oimConnectionName, Config configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
-            OIMAdminTreeNode rootNode = selectionTree.getRootNode();
-            selectionTree.addChildNode(rootNode, new ConnectionTreeNode(oimConnectionName, configuration.getConnectionDetails(oimConnectionName), selectionTree, displayArea));
         }
 
         @Override

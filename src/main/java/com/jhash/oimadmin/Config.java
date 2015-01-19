@@ -295,7 +295,7 @@ public class Config {
                     continue;
                 } else {
                     logger.trace("Selecting new configuration and tracking that given configuration has been added");
-                    configurationDetail =configuration.editableConfiguration;
+                    configurationDetail = configuration.editableConfiguration;
                     newConfigurationSaved = true;
                 }
             } else {
@@ -411,7 +411,7 @@ public class Config {
         }
 
         private void syncProperties() {
-            for (String attributeName: editableConfiguration.stringPropertyNames()) {
+            for (String attributeName : editableConfiguration.stringPropertyNames()) {
                 super.configuration.setProperty(attributeName, editableConfiguration.getProperty(attributeName));
             }
         }
