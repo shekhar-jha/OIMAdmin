@@ -224,6 +224,44 @@ public class OIMAdmin extends JFrame {
                     logger.warn("Failed to process mouse pressed event " + event + " on tree " + localConnectionTree, exception);
                 }
             }
+
+            public void mouseReleased(MouseEvent event) {
+                logger.trace("Processing mouse pressed event {} on tree {}", event, localConnectionTree);
+                try {
+                    logger.trace("Trying to locate the row of tree on which event occurred.");
+                    int selRow = localConnectionTree.getRowForLocation(event.getX(), event.getY());
+                    if (selRow != -1) {
+                        logger.trace("Trying to locate the node on which event occurred");
+                        TreePath selPath = localConnectionTree.getPathForLocation(event.getX(), event.getY());
+                        logger.trace("Validating whether event is a popup trigger");
+                        if (event.isPopupTrigger()) {
+                            Object clickedNodeObject = selPath.getLastPathComponent();
+                            logger.trace("Trying to validate whether we have received identifiable node detail");
+                            if (clickedNodeObject != null && clickedNodeObject instanceof OIMAdminTreeNode) {
+                                if (clickedNodeObject instanceof ContextMenuEnabledNode) {
+                                    ContextMenuEnabledNode menuEnabledNode = (ContextMenuEnabledNode) clickedNodeObject;
+                                    if (menuEnabledNode.hasContextMenu()) {
+                                        JPopupMenu popupMenu = menuEnabledNode.getContextMenu();
+                                        if (popupMenu != null) {
+                                            popupMenu.show(event.getComponent(), event.getX(), event.getY());
+                                        }
+                                    }
+                                }
+                            } else {
+                                logger.trace("Failed to locate OIMAdminTreeNode node {} that was clicked", clickedNodeObject);
+                            }
+                        } else {
+                            logger.trace("No popup event was detected. Ignoring event");
+                        }
+                    } else {
+                        logger.trace("The event occurred at a location that did not correspond to a row. Ignoring the event");
+                    }
+                    logger.trace("Processed mouse pressed event {} on tree {}", event, localConnectionTree);
+                } catch (Exception exception) {
+                    logger.warn("Failed to process mouse pressed event " + event + " on tree " + localConnectionTree, exception);
+                }
+            }
+
         });
         UIComponentTreeImpl localComponentTree = new UIComponentTreeImpl(localConnectionTree);
         root.setUIComponentTree(localComponentTree);
