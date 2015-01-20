@@ -62,7 +62,9 @@ public class Utils {
         outputFileDirectory.mkdirs();
 
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-
+        if (compiler == null) {
+            throw new NullPointerException("Failed to locate a java compiler. Please ensure that application is being run using JDK (Java Development Kit) and NOT JRE (Java Runtime Environment) ");
+        }
         StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null);
 
         Iterable<File> files = Arrays.asList(new File(outputFileLocation));
