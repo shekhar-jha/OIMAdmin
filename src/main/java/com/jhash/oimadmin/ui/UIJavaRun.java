@@ -61,6 +61,7 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
     JGTable programArguments;
     JGTable environmentVariable;
     private JPanel uiJavaRunPanel;
+    Process runningProcess;
 
     public UIJavaRun(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
@@ -260,7 +261,7 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
         processBuilder.redirectErrorStream(true);
         try {
             logger.debug("Trying to start process {}", processBuilder.command());
-            Process runningProcess = processBuilder.start();
+            runningProcess = processBuilder.start();
             logger.debug("Attaching listener to write input to process's output stream");
             input.addActionListener(new ActionListener() {
                 @Override

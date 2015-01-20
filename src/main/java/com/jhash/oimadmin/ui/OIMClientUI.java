@@ -19,6 +19,7 @@ package com.jhash.oimadmin.ui;
 import com.jgoodies.jsdl.common.builder.FormBuilder;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
+import com.jhash.oimadmin.Utils;
 import com.jidesoft.swing.JideSplitPane;
 import com.jidesoft.swing.JideTabbedPane;
 import org.slf4j.Logger;
@@ -70,6 +71,21 @@ public class OIMClientUI extends AbstractUIComponent<JPanel> {
             public void actionPerformed(ActionEvent e) {
                 try {
                     javaRun.run();
+                    if (javaRun.runningProcess != null) {
+                        executeButton.setEnabled(false);
+                        Utils.executeAsyncOperation("Waiting for Process " + javaRun.runningProcess, new Runnable() {
+                            @Override
+                            public void run() {
+                                try {
+                                    javaRun.runningProcess.waitFor();
+                                    executeButton.setEnabled(true);
+                                }catch (Exception exception) {
+                                    logger.warn("Failed to wait for process " + javaRun.runningProcess +" to complete");
+                                }
+
+                            }
+                        });
+                    }
                 } catch (Exception exception) {
                     logger.warn("Execution failed", exception);
                 }
