@@ -1,0 +1,264 @@
+
+import java.util.Hashtable;
+
+import oracle.iam.platform.OIMClient;
+import oracle.iam.platformservice.api.PlatformUtilsService;
+
+public class OIMClientServices {
+
+   private static final String OIM_URL = "t3://localhost:14000/";
+   protected static final String OIM_PASSWORD = "Demo1234";
+
+   private static final String AUTH_CONF = "conf/authwl.conf";
+   protected static final String OIM_USERNAME = "xelsysadm";
+
+   protected static final String NULL = "(null)";
+   protected static final String NL = "\n";
+   protected static final String SP = "\t";
+   protected OIMClient _oimClient = null;
+
+   /* Class Names with @Service class annotation in oimclient.jar */
+   protected String[] oimClientServiceNames = new String[]{
+//"Thor.API.Base.tcUtilityOperationsIntf",
+"Thor.API.Operations.AttestationDefinitionOperationsIntf",
+"Thor.API.Operations.AttestationOperationsIntf",
+"Thor.API.Operations.ConnectorInstallationOperationsIntf",
+"Thor.API.Operations.DataCollectionOperationsIntf",
+"Thor.API.Operations.ErrorOperationsIntf",
+//"Thor.API.Operations.GCOperationsIntf",
+//"Thor.API.Operations.RemoteManagerOperationsIntf",
+"Thor.API.Operations.TaskDefinitionOperationsIntf",
+"Thor.API.Operations.tcAccessPolicyOperationsIntf",
+"Thor.API.Operations.tcAdapterOperationsIntf",
+"Thor.API.Operations.tcAuditOperationsIntf",
+"Thor.API.Operations.tcEmailOperationsIntf",
+"Thor.API.Operations.tcEntitlementsOperationsIntf",
+"Thor.API.Operations.tcExportOperationsIntf",
+"Thor.API.Operations.tcFormDefinitionOperationsIntf",
+"Thor.API.Operations.tcFormInstanceOperationsIntf",
+"Thor.API.Operations.tcGroupOperationsIntf",
+"Thor.API.Operations.tcHelpOperationsIntf",
+//"Thor.API.Operations.tcImportOperationsIntf",
+"Thor.API.Operations.tcITResourceDefinitionOperationsIntf",
+"Thor.API.Operations.tcITResourceInstanceOperationsIntf",
+"Thor.API.Operations.tcLookupOperationsIntf",
+"Thor.API.Operations.tcObjectOperationsIntf",
+"Thor.API.Operations.tcOrganizationOperationsIntf",
+"Thor.API.Operations.tcPasswordOperationsIntf",
+"Thor.API.Operations.tcPermissionOperationsIntf",
+"Thor.API.Operations.tcPropertyOperationsIntf",
+"Thor.API.Operations.tcProvisioningOperationsIntf",
+"Thor.API.Operations.tcQueueOperationsIntf",
+"Thor.API.Operations.tcReconciliationOperationsIntf",
+"Thor.API.Operations.tcSchedulerOperationsIntf",
+"Thor.API.Operations.tcScheduleTaskOperationsIntf",
+//"Thor.API.Operations.tcUnauthenticatedOperationsIntf",
+"Thor.API.Operations.tcUserOperationsIntf",
+"Thor.API.Operations.tcWorkflowDefinitionOperationsIntf",
+//"com.thortech.xl.ejb.interfaces.tcAAP",
+//"com.thortech.xl.ejb.interfaces.tcACT",
+//"com.thortech.xl.ejb.interfaces.tcADJ",
+//"com.thortech.xl.ejb.interfaces.tcADL",
+//"com.thortech.xl.ejb.interfaces.tcADM",
+//"com.thortech.xl.ejb.interfaces.tcADP",
+//"com.thortech.xl.ejb.interfaces.tcADS",
+//"com.thortech.xl.ejb.interfaces.tcADT",
+//"com.thortech.xl.ejb.interfaces.tcADU",
+//"com.thortech.xl.ejb.interfaces.tcADV",
+//"com.thortech.xl.ejb.interfaces.tcARS",
+//"com.thortech.xl.ejb.interfaces.tcAtomicProcess",
+//"com.thortech.xl.ejb.interfaces.tcATP",
+"com.thortech.xl.ejb.interfaces.tcDataBase",
+//"com.thortech.xl.ejb.interfaces.tcDAV",
+//"com.thortech.xl.ejb.interfaces.tcDEP",
+//"com.thortech.xl.ejb.interfaces.tcDOB",
+//"com.thortech.xl.ejb.interfaces.tcDVT",
+//"com.thortech.xl.ejb.interfaces.tcEMD",
+//"com.thortech.xl.ejb.interfaces.tcERR",
+//"com.thortech.xl.ejb.interfaces.tcEVT",
+//"com.thortech.xl.ejb.interfaces.tcFUG",
+//"com.thortech.xl.ejb.interfaces.tcLKU",
+//"com.thortech.xl.ejb.interfaces.tcLKV",
+//"com.thortech.xl.ejb.interfaces.tcMAV",
+//"com.thortech.xl.ejb.interfaces.tcMEV",
+//"com.thortech.xl.ejb.interfaces.tcMIL",
+//"com.thortech.xl.ejb.interfaces.tcMSG",
+//"com.thortech.xl.ejb.interfaces.tcMST",
+//"com.thortech.xl.ejb.interfaces.tcOBA",
+//"com.thortech.xl.ejb.interfaces.tcOBD",
+//"com.thortech.xl.ejb.interfaces.tcOBJ",
+//"com.thortech.xl.ejb.interfaces.tcObject",
+//"com.thortech.xl.ejb.interfaces.tcODF",
+//"com.thortech.xl.ejb.interfaces.tcODV",
+//"com.thortech.xl.ejb.interfaces.tcOQE",
+//"com.thortech.xl.ejb.interfaces.tcORF",
+//"com.thortech.xl.ejb.interfaces.tcORR",
+//"com.thortech.xl.ejb.interfaces.tcOST",
+//"com.thortech.xl.ejb.interfaces.tcOUG",
+//"com.thortech.xl.ejb.interfaces.tcPKG",
+//"com.thortech.xl.ejb.interfaces.tcPrePopulateUtility",
+//"com.thortech.xl.ejb.interfaces.tcPRF",
+"com.thortech.xl.ejb.interfaces.tcProcessUtilities",
+//"com.thortech.xl.ejb.interfaces.tcPUG",
+//"com.thortech.xl.ejb.interfaces.tcPWP",
+//"com.thortech.xl.ejb.interfaces.tcPWR",
+//"com.thortech.xl.ejb.interfaces.tcPWT",
+//"com.thortech.xl.ejb.interfaces.tcQUE",
+//"com.thortech.xl.ejb.interfaces.tcQUG",
+//"com.thortech.xl.ejb.interfaces.tcQUM",
+//"com.thortech.xl.ejb.interfaces.tcRAO",
+//"com.thortech.xl.ejb.interfaces.tcRAV",
+//"com.thortech.xl.ejb.interfaces.tcRES",
+//"com.thortech.xl.ejb.interfaces.tcRGM",
+//"com.thortech.xl.ejb.interfaces.tcRGP",
+//"com.thortech.xl.ejb.interfaces.tcRGS",
+//"com.thortech.xl.ejb.interfaces.tcRML",
+//"com.thortech.xl.ejb.interfaces.tcROP",
+//"com.thortech.xl.ejb.interfaces.tcRPW",
+//"com.thortech.xl.ejb.interfaces.tcRRE",
+//"com.thortech.xl.ejb.interfaces.tcRRL",
+//"com.thortech.xl.ejb.interfaces.tcRRT",
+//"com.thortech.xl.ejb.interfaces.tcRSC",
+//"com.thortech.xl.ejb.interfaces.tcRUE",
+//"com.thortech.xl.ejb.interfaces.tcRUG",
+//"com.thortech.xl.ejb.interfaces.tcRUL",
+//"com.thortech.xl.ejb.interfaces.tcRVM",
+//"com.thortech.xl.ejb.interfaces.tcSDC",
+//"com.thortech.xl.ejb.interfaces.tcSDH",
+//"com.thortech.xl.ejb.interfaces.tcSDK",
+//"com.thortech.xl.ejb.interfaces.tcSDL",
+//"com.thortech.xl.ejb.interfaces.tcSDP",
+//"com.thortech.xl.ejb.interfaces.tcSEC",
+//"com.thortech.xl.ejb.interfaces.tcSEL",
+//"com.thortech.xl.ejb.interfaces.tcSGK",
+//"com.thortech.xl.ejb.interfaces.tcSPD",
+//"com.thortech.xl.ejb.interfaces.tcSRE",
+//"com.thortech.xl.ejb.interfaces.tcSTA",
+//"com.thortech.xl.ejb.interfaces.tcSUG",
+//"com.thortech.xl.ejb.interfaces.tcSVD",
+//"com.thortech.xl.ejb.interfaces.tcSVR",
+//"com.thortech.xl.ejb.interfaces.tcTOS",
+//"com.thortech.xl.ejb.interfaces.tcUGP",
+//"com.thortech.xl.ejb.interfaces.tcUNM",
+//"com.thortech.xl.ejb.interfaces.tcUWP",
+//"com.thortech.xl.ejb.interfaces.tcWIN",
+//"com.thortech.xl.scheduler.interfaces.SchedulerController",
+"com.thortech.xl.systemverification.api.DDKernelService",
+"oracle.iam.accesspolicy.api.AccessPolicyService",
+"oracle.iam.accesspolicy.api.AccessPolicyServiceInternal",
+"oracle.iam.api.OIMService",
+//"oracle.iam.autoroles.api.AutoRolesService",
+"oracle.iam.callbacks.api.CallbackService",
+"oracle.iam.catalog.api.CatalogService",
+"oracle.iam.catalog.api.MetaDataDefinitionManager",
+"oracle.iam.catalog.harvest.api.HarvestCatalog",
+"oracle.iam.certification.api.CertificationAdministrationService",
+"oracle.iam.certification.api.CertificationService",
+"oracle.iam.conf.api.SystemConfigurationService",
+"oracle.iam.configservice.api.ConfigManager",
+"oracle.iam.connectormgmt.api.ConnectorMgmtService",
+"oracle.iam.connectors.icfintg.api.ConnectorBundleService",
+"oracle.iam.diagnostic.api.DiagnosticService",
+"oracle.iam.grc.sod.api.SILService",
+"oracle.iam.identity.orgmgmt.api.OrganizationManager",
+"oracle.iam.identity.rolemgmt.api.RoleCategoryManager",
+"oracle.iam.identity.rolemgmt.api.RoleManager",
+"oracle.iam.identity.usermgmt.api.UserManager",
+"oracle.iam.idmobj.api.MigrationService",
+"oracle.iam.notification.api.NotificationService",
+"oracle.iam.OIMMigration.api.OIMMigrationService",
+"oracle.iam.oimtoldap.api.SeedOIMDataInLDAP",
+"oracle.iam.passwordmgmt.api.ChallengeResponseService",
+"oracle.iam.passwordmgmt.api.PasswordMgmtService",
+//"oracle.iam.platform.authopss.api.AdminRoleService",
+//"oracle.iam.platform.authopss.api.AdminRoleServiceInternal",
+//"oracle.iam.platform.authopss.api.AuthorizationService",
+//"oracle.iam.platform.authopss.api.EntityPublicationService",
+//"oracle.iam.platform.authopss.api.EntityPublicationServiceInternal",
+"oracle.iam.platformservice.api.AdminRoleService",
+"oracle.iam.platformservice.api.AuthorizationOPSSService",
+"oracle.iam.platformservice.api.ClientLoginSessionService",
+"oracle.iam.platformservice.api.EntityPublicationService",
+//"oracle.iam.platformservice.api.FailedTaskManager",
+"oracle.iam.platformservice.api.LookupQueryService",
+"oracle.iam.platformservice.api.PlatformService",
+"oracle.iam.platformservice.api.PlatformUtilsService",
+//"oracle.iam.platformservice.api.WorkflowRegistrationService",
+"oracle.iam.provisioning.api.ApplicationInstanceInternalService",
+"oracle.iam.provisioning.api.ApplicationInstanceService",
+"oracle.iam.provisioning.api.EntitlementService",
+"oracle.iam.provisioning.api.ProvisioningService",
+"oracle.iam.provisioning.api.ProvisioningServiceInternal",
+"oracle.iam.reconciliation.api.EventMgmtService",
+"oracle.iam.reconciliation.api.ReconConfigService",
+"oracle.iam.reconciliation.api.ReconOperationsService",
+"oracle.iam.request.api.ApprovalPolicyService",
+//"oracle.iam.request.api.RequestDataSetInternalService",
+"oracle.iam.request.api.RequestDataSetService",
+//"oracle.iam.request.api.RequestInternalService",
+"oracle.iam.request.api.RequestService",
+"oracle.iam.request.api.RequestTemplateService",
+//"oracle.iam.request.api.UnauthenticatedInternalRequestService",
+"oracle.iam.request.api.UnauthenticatedRequestService",
+"oracle.iam.requestprofile.api.RequestProfileService",
+"oracle.iam.rolesod.api.RoleSODService",
+"oracle.iam.scheduler.api.SchedulerService",
+"oracle.iam.selfservice.self.selfmgmt.api.AuthenticatedSelfService",
+"oracle.iam.selfservice.uself.uselfmgmt.api.UnauthenticatedSelfService",
+"oracle.iam.sod.api.SODCheckService",
+"oracle.iam.templatefeature.api.templatefeatureService"};
+
+   public OIMClientServices() throws Exception
+   {
+      Hashtable<String, String> env = new Hashtable<String, String>();
+
+      env.put(OIMClient.JAVA_NAMING_FACTORY_INITIAL, "weblogic.jndi.WLInitialContextFactory");
+      env.put(OIMClient.JAVA_NAMING_PROVIDER_URL, OIM_URL);
+
+      // System.setProperty("weblogic.Name", "oim_server1");
+      // System.setProperty("APPSERVER_TYPE", "wls");
+      // System.setProperty("java.security.auth.login.config", AUTH_CONF);
+      log("Trying to create OIM Client " + env);
+      _oimClient = new OIMClient(env);
+      log("Created OIM Client " + _oimClient + ", login as " + OIM_USERNAME);
+      _oimClient.login(OIM_USERNAME, OIM_PASSWORD.toCharArray());
+      log("Login successful");
+      return;
+   }
+   
+   public void checkServices() {
+      log("Starting check services...");
+      for (String oimServiceClassName : oimClientServiceNames) {
+            Class oimServiceClass = null;
+            try {
+              oimServiceClass = Class.forName(oimServiceClassName);
+            }catch(Error exception) {
+              log("Class " + oimServiceClassName + " not found");
+              continue;
+            }catch(Exception exception) {
+              log("Class " + oimServiceClassName + " not found");
+              continue;
+            }
+            try {
+               _oimClient.getService(oimServiceClass);
+               //log("Validated " + oimServiceClass);
+            }catch(Exception exception) {
+                log ("Class " + oimServiceClass + " can not be located through OIMClient");
+            }
+      }
+      log("Completed check services");
+   }
+
+   public static void log(String str)
+   {
+      if (str != null)
+      {
+         System.out.println("LOG: " + str);
+      }
+   }
+
+   public static void main(String[] args) throws Exception {
+      OIMClientServices client = new OIMClientServices();
+      client.checkServices();
+   }
+}
