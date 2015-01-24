@@ -23,6 +23,7 @@ import com.jgoodies.jsdl.component.JGComponentFactory;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.Connection;
 import com.jhash.oimadmin.UIComponentTree;
+import com.jhash.oimadmin.oim.DBConnection;
 import com.jhash.oimadmin.oim.JMXConnection;
 import com.jhash.oimadmin.oim.OIMConnection;
 import org.slf4j.Logger;
@@ -31,10 +32,7 @@ import org.slf4j.LoggerFactory;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
+import java.awt.event.*;
 import java.io.File;
 
 public class ConnectionDetails extends AbstractUIComponent<JPanel> {
@@ -53,6 +51,11 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
     private JTextField jmxPort = JGComponentFactory.getCurrent().createTextField();
     private JTextField jmxUser = JGComponentFactory.getCurrent().createTextField();
     private JTextField jmxUserPassword = JGComponentFactory.getCurrent().createPasswordField();
+    private JTextField dbJDBCDriverClass = JGComponentFactory.getCurrent().createTextField();
+    private JTextField dbJDBCURL = JGComponentFactory.getCurrent().createTextField();
+    private JTextField dbUser = JGComponentFactory.getCurrent().createTextField();
+    private JTextField dbPassword = JGComponentFactory.getCurrent().createPasswordField();
+    private JCheckBox dbAutoCommit = JGComponentFactory.getCurrent().createCheckBox("Autocommit?");
     private JPanel displayComponent = null;
     private boolean isNewConnection = false;
 
@@ -106,6 +109,25 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
         int selectedItemIndex = Config.PLATFORM.valuesAsString().indexOf(connectionDetails.getProperty(OIMConnection.ATTR_CONN_PLATFORM, "weblogic"));
         logger.debug("Selected Item index {}", selectedItemIndex);
         platform.setSelectedIndex(selectedItemIndex);
+        dbJDBCDriverClass.getDocument().addDocumentListener(new StandardDocumentListener(dbJDBCDriverClass, connectionDetails, DBConnection.ATTR_DB_JDBC));
+        dbJDBCDriverClass.setText(connectionDetails.getProperty(DBConnection.ATTR_DB_JDBC, "oracle.jdbc.driver.OracleDriver"));
+        dbJDBCURL.getDocument().addDocumentListener(new StandardDocumentListener(dbJDBCURL, connectionDetails, DBConnection.ATTR_DB_URL));
+        dbJDBCURL.setText(connectionDetails.getProperty(DBConnection.ATTR_DB_URL, "jdbc:oracle:thin:@<dbhost>:<dbport>:<service name>"));
+        dbUser.getDocument().addDocumentListener(new StandardDocumentListener(dbUser, connectionDetails, DBConnection.ATTR_DB_USER));
+        dbUser.setText(connectionDetails.getProperty(DBConnection.ATTR_DB_USER, "DEV_OIM"));
+        dbPassword.getDocument().addDocumentListener(new StandardDocumentListener(dbPassword, connectionDetails, DBConnection.ATTR_DB_PWD));
+        dbPassword.setText(connectionDetails.getProperty(DBConnection.ATTR_DB_PWD));
+        dbAutoCommit.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange()==ItemEvent.SELECTED) {
+                    connectionDetails.setProperty(DBConnection.ATTR_DB_AUTOCOMMIT, "true");
+                } else {
+                    connectionDetails.setProperty(DBConnection.ATTR_DB_AUTOCOMMIT, "false");
+                }
+            }
+        });
+        dbAutoCommit.setSelected(Boolean.parseBoolean(connectionDetails.getProperty(DBConnection.ATTR_DB_AUTOCOMMIT)));
         displayComponent = buildComponent();
         logger.debug("Initialized {}", this);
     }
@@ -118,7 +140,7 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
     private JPanel buildComponent() {
         FormLayout eventHandlerFormLayout = new FormLayout(
                 "3dlu, right:pref, 3dlu, pref:grow, 5dlu, right:pref, 3dlu, pref:grow, 5dlu",
-                "5dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 5dlu,p, 5dlu");
+                "5dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu,p, 3dlu, p, 3dlu, p, 3dlu, p,3dlu, p, 3dlu, p ");
         eventHandlerFormLayout.setColumnGroups(new int[][]{{2, 6}});
         CellConstraints cellConstraint = new CellConstraints();
         PanelBuilder builder = new PanelBuilder(eventHandlerFormLayout);
@@ -176,6 +198,42 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
         builder.add(jmxUser, cellConstraint.xy(4, 16));
         builder.addLabel("Password", cellConstraint.xy(6, 16));
         builder.add(jmxUserPassword, cellConstraint.xy(8, 16));
+
+        builder.addSeparator("Database", cellConstraint.xyw(2, 18, 5));
+        JButton testDBButton = JGComponentFactory.getCurrent().createButton("Test");
+        testDBButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                logger.debug("Trying to test connection using configuration {}", connectionDetails);
+                DBConnection connection = new DBConnection();
+                try {
+                    connection.initialize(connectionDetails);
+                }catch (Exception exception) {
+                    logger.error("Failed to create connection using details", exception);
+                }
+                try {
+                    connection.destroy();
+                }catch (Exception exception) {
+                    logger.warn("Failed to destroy new connection. Ignoring error", exception);
+                }
+                logger.debug("Tested connection");
+            }
+        });
+        builder.add(testDBButton, cellConstraint.xy(8,18));
+
+        builder.addLabel("Driver Class", cellConstraint.xy(2, 20));
+        builder.add(dbJDBCDriverClass, cellConstraint.xy(4, 20));
+        builder.addLabel("JDBC URL", cellConstraint.xy(6, 20));
+        builder.add(dbJDBCURL, cellConstraint.xy(8,20));
+
+        builder.addLabel("User", cellConstraint.xy(2,22));
+        builder.add(dbUser, cellConstraint.xy(4,22));
+        builder.addLabel("Password", cellConstraint.xy(6, 22));
+        builder.add(dbPassword, cellConstraint.xy(8,22));
+
+        builder.add(dbAutoCommit, cellConstraint.xy(4,24));
+
+
         JButton saveButton = JGComponentFactory.getCurrent().createButton("&Save");
         saveButton.addActionListener(new ActionListener() {
             @Override
@@ -196,8 +254,8 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
                 destroy();
             }
         });
-        builder.add(saveButton, cellConstraint.xy(4, 18));
-        builder.add(cancelButton, cellConstraint.xy(6, 18));
+        builder.add(saveButton, cellConstraint.xy(4, 26));
+        builder.add(cancelButton, cellConstraint.xy(6, 26));
         return builder.build();
     }
 
