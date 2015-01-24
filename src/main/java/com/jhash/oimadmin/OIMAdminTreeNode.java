@@ -109,13 +109,13 @@ public abstract class OIMAdminTreeNode extends DefaultMutableTreeNode {
         }
     }
 
-    public static class DUMMYAdminTreeNode extends OIMAdminTreeNodeNoAction {
+    public static class LoadingNode extends OIMAdminTreeNodeNoAction {
 
-        private static final Logger logger = LoggerFactory.getLogger(DUMMYAdminTreeNode.class);
+        private static final Logger logger = LoggerFactory.getLogger(LoadingNode.class);
 
-        public DUMMYAdminTreeNode(OIMAdminTreeNode parentNode, UIComponentTree selectionTree) {
+        public LoadingNode(OIMAdminTreeNode parentNode, UIComponentTree selectionTree) {
             super(DUMMY_LEAF_NODE_NAME, parentNode, selectionTree);
-            logger.trace("DUMMYAdminTreeNode({},{})", new Object[]{parentNode, selectionTree});
+            logger.trace("LoadingNode({},{})", new Object[]{parentNode, selectionTree});
         }
     }
 

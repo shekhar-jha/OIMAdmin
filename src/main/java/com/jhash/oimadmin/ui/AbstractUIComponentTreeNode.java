@@ -41,7 +41,7 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
         this.displayArea = displayArea;
         this.stringRepresentation = getClass().getName() + " [" + name + "]";
         if (isLoadable())
-            add(new OIMAdminTreeNode.DUMMYAdminTreeNode(this, selectionTree));
+            add(new LoadingNode(this, selectionTree));
     }
 
     public void executeOperationService(UIComponent component) {
@@ -77,7 +77,7 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
             initializeComponent();
             setStatus(NODE_STATE.INITIALIZED);
             List<OIMAdminTreeNode> childNodes = this.selectionTree.getChildNodes(this);
-            if (childNodes.get(0) instanceof DUMMYAdminTreeNode) {
+            if (childNodes.get(0) instanceof LoadingNode) {
                 selectionTree.removeChildNode(this, childNodes.get(0));
             }
             logger.debug("Initialized UI Component");
@@ -156,18 +156,14 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
         return stringRepresentation;
     }
 
-    public static class ROOTAdminTreeNode extends AbstractUIComponentTreeNode<Object> {
-        private static final Logger logger = LoggerFactory.getLogger(ROOTAdminTreeNode.class);
+    public static class DummyAdminTreeNode extends AbstractUIComponentTreeNode<Object> {
 
-        //TODO: Work on making sure that Root node does not trigger NPE.
-        public ROOTAdminTreeNode(String name) {
-            super(name, null, null, null, NODE_STATE.INITIALIZED_NO_OP);
-            logger.trace("ROOTAdminTreeNode()");
-        }
+        private static final Logger logger = LoggerFactory.getLogger(DummyAdminTreeNode.class);
 
-        public void setUIComponentTree(UIComponentTree selectionTree) {
-            logger.trace("Setting UIComponentTree for root node to {}", selectionTree);
-            super.selectionTree = selectionTree;
+        //TODO: Work on making sure that Dummy node does not trigger NPE.
+        public DummyAdminTreeNode(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+            super(name, configuration, selectionTree, displayArea, NODE_STATE.INITIALIZED_NO_OP);
+            logger.trace("DummyAdminTreeNode()");
         }
 
         @Override
@@ -189,6 +185,24 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
         public Object getComponent() {
             return null;
         }
+
+    }
+
+    public static class ROOTAdminTreeNode extends DummyAdminTreeNode {
+
+        private static final Logger logger = LoggerFactory.getLogger(ROOTAdminTreeNode.class);
+
+        //TODO: Work on making sure that Root node does not trigger NPE.
+        public ROOTAdminTreeNode(String name) {
+            super(name, null, null, null);
+            logger.trace("ROOTAdminTreeNode()");
+        }
+
+        public void setUIComponentTree(UIComponentTree selectionTree) {
+            logger.trace("Setting UIComponentTree for root node to {}", selectionTree);
+            super.selectionTree = selectionTree;
+        }
+
     }
 
 }
