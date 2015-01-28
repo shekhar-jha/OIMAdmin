@@ -69,7 +69,12 @@ public class EventHandlerDetails extends AbstractUIComponent<JPanel> {
         locationLabel.setBackground(null);
         locationLabel.setBorder(null);
         OIMJMXWrapper.Details details = connection.getEventHandlers(eventHandlerDetails);
-        DefaultTableModel tableModel = new DefaultTableModel(details.getData(), details.getColumns());
+        DefaultTableModel tableModel = new DefaultTableModel(details.getData(), details.getColumns()){
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
         table = JGComponentFactory.getCurrent().createReadOnlyTable(tableModel);
         table.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
@@ -80,14 +85,14 @@ public class EventHandlerDetails extends AbstractUIComponent<JPanel> {
                     return;
                 int selectedIndex = table.getSelectedRow();
                 Map<String, Object> detail = details.getItemAt(selectedIndex);
-                nameLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.NAME.name).toString());
-                stageLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.STAGE.name).toString());
-                orderLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.ORDER.name).toString());
-                customLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.CUSTOM.name).toString());
-                conditionalLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.CONDITIONAL.name).toString());
-                offBandLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.OFFBAND.name).toString());
-                classNameLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.CLASS.name).toString());
-                locationLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.LOCATION.name).toString());
+                nameLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.NAME.columnName).toString());
+                stageLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.STAGE.columnName).toString());
+                orderLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.ORDER.columnName).toString());
+                customLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.CUSTOM.columnName).toString());
+                conditionalLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.CONDITIONAL.columnName).toString());
+                offBandLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.OFFBAND.columnName).toString());
+                classNameLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.CLASS.columnName).toString());
+                locationLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.LOCATION.columnName).toString());
             }
         });
         eventHandlerUI = buildDetailScreen();

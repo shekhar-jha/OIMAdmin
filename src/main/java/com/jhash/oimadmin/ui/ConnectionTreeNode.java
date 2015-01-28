@@ -78,6 +78,9 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
         selectionTree.addChildNode(this, new MDSTreeNode("MDS Repository", configuration, selectionTree, displayArea));
         selectionTree.addChildNode(this, new EventHandlersTreeNode("Event Handlers", connection, configuration, selectionTree, displayArea));
         selectionTree.addChildNode(this, new OIMAdminTreeNode.OIMAdminTreeNodeNoAction("Scheduled Tasks", this, selectionTree));
+        DummyAdminTreeNode cacheNode = new DummyAdminTreeNode("Cache", configuration, selectionTree, displayArea);
+        selectionTree.addChildNode(this, cacheNode);
+        selectionTree.addChildNode(cacheNode, new OIMCacheNode("OIM Cache", connection, configuration, selectionTree, displayArea).initialize());
         logger.debug("Initialized {}", this);
     }
 

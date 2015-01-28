@@ -19,9 +19,11 @@ import com.jhash.oimadmin.Config.Configuration;
 import com.jhash.oimadmin.Config.PLATFORM;
 import com.jhash.oimadmin.Connection;
 import com.jhash.oimadmin.OIMAdminException;
+import com.jhash.oimadmin.Utils;
 import oracle.iam.platform.OIMClient;
 import oracle.iam.platform.Role;
 import oracle.iam.platformservice.api.PlatformService;
+import oracle.iam.platformservice.api.PlatformUtilsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -155,6 +157,21 @@ public class OIMConnection extends AbstractConnection {
             logger.debug("Unregistered plugin {}", name);
         } catch (Exception exception) {
             throw new OIMAdminException("Failed to unregister plugin " + name, exception);
+        }
+    }
+
+    public void purgeCache(String cacheName) {
+        if (!isLogin)
+            throw new IllegalStateException("The OIM Connection " + this + " is not in a login state");
+        PlatformUtilsService platformService = oimClient.getService(PlatformUtilsService.class);
+        if (Utils.isEmpty(cacheName))
+            cacheName = "All";
+        try {
+            logger.debug("Trying to purge cache {}", cacheName);
+            platformService.purgeCache(cacheName);
+            logger.debug("Purged cache");
+        } catch (Exception exception) {
+            throw new OIMAdminException("Failed to purge cache " + cacheName, exception);
         }
     }
 

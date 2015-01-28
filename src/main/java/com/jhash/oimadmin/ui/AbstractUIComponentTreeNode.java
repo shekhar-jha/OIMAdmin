@@ -62,7 +62,7 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
     }
 
     @Override
-    public UIComponent<T> initialize() {
+    public AbstractUIComponentTreeNode<T> initialize() {
         logger.debug("Trying to initialize UI Component");
         if (getStatus() == NODE_STATE.INITIALIZATION_IN_PROGRESS) {
             logger.warn("Node {} is already being initialized, ignoring the trigger", this);

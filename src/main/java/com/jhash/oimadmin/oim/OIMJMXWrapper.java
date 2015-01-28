@@ -20,7 +20,10 @@ import com.jhash.oimadmin.OIMAdminException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.Attribute;
+import javax.management.MBeanAttributeInfo;
 import javax.management.ObjectInstance;
+import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
 import java.io.Serializable;
 import java.util.*;
@@ -31,6 +34,7 @@ public class OIMJMXWrapper extends AbstractConnection {
     protected String STRING_REPRESENTATION = "OIMJMXWrapper";
     private JMXConnection jmxConnection = null;
     private Map<OIM_JMX_BEANS, ObjectInstance> beanCache = new HashMap<OIM_JMX_BEANS, ObjectInstance>();
+    private Map<OIM_JMX_BEANS, List<ObjectInstance>> beanTypeCache = new HashMap<>();
 
     @Override
     protected void initializeConnection(Configuration config) {
@@ -43,31 +47,73 @@ public class OIMJMXWrapper extends AbstractConnection {
         STRING_REPRESENTATION += "(" + jmxConnection + ")";
     }
 
-    private ObjectInstance getBean(OIM_JMX_BEANS jmxBean) {
-        if (beanCache.isEmpty()) {
-            synchronized (beanCache) {
-                if (beanCache.isEmpty()) {
-                    Set<ObjectInstance> allBeans = null;
+    private void initializeBeanCache() {
+        logger.trace("Initializing Bean cache for connection {}", jmxConnection);
+        synchronized (beanCache) {
+            if (beanCache.isEmpty()) {
+                Set<ObjectInstance> allBeans = null;
+                try {
+                    allBeans = jmxConnection.getConnection().queryMBeans(null, null);
+                } catch (Exception exception) {
+                    throw new OIMAdminException("Failed to get a list of all the beans ", exception);
+                }
+                for (ObjectInstance bean : allBeans) {
                     try {
-                        allBeans = jmxConnection.getConnection().queryMBeans(null, null);
-                    } catch (Exception exception) {
-                        throw new OIMAdminException("Failed to get a list of all the beans ", exception);
-                    }
-                    for (ObjectInstance bean : allBeans) {
-                        try {
-                            // TODO: May need to support additional validations
-                            // later in case of conflict
-                            String beanName = bean.getObjectName().getKeyPropertyList().get("name");
-                            if (beanName != null && OIM_JMX_BEANS.beanNames.contains(beanName)) {
-                                OIM_JMX_BEANS mappedBeanType = OIM_JMX_BEANS.beanMapping.get(beanName);
-                                beanCache.put(mappedBeanType, bean);
+                        // TODO: May need to support additional validations
+                        // later in case of conflict
+                        String beanName = bean.getObjectName().getKeyPropertyList().get("name");
+                        String beanType = bean.getObjectName().getKeyPropertyList().get("type");
+                        if (beanName != null && OIM_JMX_BEANS.beanNames.contains(beanName)) {
+                            OIM_JMX_BEANS mappedBean = OIM_JMX_BEANS.beanMapping.get(beanName);
+                            if (mappedBean.type == null) {
+                                logger.trace("Located Bean {} for requested bean {} with name {}", new Object[]{bean, mappedBean, beanName});
+                                beanCache.put(mappedBean, bean);
+                            } else if (mappedBean.type.equals(beanType)) {
+                                logger.trace("Located Bean {} for requested bean {} with name {} & type {}", new Object[]{bean, mappedBean, beanName, beanType});
+                                beanCache.put(mappedBean, bean);
+                            } else {
+                                logger.trace("Ignoring bean {} since type {} != {} of bean {}", new Object[]{bean, beanType, mappedBean.type, mappedBean});
                             }
-                        } catch (Exception exception) {
-                            throw new OIMAdminException("Failed to process bean " + bean, exception);
                         }
+                        if (beanType != null && OIM_JMX_BEANS.beanTypeNames.contains(beanType)) {
+                            OIM_JMX_BEANS mappedBean = OIM_JMX_BEANS.beanTypeMapping.get(beanType);
+                            logger.trace("Located Bean {} for requested bean {} of type {}", new Object[]{bean,mappedBean, beanType});
+                            List<ObjectInstance> beanList = null;
+                            if (beanTypeCache.containsKey(mappedBean)) {
+                                beanList = beanTypeCache.get(mappedBean);
+                            } else {
+                                beanList = new ArrayList<>();
+                                beanTypeCache.put(mappedBean, beanList);
+                            }
+                            beanList.add(bean);
+                        }
+                        // TODO: Use for quick tests.
+                        /*try {
+                        if (beanName != null && beanName.contains("Cache")) {logger.debug("FOUND BEAN WITH CACHE {}", bean);}
+                        for ( MBeanAttributeInfo attrInfo :jmxConnection.getConnection().getMBeanInfo(bean.getObjectName()).getAttributes()){
+                            if (attrInfo.getName().contains("Cache") && attrInfo.isWritable()) {
+                                logger.debug("FOUND BEAN {} WITH CACHE ATTR {}", bean, attrInfo);
+                            }
+                        }}catch(Exception exception) {logger.debug("FAILED TO PROCESS BEAN {}", bean);}*/
+                    } catch (Exception exception) {
+                        throw new OIMAdminException("Failed to process bean " + bean, exception);
                     }
                 }
             }
+        }
+        logger.trace("Initialized Bean cache for connection {}", jmxConnection);
+    }
+
+    private List<ObjectInstance> getBeansOfType(OIM_JMX_BEANS jmxBeans) {
+        if (beanTypeCache.isEmpty()) {
+            initializeBeanCache();
+        }
+        return beanTypeCache.get(jmxBeans);
+    }
+
+    private ObjectInstance getBean(OIM_JMX_BEANS jmxBean) {
+        if (beanCache.isEmpty()) {
+            initializeBeanCache();
         }
         return beanCache.get(jmxBean);
     }
@@ -85,6 +131,7 @@ public class OIMJMXWrapper extends AbstractConnection {
         }
         Set<String> columns = new HashSet<String>();
         List<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
+        Map<String, String> nameToColumnNameMapping = EVENT_HANDLER_DETAILS.getNameToColumnNameMapping();
         if (methodInvocationResult != null && methodInvocationResult instanceof CompositeData[]) {
             try {
                 for (CompositeData data : ((CompositeData[]) methodInvocationResult)) {
@@ -92,7 +139,7 @@ public class OIMJMXWrapper extends AbstractConnection {
                     Set<String> columnNames = data.getCompositeType().keySet();
                     columns.addAll(columnNames);
                     for (String columnName : columnNames) {
-                        dataMap.put(columnName, data.get(columnName));
+                        dataMap.put(nameToColumnNameMapping.getOrDefault(columnName, columnName), data.get(columnName));
                     }
                     result.add(dataMap);
                 }
@@ -106,7 +153,7 @@ public class OIMJMXWrapper extends AbstractConnection {
                     + " on invoking getEventHandlers on " + configMBean + " using parameters "
                     + Arrays.toString(parameters));
         }
-        return new Details(result);
+        return new Details(result, EVENT_HANDLER_DETAILS.getColumnNames());
     }
 
     public Set<OperationDetail> getOperations() {
@@ -132,6 +179,113 @@ public class OIMJMXWrapper extends AbstractConnection {
         return operations;
     }
 
+    public void setCacheDetails(Map<String, Object> cacheItem, OIM_CACHE_ATTRS cacheAttr, String value) {
+        try {
+            if (cacheItem != null) {
+                if (cacheItem.containsKey("BEAN")) {
+                    ObjectInstance bean = (ObjectInstance) cacheItem.get("BEAN");
+                    switch (cacheAttr) {
+                        case ENABLED:
+                            jmxConnection.getConnection().setAttribute(bean.getObjectName(), new Attribute("Enabled", Boolean.valueOf(value)));
+                            break;
+                        case ExpirationTime:
+                            jmxConnection.getConnection().setAttribute(bean.getObjectName(), new Attribute("ExpirationTime", Integer.valueOf(value)));
+                            break;
+                        default:
+                            throw new UnsupportedOperationException("Setting cache attribute " + cacheAttr + " is not supported for cache " + cacheItem);
+                    }
+                } else {
+                    throw new NullPointerException("Failed to locate the corresponding bean for cache category " + cacheItem);
+                }
+            } else {
+                switch (cacheAttr) {
+                    case ENABLED:
+                    case CLUSTERED:
+                    case ThreadLocalCacheEnabled:
+                        jmxConnection.getConnection().setAttribute(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), new Attribute(cacheAttr.nameValue, Boolean.valueOf(value)));
+                        break;
+                    case ExpirationTime:
+                        jmxConnection.getConnection().setAttribute(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), new Attribute(cacheAttr.nameValue, Integer.parseInt(value)));
+                        break;
+                    case Provider:
+                        jmxConnection.getConnection().setAttribute(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), new Attribute(cacheAttr.nameValue, value));
+                        break;
+                    case MulticastAddress:
+                    case MulticastConfig:
+                        jmxConnection.getConnection().setAttribute(getBean(OIM_JMX_BEANS.CACHE_PROVIDER_MBEAN_NAME).getObjectName(), new Attribute(cacheAttr.nameValue, value));
+                        break;
+                    case Size:
+                        jmxConnection.getConnection().setAttribute(getBean(OIM_JMX_BEANS.CACHE_PROVIDER_MBEAN_NAME).getObjectName(), new Attribute(cacheAttr.nameValue, Integer.parseInt(value)));
+                        break;
+                }
+            }
+        }catch (Exception exception) {
+            throw new OIMAdminException("Failed to set attribute " + cacheAttr + "=" + value +" on " + (cacheItem ==null?"Cache":cacheItem), exception);
+        }
+    }
+
+    public <T> T getCacheDetails(OIM_CACHE_ATTRS attributeRequested) {
+        logger.debug("Trying to get OIM Cache Detail {}", attributeRequested);
+        Object returnValue=null;
+        try {
+            switch (attributeRequested) {
+                case CLUSTERED: {
+                    returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isClustered",new Object[]{}, new String[]{});
+                    break;
+                }
+                case ENABLED: {
+                    returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isEnabled",new Object[]{}, new String[]{});
+                    break;
+                }
+                case ThreadLocalCacheEnabled: {
+                    returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isThreadLocalCacheEnabled",new Object[]{}, new String[]{});
+                    break;
+                }
+                case ExpirationTime:
+                case Provider: {
+                    returnValue = jmxConnection.getConnection().getAttribute(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), attributeRequested.nameValue);
+                    break;
+                }
+                case MulticastAddress:
+                case MulticastConfig:
+                case Size: {
+                    returnValue = jmxConnection.getConnection().getAttribute(getBean(OIM_JMX_BEANS.CACHE_PROVIDER_MBEAN_NAME).getObjectName(), attributeRequested.nameValue);
+                    break;
+                }
+                default:
+                    throw new UnsupportedOperationException("Invalid attribute " + attributeRequested + " requested");
+            }
+            logger.debug("Returning value {} of type {}", returnValue, returnValue != null ? returnValue : "null");
+            return (T) returnValue;
+        }catch (Exception exception) {
+            throw new OIMAdminException("Failed to get attribute " + attributeRequested +" from bean " + OIM_JMX_BEANS.CACHE_MBEAN_NAME, exception);
+        }
+    }
+
+    public Details getCacheCategories() {
+        try {
+            logger.debug("Trying to locate cache categories...");
+            List<Map<String, Object>> categoryDetails = new ArrayList<>();
+            for (ObjectInstance bean : getBeansOfType(OIM_JMX_BEANS.CACHE_CATEGORIES)) {
+                Map<String, Object> categoryDetail = new HashMap<>();
+                ObjectName objectName = bean.getObjectName();
+                String name = (String)jmxConnection.getConnection().getAttribute(objectName, "Name");
+                categoryDetail.put("Name", name);
+                boolean isEnabled = (Boolean) jmxConnection.getConnection().invoke(objectName,"isEnabled", new Object[]{}, new String[]{});
+                categoryDetail.put("Enabled?", isEnabled);
+                int expirationTime = (Integer) jmxConnection.getConnection().getAttribute(objectName, "ExpirationTime");
+                categoryDetail.put("Expires in", expirationTime);
+                categoryDetail.put("BEAN", bean);
+                categoryDetails.add(categoryDetail);
+                logger.trace("Added cache detail {}", categoryDetail);
+            }
+            logger.debug("Located cache details {}", categoryDetails);
+            return new Details(categoryDetails, new String[]{"Name", "Enabled?", "Expires in"});
+        }catch (Exception exception) {
+            throw new OIMAdminException("Failed to retrieve cache details", exception);
+        }
+    }
+
     protected void destroyConnection() {
         logger.debug("Trying to destroy OIM JMX Connection");
         if (this.jmxConnection != null) {
@@ -146,7 +300,7 @@ public class OIMJMXWrapper extends AbstractConnection {
     public static enum EVENT_HANDLER_DETAILS {
         STAGE("Stage of Execution", "stage"), ORDER("Order of Execution", "order"), NAME("Name", "name"), CUSTOM(
                 "Is custom?", "custom"), CONDITIONAL("Conditional", "conditional"), OFFBAND("Executed Offband",
-                "offBand"), CLASS(null, "class"), LOCATION(null, "location");
+                "offBand"), CLASS("class", "class"), LOCATION("location", "location");
 
         private static final EVENT_HANDLER_DETAILS[] allValues = new EVENT_HANDLER_DETAILS[]{STAGE, ORDER, NAME,
                 CUSTOM, CONDITIONAL, OFFBAND};
@@ -165,6 +319,14 @@ public class OIMJMXWrapper extends AbstractConnection {
                 columnNames[counter++] = detail.columnName;
             }
             return columnNames;
+        }
+
+        public static Map<String, String> getNameToColumnNameMapping() {
+            Map<String, String> nameToColumnNameMapping = new HashMap<>();
+            for (EVENT_HANDLER_DETAILS detail : allValues) {
+                nameToColumnNameMapping.put(detail.name, detail.columnName);
+            }
+            return nameToColumnNameMapping;
         }
 
     }
@@ -213,9 +375,11 @@ public class OIMJMXWrapper extends AbstractConnection {
 
     public static class Details {
         private List<Map<String, Object>> values;
+        private String[] columnNames;
 
-        public Details(List<Map<String, Object>> values) {
+        public Details(List<Map<String, Object>> values, String[] columnNames) {
             this.values = values;
+            this.columnNames = columnNames;
         }
 
         public Map<String, Object> getItemAt(int index) {
@@ -226,10 +390,10 @@ public class OIMJMXWrapper extends AbstractConnection {
             Object[][] data = new Object[values.size()][];
             int rowCounter = 0;
             for (Map<String, Object> value : values) {
-                Object[] valueArray = new Object[EVENT_HANDLER_DETAILS.allValues.length];
+                Object[] valueArray = new Object[columnNames.length];
                 int columnCounter = 0;
-                for (EVENT_HANDLER_DETAILS column : EVENT_HANDLER_DETAILS.allValues) {
-                    valueArray[columnCounter++] = value.get(column.name);
+                for (String columnName : columnNames) {
+                    valueArray[columnCounter++] = value.get(columnName);
                 }
                 data[rowCounter++] = valueArray;
             }
@@ -237,25 +401,51 @@ public class OIMJMXWrapper extends AbstractConnection {
         }
 
         public String[] getColumns() {
-            return EVENT_HANDLER_DETAILS.getColumnNames();
+            return columnNames;
         }
     }
 
     public static class OIM_JMX_BEANS {
 
         private static final Set<String> beanNames = new HashSet<String>();
+        private static final Set<String> beanTypeNames = new HashSet<>();
         private static final Map<String, OIM_JMX_BEANS> beanMapping = new HashMap<String, OIM_JMX_BEANS>();
+        private static final Map<String, OIM_JMX_BEANS> beanTypeMapping = new HashMap<>();
         public static final OIM_JMX_BEANS CONFIG_QUERY_MBEAN_NAME = new OIM_JMX_BEANS("ConfigQueryMBeanName");
         public static final OIM_JMX_BEANS OPERATION_CONFIG_MBEAN_NAME = new OIM_JMX_BEANS("OperationConfigMXBean");
+        public static final OIM_JMX_BEANS CACHE_MBEAN_NAME = new OIM_JMX_BEANS("Cache");
+        public static final OIM_JMX_BEANS CACHE_PROVIDER_MBEAN_NAME = new OIM_JMX_BEANS("XLCacheProvider");
+        public static final OIM_JMX_BEANS CACHE_CATEGORIES = new OIM_JMX_BEANS(null, "XMLConfig.CacheConfig.CacheCategoryConfig");
+
         //TODO: There is a incorrect dependency between the static variables which is dependent on location of variable in file
         // beanNames should come before CONFIG_QUERY_MBEAN_NAME;
         public final String name;
+        public final String type;
 
         private OIM_JMX_BEANS(String name) {
+            this(name, null);
+        }
+
+        private OIM_JMX_BEANS(String name, String type) {
             this.name = name;
-            OIM_JMX_BEANS.beanNames.add(name);
-            OIM_JMX_BEANS.beanMapping.put(name, this);
+            this.type = type;
+            if (name != null) {
+                OIM_JMX_BEANS.beanNames.add(name);
+                OIM_JMX_BEANS.beanMapping.put(name, this);
+            }
+            if (type != null) {
+                OIM_JMX_BEANS.beanTypeNames.add(type);
+                beanTypeMapping.put(type, this);
+            }
         }
     }
 
+    public static enum OIM_CACHE_ATTRS {
+        CLUSTERED("Clustered"), ENABLED("Enabled"), ExpirationTime("ExpirationTime"), Provider("Provider"), ThreadLocalCacheEnabled("ThreadLocalCacheEnabled"),
+        MulticastAddress("MulticastAddress"), MulticastConfig("MulticastConfig"), Size("Size");
+
+        public final String nameValue;
+
+        private OIM_CACHE_ATTRS(String nameValue){this.nameValue = nameValue;}
+    }
 }
