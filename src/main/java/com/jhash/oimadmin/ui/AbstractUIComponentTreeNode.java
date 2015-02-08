@@ -188,6 +188,46 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
 
     }
 
+    public static class DisplayComponentNode<T extends UIComponent,W> extends AbstractUIComponentTreeNode<W> implements DisplayableNode<T> {
+
+        private static final Logger logger = LoggerFactory.getLogger(DisplayComponentNode.class);
+
+        private T displayComponent;
+        private W nodeComponent;
+
+        public DisplayComponentNode(String name, T displayComponent, W component, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+            super(name, configuration, selectionTree, displayArea);
+            logger.debug("DisplayComponentNode({}, {}, {}, {}, {})", new Object[]{name, displayComponent, configuration, selectionTree, displayArea});
+            this.displayComponent = displayComponent;
+            this.nodeComponent = component;
+        }
+
+        @Override
+        public void initializeComponent() {
+            logger.debug("Initialized component {}", this);
+        }
+
+        @Override
+        public W getComponent() {
+            return nodeComponent;
+        }
+
+        @Override
+        public T getDisplayComponent() {
+            return displayComponent;
+        }
+
+        @Override
+        public void destroyComponent() {
+            logger.debug("Trying to destroy {}", this);
+            if (displayComponent != null) {
+                displayComponent.destroy();
+            }
+            logger.debug("Destroyed {}", this);
+        }
+
+    }
+
     public static class ROOTAdminTreeNode extends DummyAdminTreeNode {
 
         private static final Logger logger = LoggerFactory.getLogger(ROOTAdminTreeNode.class);

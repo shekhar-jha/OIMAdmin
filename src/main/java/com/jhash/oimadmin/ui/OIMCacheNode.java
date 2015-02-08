@@ -32,7 +32,7 @@ public class OIMCacheNode extends AbstractUIComponentTreeNode<Object> implements
 
     private static final Logger logger = LoggerFactory.getLogger(OIMCacheNode.class);
 
-    private OIMConnection connection;
+    final private OIMConnection connection;
     private JPopupMenu popupMenu;
     private OIMCacheDetails cacheUI;
 

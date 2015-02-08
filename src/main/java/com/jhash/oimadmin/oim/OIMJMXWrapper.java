@@ -17,13 +17,11 @@ package com.jhash.oimadmin.oim;
 
 import com.jhash.oimadmin.Config.Configuration;
 import com.jhash.oimadmin.OIMAdminException;
+import com.jhash.oimadmin.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.management.Attribute;
-import javax.management.MBeanAttributeInfo;
-import javax.management.ObjectInstance;
-import javax.management.ObjectName;
+import javax.management.*;
 import javax.management.openmbean.CompositeData;
 import java.io.Serializable;
 import java.util.*;
@@ -104,9 +102,45 @@ public class OIMJMXWrapper extends AbstractConnection {
         logger.trace("Initialized Bean cache for connection {}", jmxConnection);
     }
 
+    private Set<ObjectInstance> getJMXBean(OIM_JMX_BEANS jmxBeans) {
+        logger.trace("Trying to locate beans for {}", jmxBeans);
+        try {
+            String expression = "*:";
+            if (jmxBeans.type != null) {
+                expression += "type=" + jmxBeans.type;
+            } else {
+                expression += "type=*";
+            }
+            if (jmxBeans.name != null) {
+                expression += ",name=" + jmxBeans.name +",";
+            } else {
+                expression += ",";
+            }
+            expression +="*";
+            logger.trace("Query expression {}", expression);
+            Set<ObjectInstance> jmxBeanObjectInstances = jmxConnection.getConnection().queryMBeans(new ObjectName(expression), null);
+            logger.trace("Returning search result {}", jmxBeanObjectInstances);
+            return jmxBeanObjectInstances;
+        }catch(Exception exception) {
+            throw new OIMAdminException("Failed to get JMX Bean for " + jmxBeans, exception);
+        }
+    }
+
     private List<ObjectInstance> getBeansOfType(OIM_JMX_BEANS jmxBeans) {
         if (beanTypeCache.isEmpty()) {
             initializeBeanCache();
+        }
+        if (!beanTypeCache.containsKey(jmxBeans)) {
+            Set<ObjectInstance> result = getJMXBean(jmxBeans);
+            if (result.isEmpty()) {
+                return null;
+            } else {
+                List<ObjectInstance> resultAsList = new ArrayList<>(result);
+                beanTypeCache.put(jmxBeans,resultAsList);
+                if (result.size() ==1 && !Utils.isEmpty(jmxBeans.name)) {
+                    beanCache.put(jmxBeans, resultAsList.get(0));
+                }
+            }
         }
         return beanTypeCache.get(jmxBeans);
     }
@@ -114,6 +148,19 @@ public class OIMJMXWrapper extends AbstractConnection {
     private ObjectInstance getBean(OIM_JMX_BEANS jmxBean) {
         if (beanCache.isEmpty()) {
             initializeBeanCache();
+        }
+        if (!beanCache.containsKey(jmxBean)) {
+            Set<ObjectInstance> result = getJMXBean(jmxBean);
+            if (result.isEmpty()) {
+                return null;
+            } else {
+                List<ObjectInstance> resultAsList = new ArrayList<>(result);
+                if (!Utils.isEmpty(jmxBean.type)) {
+                    beanTypeCache.put(jmxBean, resultAsList);
+                }
+                ObjectInstance resultValue = resultAsList.get(0);
+                beanCache.put(jmxBean, resultValue);
+            }
         }
         return beanCache.get(jmxBean);
     }
@@ -262,6 +309,26 @@ public class OIMJMXWrapper extends AbstractConnection {
         }
     }
 
+    public <T> T getValue(OIM_JMX_BEANS bean, String attributeName) {
+        try {
+            ObjectInstance objectInstance = getBean(bean);
+            if (objectInstance == null) {
+                logger.warn("Could not locate the bean corresponding to {}", bean);
+                return null;
+            }
+            try {
+                Object returnValue = jmxConnection.getConnection().getAttribute(objectInstance.getObjectName(), attributeName);
+                logger.trace("Returning value {} corresponding to attribute {} of bean {}", new Object[]{returnValue, attributeName, bean});
+                return (T)returnValue;
+            }catch (AttributeNotFoundException exception) {
+                logger.warn("Could not locate the attribute {} in bean {} associated with {}", new Object[]{attributeName, objectInstance,bean});
+                return null;
+            }
+        }catch (Exception exception) {
+            throw new OIMAdminException("Failed to get attribute "+ attributeName + " from bean " + bean, exception);
+        }
+    }
+
     public Details getCacheCategories() {
         try {
             logger.debug("Trying to locate cache categories...");
@@ -403,6 +470,8 @@ public class OIMJMXWrapper extends AbstractConnection {
         public String[] getColumns() {
             return columnNames;
         }
+
+        public int size() { return values.size();}
     }
 
     public static class OIM_JMX_BEANS {
@@ -421,12 +490,13 @@ public class OIMJMXWrapper extends AbstractConnection {
         // beanNames should come before CONFIG_QUERY_MBEAN_NAME;
         public final String name;
         public final String type;
+        private final String stringRepresentation;
 
-        private OIM_JMX_BEANS(String name) {
+        public OIM_JMX_BEANS(String name) {
             this(name, null);
         }
 
-        private OIM_JMX_BEANS(String name, String type) {
+        public OIM_JMX_BEANS(String name, String type) {
             this.name = name;
             this.type = type;
             if (name != null) {
@@ -437,7 +507,10 @@ public class OIMJMXWrapper extends AbstractConnection {
                 OIM_JMX_BEANS.beanTypeNames.add(type);
                 beanTypeMapping.put(type, this);
             }
+            stringRepresentation = "JMX Bean [" + (name==null?"":name) +":" + (type==null?"":type) + "]";
         }
+
+        public String toString() {return stringRepresentation;}
     }
 
     public static enum OIM_CACHE_ATTRS {

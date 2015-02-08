@@ -26,6 +26,7 @@ public class Config {
 
     public static final String DEF_CONFIG_LOC = "config.properties";
     public static final String ATTR_NAME_PREFIX = "sysadmin.";
+    public static final String ATTR_CONN_NAME_PREFIX = "sysadmin.connection.";
     public static final String ATTR_NAME_WORK_AREA = "workhome";
     public static final String VAL_WORK_AREA_BASE_PREFIX_DEFAULT = "user.home";
     public static final String VAL_WORK_AREA_BASE = ".oimadm";
@@ -39,6 +40,7 @@ public class Config {
     private static final Logger logger = LoggerFactory.getLogger(Config.class);
     private Map<String, Properties> oimConnectionConfiguration = new HashMap<String, Properties>();
     private List<String> oimConnectionNames = new ArrayList<>();
+    private Map<String, String> commonProperties = new HashMap<>();
     private String workArea = null;
     private String configurationLocation = null;
 
@@ -99,40 +101,46 @@ public class Config {
         Map<Integer, Properties> oimConnectionConfigurationList = new HashMap<Integer, Properties>();
         for (String oimPropertyName : configuration.stringPropertyNames()) {
             logger.trace("Processing property {}", oimPropertyName);
-            if (oimPropertyName != null && oimPropertyName.startsWith(ATTR_NAME_PREFIX)) {
-                String[] keyValues = oimPropertyName.split("\\.");
-                if (keyValues.length == 3) {
-                    Properties oimProperty = null;
-                    int configurationIndex = -1;
-                    try {
-                        configurationIndex = Integer.parseUnsignedInt(keyValues[1]);
-                    } catch (NumberFormatException exception) {
-                        logger.warn("Ignoring attribute name " + oimPropertyName + " in configuration (" + configurationLocation + ") since it is not in <>.<number>.<> format", exception);
-                        continue;
-                    }
-                    if (configurationIndex > totalConnections) {
-                        logger.trace("Resetting total number of connections to {}", configurationIndex);
-                        totalConnections = configurationIndex;
-                    }
-                    if (oimConnectionConfigurationList.containsKey(configurationIndex)) {
-                        logger.trace("Located an existing configuration map for {}", configurationIndex);
-                        oimProperty = oimConnectionConfigurationList.get(configurationIndex);
+            if (oimPropertyName != null){
+                if (oimPropertyName.startsWith(ATTR_CONN_NAME_PREFIX)) {
+                    String[] keyValues = oimPropertyName.split("\\.");
+                    if (keyValues.length == 4) {
+                        Properties oimProperty = null;
+                        int configurationIndex = -1;
+                        try {
+                            configurationIndex = Integer.parseUnsignedInt(keyValues[2]);
+                        } catch (NumberFormatException exception) {
+                            logger.warn("Ignoring attribute name " + oimPropertyName + " in configuration (" + configurationLocation + ") since it is not in <>.<number>.<> format", exception);
+                            continue;
+                        }
+                        if (configurationIndex > totalConnections) {
+                            logger.trace("Resetting total number of connections to {}", configurationIndex);
+                            totalConnections = configurationIndex;
+                        }
+                        if (oimConnectionConfigurationList.containsKey(configurationIndex)) {
+                            logger.trace("Located an existing configuration map for {}", configurationIndex);
+                            oimProperty = oimConnectionConfigurationList.get(configurationIndex);
+                        } else {
+                            logger.trace("Creating a new configuration map for {}", configurationIndex);
+                            oimProperty = new Properties();
+                            oimConnectionConfigurationList.put(configurationIndex, oimProperty);
+                        }
+                        String key = keyValues[3];
+                        String value = configuration.getProperty(oimPropertyName);
+                        //TODO: Remove this if password printing is an issue.
+                        logger.trace("Setting {}={}", key, value);
+                        oimProperty.setProperty(key, value);
                     } else {
-                        logger.trace("Creating a new configuration map for {}", configurationIndex);
-                        oimProperty = new Properties();
-                        oimConnectionConfigurationList.put(configurationIndex, oimProperty);
+                        logger.warn("Ignoring attribute name {} in configuration({}) since it is not in <>.<>.<>.<> format", new Object[]{oimPropertyName, configurationLocation});
                     }
-                    String key = keyValues[2];
-                    String value = configuration.getProperty(oimPropertyName);
-                    //TODO: Remove this if password printing is an issue.
-                    logger.trace("Setting {}={}", key, value);
-                    oimProperty.setProperty(key, value);
-                } else {
-                    logger.warn("Ignoring attribute name {} in configuration({}) since it is not in <>.<>.<> format", new Object[]{oimPropertyName, configurationLocation});
+                } else if (oimPropertyName.startsWith(ATTR_NAME_PREFIX)){
+                    commonProperties.put(oimPropertyName, configuration.getProperty(oimPropertyName));
+                }else {
+                    logger.debug("Ignoring {} key since it does not start with {} i.e. not an OIM property",
+                            oimPropertyName, ATTR_NAME_PREFIX);
                 }
             } else {
-                logger.debug("Ignoring {} key since it does not start with {} i.e. not an OIM property",
-                        oimPropertyName, ATTR_NAME_PREFIX);
+                logger.debug("Ignoring {} key since it is null");
             }
         }
         logger.debug("Trying to create a list of OIM ConnectionTreeNode in specified order");
@@ -307,7 +315,7 @@ public class Config {
                 throw new NullPointerException("Failed to locate configuration detail with name " + name);
             logger.trace("Adding selected configuration {} in to new configuration file being generated", configurationDetail);
             for (String attributeName : configurationDetail.stringPropertyNames()) {
-                configurationFile.setProperty("sysadmin." + counter + "." + attributeName, configurationDetail.getProperty(attributeName));
+                configurationFile.setProperty(ATTR_CONN_NAME_PREFIX + counter + "." + attributeName, configurationDetail.getProperty(attributeName));
             }
         }
         logger.trace("Trying to validate whether given configuration has already been added or needs to be removed");
@@ -315,11 +323,14 @@ public class Config {
             logger.trace("Adding the new configuration {} to configuration", configuration);
             Properties configurationDetail = configuration.editableConfiguration;
             for (String attributeName : configurationDetail.stringPropertyNames()) {
-                configurationFile.setProperty("sysadmin." + counter + "." + attributeName, configurationDetail.getProperty(attributeName));
+                configurationFile.setProperty(ATTR_CONN_NAME_PREFIX + counter + "." + attributeName, configurationDetail.getProperty(attributeName));
             }
             this.oimConnectionNames.add(counter, configurationBeingSaved);
             this.oimConnectionConfiguration.put(configurationBeingSaved, configurationDetail);
         }
+        logger.trace("Trying to add the common configuration to updated configuration");
+        configurationFile.putAll(commonProperties);
+        logger.trace("Added common configuration");
         File configurationFileObject = new File(configurationLocation);
         if (configurationFileObject.exists() && configurationFileObject.canWrite()) {
             try {
@@ -383,7 +394,10 @@ public class Config {
         }
 
         public String getProperty(String propertyName, String defaultValue) {
-            return configuration.getProperty(propertyName, defaultValue);
+            String returnValue = configuration.getProperty(propertyName);
+            if (returnValue == null)
+                returnValue = config.commonProperties.getOrDefault(propertyName, defaultValue);
+            return returnValue;
         }
 
         public Config getConfig() {
