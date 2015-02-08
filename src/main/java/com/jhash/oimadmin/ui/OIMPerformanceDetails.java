@@ -24,21 +24,20 @@ import com.jhash.oimadmin.Utils;
 import com.jhash.oimadmin.oim.OIMJMXWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.misc.Perf;
 
 import javax.swing.*;
-import javax.swing.event.CellEditorListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellEditor;
-import javax.swing.table.TableModel;
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.*;
-import java.util.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class OIMPerformanceDetails extends AbstractUIComponent<JComponent>{
 

@@ -22,7 +22,6 @@ import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
 import com.jhash.oimadmin.oim.OIMJMXWrapper;
-import com.jidesoft.swing.JideBoxLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +31,6 @@ import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableModel;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;

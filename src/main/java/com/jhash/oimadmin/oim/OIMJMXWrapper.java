@@ -21,7 +21,10 @@ import com.jhash.oimadmin.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.management.*;
+import javax.management.Attribute;
+import javax.management.AttributeNotFoundException;
+import javax.management.ObjectInstance;
+import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
 import java.io.Serializable;
 import java.util.*;

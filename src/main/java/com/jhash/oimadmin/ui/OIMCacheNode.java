@@ -18,7 +18,6 @@ package com.jhash.oimadmin.ui;
 
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
-import com.jhash.oimadmin.oim.MDSConnectionJMX;
 import com.jhash.oimadmin.oim.OIMConnection;
 import com.jidesoft.swing.JidePopupMenu;
 import org.slf4j.Logger;
