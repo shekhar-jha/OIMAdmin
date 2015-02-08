@@ -101,7 +101,7 @@ public class Config {
         Map<Integer, Properties> oimConnectionConfigurationList = new HashMap<Integer, Properties>();
         for (String oimPropertyName : configuration.stringPropertyNames()) {
             logger.trace("Processing property {}", oimPropertyName);
-            if (oimPropertyName != null){
+            if (oimPropertyName != null) {
                 if (oimPropertyName.startsWith(ATTR_CONN_NAME_PREFIX)) {
                     String[] keyValues = oimPropertyName.split("\\.");
                     if (keyValues.length == 4) {
@@ -133,9 +133,9 @@ public class Config {
                     } else {
                         logger.warn("Ignoring attribute name {} in configuration({}) since it is not in <>.<>.<>.<> format", new Object[]{oimPropertyName, configurationLocation});
                     }
-                } else if (oimPropertyName.startsWith(ATTR_NAME_PREFIX)){
+                } else if (oimPropertyName.startsWith(ATTR_NAME_PREFIX)) {
                     commonProperties.put(oimPropertyName, configuration.getProperty(oimPropertyName));
-                }else {
+                } else {
                     logger.debug("Ignoring {} key since it does not start with {} i.e. not an OIM property",
                             oimPropertyName, ATTR_NAME_PREFIX);
                 }

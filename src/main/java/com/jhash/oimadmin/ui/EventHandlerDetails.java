@@ -69,7 +69,7 @@ public class EventHandlerDetails extends AbstractUIComponent<JPanel> {
         locationLabel.setBackground(null);
         locationLabel.setBorder(null);
         OIMJMXWrapper.Details details = connection.getEventHandlers(eventHandlerDetails);
-        DefaultTableModel tableModel = new DefaultTableModel(details.getData(), details.getColumns()){
+        DefaultTableModel tableModel = new DefaultTableModel(details.getData(), details.getColumns()) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;

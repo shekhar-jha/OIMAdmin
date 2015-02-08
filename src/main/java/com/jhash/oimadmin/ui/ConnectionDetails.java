@@ -120,7 +120,7 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
         dbAutoCommit.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange()==ItemEvent.SELECTED) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
                     connectionDetails.setProperty(DBConnection.ATTR_DB_AUTOCOMMIT, "true");
                 } else {
                     connectionDetails.setProperty(DBConnection.ATTR_DB_AUTOCOMMIT, "false");
@@ -208,30 +208,30 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
                 DBConnection connection = new DBConnection();
                 try {
                     connection.initialize(connectionDetails);
-                }catch (Exception exception) {
+                } catch (Exception exception) {
                     logger.error("Failed to create connection using details", exception);
                 }
                 try {
                     connection.destroy();
-                }catch (Exception exception) {
+                } catch (Exception exception) {
                     logger.warn("Failed to destroy new connection. Ignoring error", exception);
                 }
                 logger.debug("Tested connection");
             }
         });
-        builder.add(testDBButton, cellConstraint.xy(8,18));
+        builder.add(testDBButton, cellConstraint.xy(8, 18));
 
         builder.addLabel("Driver Class", cellConstraint.xy(2, 20));
         builder.add(dbJDBCDriverClass, cellConstraint.xy(4, 20));
         builder.addLabel("JDBC URL", cellConstraint.xy(6, 20));
-        builder.add(dbJDBCURL, cellConstraint.xy(8,20));
+        builder.add(dbJDBCURL, cellConstraint.xy(8, 20));
 
-        builder.addLabel("User", cellConstraint.xy(2,22));
-        builder.add(dbUser, cellConstraint.xy(4,22));
+        builder.addLabel("User", cellConstraint.xy(2, 22));
+        builder.add(dbUser, cellConstraint.xy(4, 22));
         builder.addLabel("Password", cellConstraint.xy(6, 22));
-        builder.add(dbPassword, cellConstraint.xy(8,22));
+        builder.add(dbPassword, cellConstraint.xy(8, 22));
 
-        builder.add(dbAutoCommit, cellConstraint.xy(4,24));
+        builder.add(dbAutoCommit, cellConstraint.xy(4, 24));
 
 
         JButton saveButton = JGComponentFactory.getCurrent().createButton("&Save");

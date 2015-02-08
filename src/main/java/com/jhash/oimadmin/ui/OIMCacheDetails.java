@@ -38,7 +38,7 @@ import java.awt.event.ItemListener;
 import java.util.HashMap;
 import java.util.Map;
 
-public class OIMCacheDetails extends AbstractUIComponent<JComponent>{
+public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
 
     private static final Logger logger = LoggerFactory.getLogger(OIMCacheDetails.class);
     private static final String DEFAULT_CACHE_CONFIG = "Default Cache Configuration";
@@ -228,7 +228,7 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent>{
                 int selectedIndex = cacheCategoryTable.getSelectedRow();
                 Map<String, Object> detail = cacheCategory.getItemAt(selectedIndex);
                 cacheCategoryName.setText(detail.get("Name").toString());
-                cacheCategoryEnabled.setSelected((Boolean)detail.get("Enabled?"));
+                cacheCategoryEnabled.setSelected((Boolean) detail.get("Enabled?"));
                 cacheCategoryExpires.setText(detail.get("Expires in").toString());
                 changedCategoryValues.clear();
             }
@@ -241,7 +241,7 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent>{
                         connection.setCacheDetails(null, cacheAttr, changedDefaultValues.get(cacheAttr));
                     }
                     changedDefaultValues.clear();
-                }catch (Exception exception) {
+                } catch (Exception exception) {
                     logger.warn("Failed to set changed cache configuration " + changedDefaultValues, exception);
                 }
             }
@@ -252,7 +252,7 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent>{
                 try {
                     int selectedRow = cacheCategoryTable.getSelectedRow();
                     Map<String, Object> detail = cacheCategory.getItemAt(selectedRow);
-                    for (OIMJMXWrapper.OIM_CACHE_ATTRS cacheAttr: changedCategoryValues.keySet()) {
+                    for (OIMJMXWrapper.OIM_CACHE_ATTRS cacheAttr : changedCategoryValues.keySet()) {
                         String value = changedCategoryValues.get(cacheAttr);
                         connection.setCacheDetails(detail, cacheAttr, value);
                         switch (cacheAttr) {
@@ -267,7 +267,7 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent>{
                         }
                     }
                     changedCategoryValues.clear();
-                }catch (Exception exception) {
+                } catch (Exception exception) {
                     logger.warn("Failed to set changed cache configuration " + changedCategoryValues, exception);
                 }
             }
@@ -309,10 +309,10 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent>{
                 .addLabel("Cache Size").xy(5, 5).add(cacheSize).xy(7, 5)
                 .addLabel("Multicast Address").xy(1, 7).add(multiCastAddress).xy(3, 7)
                 .addLabel("Multi-cast configuration").xy(5, 7).add(multiCastConfig).xy(7, 7)
-                .add(saveDefaultValues).xy(3,9).add(resetDefaultValues).xy(5,9)
+                .add(saveDefaultValues).xy(3, 9).add(resetDefaultValues).xy(5, 9)
                 .add(cacheCategoryTable).xyw(1, 11, 7)
                 .addLabel("Name").xy(1, 13).add(cacheCategoryName).xyw(3, 13, 5)
-                .add(cacheCategoryEnabled).xy(3, 15).addLabel("Time to Expire").xy(5,15).add(cacheCategoryExpires).xy(7,15)
+                .add(cacheCategoryEnabled).xy(3, 15).addLabel("Time to Expire").xy(5, 15).add(cacheCategoryExpires).xy(7, 15)
                 .add(saveCategoryValues).xy(3, 17)
                 .build();
         return cacheDefaultUI;

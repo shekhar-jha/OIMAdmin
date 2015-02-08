@@ -44,27 +44,27 @@ public class DBConnection extends AbstractConnection {
     @Override
     protected void initializeConnection(Config.Configuration configuration) {
         logger.debug("Trying to initialize Database using {}", configuration);
-        STRING_REPRESENTATION +=  configuration.getProperty(ATTR_CONN_NAME, "Unknown");
+        STRING_REPRESENTATION += configuration.getProperty(ATTR_CONN_NAME, "Unknown");
         String jdbcDriver;
-        if ( (jdbcDriver = configuration.getProperty(ATTR_DB_JDBC)) != null) {
+        if ((jdbcDriver = configuration.getProperty(ATTR_DB_JDBC)) != null) {
             try {
                 Class.forName(jdbcDriver);
-            }catch(Exception error ) {
+            } catch (Exception error) {
                 throw new OIMAdminException("Failed to load JDBC Driver " + jdbcDriver + " for database connection " + this, error);
             }
         } else {
             throw new NullPointerException("Could not locate attribute " + ATTR_DB_JDBC + " in configuration for database connection " + this);
         }
         if (Utils.isEmpty(configuration.getProperty(ATTR_DB_URL)))
-            throw new NullPointerException("Could not locate attribute " + ATTR_DB_URL + " in configuration for database connection "+ this);
+            throw new NullPointerException("Could not locate attribute " + ATTR_DB_URL + " in configuration for database connection " + this);
         if (Utils.isEmpty(configuration.getProperty(ATTR_DB_USER)))
-            throw new NullPointerException("Could not locate attribute " + ATTR_DB_USER + " in configuration for database connection "+ this);
+            throw new NullPointerException("Could not locate attribute " + ATTR_DB_USER + " in configuration for database connection " + this);
         if (Utils.isEmpty(configuration.getProperty(ATTR_DB_PWD)))
-            throw new NullPointerException("Could not locate attribute " + ATTR_DB_PWD + " in configuration for database connection "+ this);
+            throw new NullPointerException("Could not locate attribute " + ATTR_DB_PWD + " in configuration for database connection " + this);
         try {
             dbConnection = DriverManager.getConnection(configuration.getProperty(ATTR_DB_URL), configuration.getProperty(ATTR_DB_USER), configuration.getProperty(ATTR_DB_PWD));
-            STRING_REPRESENTATION += "{" + configuration.getProperty(ATTR_DB_URL) +"}";
-        }catch (Exception exception){
+            STRING_REPRESENTATION += "{" + configuration.getProperty(ATTR_DB_URL) + "}";
+        } catch (Exception exception) {
             throw new OIMAdminException("Failed to connect to database " + this, exception);
         }
         String autoCommitValue;
@@ -72,7 +72,7 @@ public class DBConnection extends AbstractConnection {
             try {
                 dbConnection.setAutoCommit(Boolean.getBoolean(autoCommitValue));
             } catch (Exception exception) {
-                logger.warn("Failed to set autocommit to " + autoCommitValue,exception);
+                logger.warn("Failed to set autocommit to " + autoCommitValue, exception);
             }
         }
         logger.debug("Initialized Database.");
@@ -84,13 +84,13 @@ public class DBConnection extends AbstractConnection {
         if (dbConnection != null) {
             try {
                 dbConnection.commit();
-            }catch (Exception exception){
-                logger.warn("Failed to commit transaction in database "+ this + ". Ignoring the same.", exception);
+            } catch (Exception exception) {
+                logger.warn("Failed to commit transaction in database " + this + ". Ignoring the same.", exception);
             }
             try {
                 dbConnection.close();
-            }catch (Exception exception) {
-                logger.warn("Failed to close the connection " + dbConnection + " to database " + this +". Ignoring the same",exception);
+            } catch (Exception exception) {
+                logger.warn("Failed to close the connection " + dbConnection + " to database " + this + ". Ignoring the same", exception);
             }
         }
         logger.debug("Destroyed connection {}", this);

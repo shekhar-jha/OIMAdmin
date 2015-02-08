@@ -27,7 +27,7 @@ import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class OIMCacheNode extends AbstractUIComponentTreeNode<Object> implements ContextMenuEnabledNode<JPopupMenu>,DisplayableNode<OIMCacheDetails> {
+public class OIMCacheNode extends AbstractUIComponentTreeNode<Object> implements ContextMenuEnabledNode<JPopupMenu>, DisplayableNode<OIMCacheDetails> {
 
     private static final Logger logger = LoggerFactory.getLogger(OIMCacheNode.class);
 
@@ -56,8 +56,8 @@ public class OIMCacheNode extends AbstractUIComponentTreeNode<Object> implements
     }
 
 
-    public boolean hasContextMenu(){
-        return popupMenu != null?true:false;
+    public boolean hasContextMenu() {
+        return popupMenu != null ? true : false;
     }
 
     public JPopupMenu getContextMenu() {

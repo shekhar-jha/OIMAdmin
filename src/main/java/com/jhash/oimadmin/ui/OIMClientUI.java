@@ -79,8 +79,8 @@ public class OIMClientUI extends AbstractUIComponent<JPanel> {
                                 try {
                                     javaRun.runningProcess.waitFor();
                                     executeButton.setEnabled(true);
-                                }catch (Exception exception) {
-                                    logger.warn("Failed to wait for process " + javaRun.runningProcess +" to complete");
+                                } catch (Exception exception) {
+                                    logger.warn("Failed to wait for process " + javaRun.runningProcess + " to complete");
                                 }
 
                             }

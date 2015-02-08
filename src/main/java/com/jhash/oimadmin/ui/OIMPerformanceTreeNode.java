@@ -31,13 +31,12 @@ public class OIMPerformanceTreeNode extends AbstractUIComponentTreeNode<OIMJMXWr
     public static final String ATTR_PERFORMANCE_CONFIG_OPTIONS = "options";
     public static final String ATTR_PERFORMANCE_CONFIG_NAME = ".name";
     public static final String ATTR_PERFORMANCE_CONFIG_TYPE = ".type";
-    public static final String ATTR_PERFORMANCE_CONFIG_DISPLAY_NAME =".display";
+    public static final String ATTR_PERFORMANCE_CONFIG_DISPLAY_NAME = ".display";
     public static final String ATTR_PERFORMANCE_CONFIG_CALL = ".call";
 
     private static final Logger logger = LoggerFactory.getLogger(OIMPerformanceTreeNode.class);
-
-    private OIMJMXWrapper connection;
     Map<String, List<Map<String, Object>>> performanceItemDetails = new HashMap<>();
+    private OIMJMXWrapper connection;
 
     public OIMPerformanceTreeNode(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
@@ -63,7 +62,7 @@ public class OIMPerformanceTreeNode extends AbstractUIComponentTreeNode<OIMJMXWr
                 if (!Utils.isEmpty(name)) {
                     List<Map<String, Object>> performanceMetrics = new ArrayList<>();
                     int missingCounter = 0;
-                    int counter=1;
+                    int counter = 1;
                     while (missingCounter < 10) {
                         String attPrefix = ATTR_PERFORMANCE_CONFIG_PREFIX + performanceItem + "." + counter;
                         String typeAttr = attPrefix + ATTR_PERFORMANCE_CONFIG_TYPE;
@@ -71,7 +70,7 @@ public class OIMPerformanceTreeNode extends AbstractUIComponentTreeNode<OIMJMXWr
                         String type = configuration.getProperty(typeAttr);
                         logger.trace("Trying to validate type {}", type);
                         if (!Utils.isEmpty(type)) {
-                            String displayName = configuration.getProperty(attPrefix +ATTR_PERFORMANCE_CONFIG_DISPLAY_NAME);
+                            String displayName = configuration.getProperty(attPrefix + ATTR_PERFORMANCE_CONFIG_DISPLAY_NAME);
                             logger.trace("Extracted display name {}", displayName);
                             switch (type) {
                                 case "api":
@@ -87,7 +86,7 @@ public class OIMPerformanceTreeNode extends AbstractUIComponentTreeNode<OIMJMXWr
                                         throw new NullPointerException("Failed to locate method being measured using property " + attPrefix + ATTR_PERFORMANCE_CONFIG_CALL + " property for " + displayName + " api.");
                                     performanceMetricForAPI.put(OIMPerformanceDetails.ATTR_BEAN, new OIMJMXWrapper.OIM_JMX_BEANS(beanName));
                                     performanceMetricForAPI.put(OIMPerformanceDetails.ATTR_BEAN_ATTRIBUTE, beanAttrPrefix);
-                                    performanceMetricForAPI.put(OIMPerformanceDetails.ATTR_NAME, (displayName==null?beanName:displayName));
+                                    performanceMetricForAPI.put(OIMPerformanceDetails.ATTR_NAME, (displayName == null ? beanName : displayName));
                                     logger.trace("Adding {} to {}", performanceMetricForAPI, performanceMetrics);
                                     performanceMetrics.add(performanceMetricForAPI);
                                     logger.trace("Processed API");
@@ -103,7 +102,7 @@ public class OIMPerformanceTreeNode extends AbstractUIComponentTreeNode<OIMJMXWr
                                         if (operation.name.equals(operationName)) {
                                             logger.trace("Trying to retrieve event handler for operation {}", operation);
                                             OIMJMXWrapper.Details eventHandlers = connection.getEventHandlers(operation);
-                                            for (int eventHandlerCounter=0; eventHandlerCounter < eventHandlers.size(); eventHandlerCounter++) {
+                                            for (int eventHandlerCounter = 0; eventHandlerCounter < eventHandlers.size(); eventHandlerCounter++) {
                                                 logger.trace("Processing item {}", eventHandlerCounter);
                                                 Map<String, Object> eventHandlerDetail = eventHandlers.getItemAt(eventHandlerCounter);
                                                 logger.trace("Processing Event handler details {}", eventHandlerDetail);
@@ -111,7 +110,7 @@ public class OIMPerformanceTreeNode extends AbstractUIComponentTreeNode<OIMJMXWr
                                                 Map<String, Object> performanceMetricForEventHandler = new HashMap<>();
                                                 performanceMetricForEventHandler.put(OIMPerformanceDetails.ATTR_BEAN, new OIMJMXWrapper.OIM_JMX_BEANS("/" + eventHandlerName));
                                                 performanceMetricForEventHandler.put(OIMPerformanceDetails.ATTR_BEAN_ATTRIBUTE, "execute");
-                                                performanceMetricForEventHandler.put(OIMPerformanceDetails.ATTR_NAME, (displayName==null?operationName:displayName) + " [" + eventHandlerName + "]");
+                                                performanceMetricForEventHandler.put(OIMPerformanceDetails.ATTR_NAME, (displayName == null ? operationName : displayName) + " [" + eventHandlerName + "]");
                                                 logger.trace("Adding {} to {}", performanceMetricForEventHandler, performanceMetrics);
                                                 performanceMetrics.add(performanceMetricForEventHandler);
                                             }
@@ -132,7 +131,7 @@ public class OIMPerformanceTreeNode extends AbstractUIComponentTreeNode<OIMJMXWr
                                         throw new NullPointerException("Failed to locate method being measured using property " + attPrefix + ATTR_PERFORMANCE_CONFIG_CALL + " property for " + displayName + " api.");
                                     performanceMetricForAdapter.put(OIMPerformanceDetails.ATTR_BEAN, new OIMJMXWrapper.OIM_JMX_BEANS(adapterBeanName));
                                     performanceMetricForAdapter.put(OIMPerformanceDetails.ATTR_BEAN_ATTRIBUTE, adapterBeanAttrPrefix);
-                                    performanceMetricForAdapter.put(OIMPerformanceDetails.ATTR_NAME, (displayName==null?adapterBeanName:displayName));
+                                    performanceMetricForAdapter.put(OIMPerformanceDetails.ATTR_NAME, (displayName == null ? adapterBeanName : displayName));
                                     logger.trace("Adding {} to {}", performanceMetricForAdapter, performanceMetrics);
                                     performanceMetrics.add(performanceMetricForAdapter);
                                     logger.trace("Processed Adapter");
@@ -149,12 +148,12 @@ public class OIMPerformanceTreeNode extends AbstractUIComponentTreeNode<OIMJMXWr
                     logger.debug("Skipping item {} since it does not have any associated name", performanceItem);
                 }
             }
-            for (String performanceItem: performanceItemDetails.keySet()) {
+            for (String performanceItem : performanceItemDetails.keySet()) {
                 List<Map<String, Object>> performanceMetrics = performanceItemDetails.get(performanceItem);
                 AbstractUIComponentTreeNode node = new AbstractUIComponentTreeNode.DisplayComponentNode(performanceItem,
                         new OIMPerformanceDetails(performanceItem, connection, performanceMetrics, configuration, selectionTree, displayArea),
                         connection, configuration, selectionTree, displayArea);
-                logger.trace("Adding node {} for item {}", node, performanceItem );
+                logger.trace("Adding node {} for item {}", node, performanceItem);
                 selectionTree.addChildNode(this, node);
             }
         }
@@ -180,7 +179,7 @@ public class OIMPerformanceTreeNode extends AbstractUIComponentTreeNode<OIMJMXWr
         if (connection != null) {
             try {
                 connection.destroy();
-            }catch (Exception exception) {
+            } catch (Exception exception) {
                 logger.warn("Failed to destroy JMX Connection " + connection, exception);
             }
             connection = null;

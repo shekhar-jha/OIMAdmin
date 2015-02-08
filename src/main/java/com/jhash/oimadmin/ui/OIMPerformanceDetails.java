@@ -39,32 +39,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class OIMPerformanceDetails extends AbstractUIComponent<JComponent>{
+public class OIMPerformanceDetails extends AbstractUIComponent<JComponent> {
 
     public static final String ATTR_NAME = "Name";
     public static final String ATTR_BEAN = "Bean";
     public static final String ATTR_BEAN_ATTRIBUTE = "BeanAttribute";
-
-    public static enum DATA_POINT {MIN, MAX, AVG, MEDIAN, COMPLETED_TRANSACTIONS, TOTAL_TRANSACTION_TIME}
-
     private static final Logger logger = LoggerFactory.getLogger(OIMPerformanceDetails.class);
-
     private final OIMJMXWrapper connection;
     private final List<Map<String, Object>> performanceDetails;
     private JTable performanceTable;
     private JLabel minimum = JGComponentFactory.getCurrent().createLabel();
     private JLabel maximum = JGComponentFactory.getCurrent().createLabel();
     private JLabel average = JGComponentFactory.getCurrent().createLabel();
-    private JLabel median  = JGComponentFactory.getCurrent().createLabel();
-    private JLabel transactionCount  = JGComponentFactory.getCurrent().createLabel();
+    private JLabel median = JGComponentFactory.getCurrent().createLabel();
+    private JLabel transactionCount = JGComponentFactory.getCurrent().createLabel();
     private JLabel totalTime = JGComponentFactory.getCurrent().createLabel();
     private JButton startTracking = JGComponentFactory.getCurrent().createButton("Start");
     private JButton exportData = JGComponentFactory.getCurrent().createButton("Export");
-
     private JComponent performanceUI;
     private boolean isRecording = false;
-
-    public OIMPerformanceDetails(String name, OIMJMXWrapper connection, List<Map<String, Object>> performanceMetrics,Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public OIMPerformanceDetails(String name, OIMJMXWrapper connection, List<Map<String, Object>> performanceMetrics, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
         this.connection = connection;
         this.performanceDetails = performanceMetrics;
@@ -74,9 +68,9 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent>{
     public void initializeComponent() {
         String[] rows = new String[performanceDetails.size()];
         for (int rowCounter = 0; rowCounter < performanceDetails.size(); rowCounter++) {
-            rows[rowCounter] = (String)performanceDetails.get(rowCounter).get(ATTR_NAME);
+            rows[rowCounter] = (String) performanceDetails.get(rowCounter).get(ATTR_NAME);
         }
-        DefaultTableModel tableModel = new DefaultTableModel(){
+        DefaultTableModel tableModel = new DefaultTableModel() {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -162,27 +156,27 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent>{
                     return;
                 }
                 PerformanceData detail = (PerformanceData) tableModel.getValueAt(selectedRow, selectedColumn);
-                String endMinimumValue = "", endMaximumValue = "", endAvgValue = "", endCompletedValue ="", endTotal_timeValue= "";
-                String startMinimumValue = "", startMaximumValue = "", startAvgValue = "", startCompletedValue ="", startTotal_timeValue= "";
+                String endMinimumValue = "", endMaximumValue = "", endAvgValue = "", endCompletedValue = "", endTotal_timeValue = "";
+                String startMinimumValue = "", startMaximumValue = "", startAvgValue = "", startCompletedValue = "", startTotal_timeValue = "";
                 if (detail.endSnapshot != null) {
-                    endMinimumValue = detail.endSnapshot.get(DATA_POINT.MIN)==null?"":detail.endSnapshot.get(DATA_POINT.MIN).toString();
-                    endMaximumValue = detail.endSnapshot.get(DATA_POINT.MAX)==null?"":detail.endSnapshot.get(DATA_POINT.MAX).toString();
-                    endAvgValue = detail.endSnapshot.get(DATA_POINT.AVG)==null?"":detail.endSnapshot.get(DATA_POINT.AVG).toString();
-                    endCompletedValue = detail.endSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS)==null?"":detail.endSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS).toString();
-                    endTotal_timeValue = detail.endSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME)==null?"":detail.endSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME).toString();
+                    endMinimumValue = detail.endSnapshot.get(DATA_POINT.MIN) == null ? "" : detail.endSnapshot.get(DATA_POINT.MIN).toString();
+                    endMaximumValue = detail.endSnapshot.get(DATA_POINT.MAX) == null ? "" : detail.endSnapshot.get(DATA_POINT.MAX).toString();
+                    endAvgValue = detail.endSnapshot.get(DATA_POINT.AVG) == null ? "" : detail.endSnapshot.get(DATA_POINT.AVG).toString();
+                    endCompletedValue = detail.endSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS) == null ? "" : detail.endSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS).toString();
+                    endTotal_timeValue = detail.endSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME) == null ? "" : detail.endSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME).toString();
                 }
                 if (detail.startSnapshot != null) {
-                    startMinimumValue = detail.startSnapshot.get(DATA_POINT.MIN)==null?"":detail.startSnapshot.get(DATA_POINT.MIN).toString();
-                    startMaximumValue = detail.startSnapshot.get(DATA_POINT.MAX)==null?"":detail.startSnapshot.get(DATA_POINT.MAX).toString();
-                    startAvgValue = detail.startSnapshot.get(DATA_POINT.AVG)==null?"":detail.startSnapshot.get(DATA_POINT.AVG).toString();
-                    startCompletedValue = detail.startSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS)==null?"":detail.startSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS).toString();
-                    startTotal_timeValue = detail.startSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME)==null?"":detail.startSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME).toString();
+                    startMinimumValue = detail.startSnapshot.get(DATA_POINT.MIN) == null ? "" : detail.startSnapshot.get(DATA_POINT.MIN).toString();
+                    startMaximumValue = detail.startSnapshot.get(DATA_POINT.MAX) == null ? "" : detail.startSnapshot.get(DATA_POINT.MAX).toString();
+                    startAvgValue = detail.startSnapshot.get(DATA_POINT.AVG) == null ? "" : detail.startSnapshot.get(DATA_POINT.AVG).toString();
+                    startCompletedValue = detail.startSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS) == null ? "" : detail.startSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS).toString();
+                    startTotal_timeValue = detail.startSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME) == null ? "" : detail.startSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME).toString();
                 }
-                minimum.setText(endMinimumValue + ((!endMinimumValue.equals(startMinimumValue))?(" (" + startMinimumValue +")"):""));
-                maximum.setText(endMaximumValue + ((!endMaximumValue.equals(startMaximumValue))?(" (" + startMaximumValue +")"):""));
-                average.setText(endAvgValue + ((!endAvgValue.equals(startAvgValue))?(" (" + startAvgValue +")"):""));
-                transactionCount.setText(endCompletedValue + ((!endCompletedValue.equals(startCompletedValue))?(" (" + startCompletedValue +")"):""));
-                totalTime.setText(endTotal_timeValue + ((!endTotal_timeValue.equals(startTotal_timeValue))?(" (" + startTotal_timeValue +")"):""));
+                minimum.setText(endMinimumValue + ((!endMinimumValue.equals(startMinimumValue)) ? (" (" + startMinimumValue + ")") : ""));
+                maximum.setText(endMaximumValue + ((!endMaximumValue.equals(startMaximumValue)) ? (" (" + startMaximumValue + ")") : ""));
+                average.setText(endAvgValue + ((!endAvgValue.equals(startAvgValue)) ? (" (" + startAvgValue + ")") : ""));
+                transactionCount.setText(endCompletedValue + ((!endCompletedValue.equals(startCompletedValue)) ? (" (" + startCompletedValue + ")") : ""));
+                totalTime.setText(endTotal_timeValue + ((!endTotal_timeValue.equals(startTotal_timeValue)) ? (" (" + startTotal_timeValue + ")") : ""));
             }
         });
         JFileChooser fileChooser = new JFileChooser();
@@ -193,10 +187,10 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent>{
                 int result = fileChooser.showSaveDialog(OIMPerformanceDetails.this);
                 if (result == JFileChooser.APPROVE_OPTION) {
                     File saveFile = fileChooser.getSelectedFile();
-                    try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter(saveFile, false))){
+                    try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter(saveFile, false))) {
                         fileWriter.append("Items,");
                         int numberOfColumns = tableModel.getColumnCount();
-                        for (int columnCounter =1; columnCounter < numberOfColumns; columnCounter++) {
+                        for (int columnCounter = 1; columnCounter < numberOfColumns; columnCounter++) {
                             String columnName = tableModel.getColumnName(columnCounter);
                             fileWriter.append(columnName + "-starting_minimum,");
                             fileWriter.append(columnName + "-starting_maximum,");
@@ -210,33 +204,33 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent>{
                             fileWriter.append(columnName + "-end_total_time,");
                         }
                         fileWriter.newLine();
-                        for (int counter=0; counter < tableModel.getRowCount(); counter++) {
-                            for (int columnCounter=0; columnCounter < numberOfColumns; columnCounter++) {
+                        for (int counter = 0; counter < tableModel.getRowCount(); counter++) {
+                            for (int columnCounter = 0; columnCounter < numberOfColumns; columnCounter++) {
                                 Object cellData = tableModel.getValueAt(counter, columnCounter);
-                                if (columnCounter ==0) {
-                                    fileWriter.append(cellData.toString()+",");
-                                } else if (cellData instanceof PerformanceData){
+                                if (columnCounter == 0) {
+                                    fileWriter.append(cellData.toString() + ",");
+                                } else if (cellData instanceof PerformanceData) {
                                     PerformanceData detail = (PerformanceData) cellData;
-                                    String startMinimumValue = "", startMaximumValue = "", startAvgValue = "", startCompletedValue ="", startTotal_timeValue= "";
+                                    String startMinimumValue = "", startMaximumValue = "", startAvgValue = "", startCompletedValue = "", startTotal_timeValue = "";
                                     if (detail.startSnapshot != null) {
-                                        startMinimumValue = detail.startSnapshot.get(DATA_POINT.MIN)==null?"":detail.startSnapshot.get(DATA_POINT.MIN).toString();
-                                        startMaximumValue = detail.startSnapshot.get(DATA_POINT.MAX)==null?"":detail.startSnapshot.get(DATA_POINT.MAX).toString();
-                                        startAvgValue = detail.startSnapshot.get(DATA_POINT.AVG)==null?"":detail.startSnapshot.get(DATA_POINT.AVG).toString();
-                                        startCompletedValue = detail.startSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS)==null?"":detail.startSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS).toString();
-                                        startTotal_timeValue = detail.startSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME)==null?"":detail.startSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME).toString();
+                                        startMinimumValue = detail.startSnapshot.get(DATA_POINT.MIN) == null ? "" : detail.startSnapshot.get(DATA_POINT.MIN).toString();
+                                        startMaximumValue = detail.startSnapshot.get(DATA_POINT.MAX) == null ? "" : detail.startSnapshot.get(DATA_POINT.MAX).toString();
+                                        startAvgValue = detail.startSnapshot.get(DATA_POINT.AVG) == null ? "" : detail.startSnapshot.get(DATA_POINT.AVG).toString();
+                                        startCompletedValue = detail.startSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS) == null ? "" : detail.startSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS).toString();
+                                        startTotal_timeValue = detail.startSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME) == null ? "" : detail.startSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME).toString();
                                     }
                                     fileWriter.append(startMinimumValue + ",");
                                     fileWriter.append(startMaximumValue + ",");
                                     fileWriter.append(startAvgValue + ",");
                                     fileWriter.append(startCompletedValue + ",");
                                     fileWriter.append(startTotal_timeValue + ",");
-                                    String endMinimumValue = "", endMaximumValue = "", endAvgValue = "", endCompletedValue ="", endTotal_timeValue= "";
+                                    String endMinimumValue = "", endMaximumValue = "", endAvgValue = "", endCompletedValue = "", endTotal_timeValue = "";
                                     if (detail.endSnapshot != null) {
-                                        endMinimumValue = detail.endSnapshot.get(DATA_POINT.MIN)==null?"":detail.endSnapshot.get(DATA_POINT.MIN).toString();
-                                        endMaximumValue = detail.endSnapshot.get(DATA_POINT.MAX)==null?"":detail.endSnapshot.get(DATA_POINT.MAX).toString();
-                                        endAvgValue = detail.endSnapshot.get(DATA_POINT.AVG)==null?"":detail.endSnapshot.get(DATA_POINT.AVG).toString();
-                                        endCompletedValue = detail.endSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS)==null?"":detail.endSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS).toString();
-                                        endTotal_timeValue = detail.endSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME)==null?"":detail.endSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME).toString();
+                                        endMinimumValue = detail.endSnapshot.get(DATA_POINT.MIN) == null ? "" : detail.endSnapshot.get(DATA_POINT.MIN).toString();
+                                        endMaximumValue = detail.endSnapshot.get(DATA_POINT.MAX) == null ? "" : detail.endSnapshot.get(DATA_POINT.MAX).toString();
+                                        endAvgValue = detail.endSnapshot.get(DATA_POINT.AVG) == null ? "" : detail.endSnapshot.get(DATA_POINT.AVG).toString();
+                                        endCompletedValue = detail.endSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS) == null ? "" : detail.endSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS).toString();
+                                        endTotal_timeValue = detail.endSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME) == null ? "" : detail.endSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME).toString();
                                     }
                                     fileWriter.append(endMinimumValue + ",");
                                     fileWriter.append(endMaximumValue + ",");
@@ -250,7 +244,7 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent>{
                             }
                             fileWriter.newLine();
                         }
-                    }catch (Exception exception) {
+                    } catch (Exception exception) {
                         logger.warn("Failed to save the Performance details to file " + saveFile, exception);
                     }
                 }
@@ -264,38 +258,13 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent>{
                 .rows("3dlu, p, 3dlu, p, 7dlu, p, 3dlu, p, 3dlu, p")
                 .add(startTracking).xy(4, 2).add(exportData).xy(8, 2)
                 .add(performanceTable).xyw(2, 4, 7)
-                .addLabel("Minimum (ms)").xy(2,6).add(minimum).xy(4,6).addLabel("Maximum (ms)").xy(6,6).add(maximum).xy(8,6)
-                .addLabel("Average (ms)").xy(2,8).add(average).xy(4,8).addLabel("Count").xy(6,8).add(transactionCount).xy(8,8)
-                .addLabel("Median").xy(2,10).add(median).xy(4, 10).addLabel("Total Time").xy(6, 10).add(totalTime).xy(8, 10)
+                .addLabel("Minimum (ms)").xy(2, 6).add(minimum).xy(4, 6).addLabel("Maximum (ms)").xy(6, 6).add(maximum).xy(8, 6)
+                .addLabel("Average (ms)").xy(2, 8).add(average).xy(4, 8).addLabel("Count").xy(6, 8).add(transactionCount).xy(8, 8)
+                .addLabel("Median").xy(2, 10).add(median).xy(4, 10).addLabel("Total Time").xy(6, 10).add(totalTime).xy(8, 10)
                 .build();
         return performanceDefaultUI;
     }
 
-    private static class PerformanceData {
-        public Map<DATA_POINT, Object> startSnapshot;
-        public Map<DATA_POINT, Object> endSnapshot;
-
-        @Override
-        public String toString() {
-            if (endSnapshot != null && startSnapshot != null
-                    && endSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME) != null
-                    && endSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS) != null) {
-                int totalTransactionsDuringTest = ((int) endSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS) - ((startSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS)==null)?0:(int)startSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS)));
-                if (totalTransactionsDuringTest > 0) {
-                    return "" + ((long) endSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME) - ((startSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME)==null)?0L:(long)startSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME))
-                        / totalTransactionsDuringTest);
-                } else {
-                    return "No Change";
-                }
-            } else if (endSnapshot != null && endSnapshot.get(DATA_POINT.AVG) != null) {
-                return endSnapshot.get(DATA_POINT.AVG).toString();
-            } else if (startSnapshot != null && startSnapshot.get(DATA_POINT.AVG)!= null) {
-                return startSnapshot.get(DATA_POINT.AVG).toString();
-            } else {
-                return "";
-            }
-        }
-    }
     private Map<DATA_POINT, Object> capturePerformanceData(OIMJMXWrapper.OIM_JMX_BEANS beans, String attributePrefix) {
         Map<DATA_POINT, Object> performanceData = new HashMap<DATA_POINT, Object>();
         performanceData.put(DATA_POINT.MAX, connection.getValue(beans, attributePrefix + "_maxTime"));
@@ -316,6 +285,34 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent>{
     @Override
     public void destroyComponent() {
 
+    }
+
+    public static enum DATA_POINT {MIN, MAX, AVG, MEDIAN, COMPLETED_TRANSACTIONS, TOTAL_TRANSACTION_TIME}
+
+    private static class PerformanceData {
+        public Map<DATA_POINT, Object> startSnapshot;
+        public Map<DATA_POINT, Object> endSnapshot;
+
+        @Override
+        public String toString() {
+            if (endSnapshot != null && startSnapshot != null
+                    && endSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME) != null
+                    && endSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS) != null) {
+                int totalTransactionsDuringTest = ((int) endSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS) - ((startSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS) == null) ? 0 : (int) startSnapshot.get(DATA_POINT.COMPLETED_TRANSACTIONS)));
+                if (totalTransactionsDuringTest > 0) {
+                    return "" + ((long) endSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME) - ((startSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME) == null) ? 0L : (long) startSnapshot.get(DATA_POINT.TOTAL_TRANSACTION_TIME))
+                            / totalTransactionsDuringTest);
+                } else {
+                    return "No Change";
+                }
+            } else if (endSnapshot != null && endSnapshot.get(DATA_POINT.AVG) != null) {
+                return endSnapshot.get(DATA_POINT.AVG).toString();
+            } else if (startSnapshot != null && startSnapshot.get(DATA_POINT.AVG) != null) {
+                return startSnapshot.get(DATA_POINT.AVG).toString();
+            } else {
+                return "";
+            }
+        }
     }
 
 }

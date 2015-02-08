@@ -60,8 +60,8 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
     JGTable vmOptions;
     JGTable programArguments;
     JGTable environmentVariable;
-    private JPanel uiJavaRunPanel;
     Process runningProcess;
+    private JPanel uiJavaRunPanel;
 
     public UIJavaRun(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);

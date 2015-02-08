@@ -188,7 +188,7 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
 
     }
 
-    public static class DisplayComponentNode<T extends UIComponent,W> extends AbstractUIComponentTreeNode<W> implements DisplayableNode<T> {
+    public static class DisplayComponentNode<T extends UIComponent, W> extends AbstractUIComponentTreeNode<W> implements DisplayableNode<T> {
 
         private static final Logger logger = LoggerFactory.getLogger(DisplayComponentNode.class);
 
