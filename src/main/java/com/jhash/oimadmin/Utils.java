@@ -285,6 +285,14 @@ public class Utils {
             return false;
     }
 
+    public static String toString(Object objectValue) {
+        if (objectValue != null) {
+            return objectValue.toString();
+        } else {
+            return "";
+        }
+    }
+
     @FunctionalInterface
     public static interface JarFileProcessor {
 

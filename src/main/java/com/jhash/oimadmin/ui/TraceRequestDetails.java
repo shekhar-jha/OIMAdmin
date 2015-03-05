@@ -1,0 +1,417 @@
+/*
+ * Copyright 2015 Shekhar Jha
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.jhash.oimadmin.ui;
+
+import com.jgoodies.jsdl.common.builder.FormBuilder;
+import com.jgoodies.jsdl.component.JGComponentFactory;
+import com.jgoodies.jsdl.component.JGStripedTable;
+import com.jgoodies.jsdl.component.renderer.JGBooleanTableCellRenderer;
+import com.jhash.oimadmin.Config;
+import com.jhash.oimadmin.UIComponentTree;
+import com.jhash.oimadmin.Utils;
+import com.jhash.oimadmin.oim.DBConnection;
+import com.jhash.oimadmin.oim.OIMConnection;
+import com.jidesoft.swing.JideTabbedPane;
+import oracle.iam.request.vo.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.List;
+
+public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
+
+    private static final Logger logger = LoggerFactory.getLogger(TraceRequestDetails.class);
+
+    private final OIMConnection connection;
+    private final boolean destroyOnClose;
+    private DBConnection dbConnection;
+    private JButton retrieve;
+    private JTextField beneficiaryType = UIUtils.createTextField();
+    private JFormattedTextField creationDate = UIUtils.createDateField();
+    private JTextField getDependsOnRequestId = UIUtils.createTextField();
+    private JFormattedTextField getEndDate = UIUtils.createDateField();
+    private JFormattedTextField getExecutionDate = UIUtils.createDateField();
+    private JTextField getReasonForFailure = UIUtils.createTextField();
+    private JFormattedTextField getRequesterKey = UIUtils.createLongField();
+    private JTextField getRequestModelName = UIUtils.createTextField();
+    private JFormattedTextField getRequestStage = UIUtils.createLongField();
+    private JTextField getRequestStatus = UIUtils.createTextField();
+    private JTextField getRequestID = UIUtils.createTextField();
+    private JFormattedTextField getRequestKey = UIUtils.createLongField();
+    private JTextArea getJustification = UIUtils.createTextArea();
+    private JTextArea getRequestContext = UIUtils.createTextArea();
+    private DetailsTable additionalAttributesTable;
+    private DetailsTable approvalDataTable;
+    private DetailsTable beneficiaryTable;
+    private DetailsTable targetEntitiesOfBeneficiaryTable;
+    private DetailsTable beneficiaryTargetEntityValuesTable;
+    private DetailsTable beneficiaryTargetEntityAdditionalValuesTable;
+    private DetailsTable targetEntitiesTable;
+    private DetailsTable targetEntityValuesTable;
+    private DetailsTable targetEntityAdditionalValuesTable;
+    private DetailsTable templateAttributesTable;
+    private DetailsTable childRequestTable;
+    private OrchestrationDetailUI orchestrationDetailPanel;
+
+    private JTextField requestID = JGComponentFactory.getCurrent().createTextField();
+    private JPanel traceRequestUI;
+
+
+    public TraceRequestDetails(String name, OIMConnection connection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+        this(name, false, connection, configuration, selectionTree, displayArea);
+    }
+
+    public TraceRequestDetails(String name, boolean destroyOnClose, OIMConnection connection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+        super(name, configuration, selectionTree, displayArea);
+        this.connection = connection;
+        this.destroyOnClose = destroyOnClose;
+    }
+
+    @Override
+    public boolean destroyComponentOnClose() {
+        return destroyOnClose;
+    }
+
+
+    private void retrieveRequestDetails(String requestIDValue) {
+        try {
+            Request request = connection.getRequestDetails(requestIDValue);
+
+            getRequestID.setText(request.getRequestID());
+            getRequestKey.setValue(request.getRequestKey());
+            getDependsOnRequestId.setText(request.getDependsOnRequestId());
+            getRequesterKey.setText(request.getRequesterKey());
+
+            beneficiaryType.setText(request.getBeneficiaryType());
+            getRequestModelName.setText(request.getRequestModelName());
+            getRequestStage.setValue(request.getRequestStage());
+            getRequestStatus.setText(request.getRequestStatus());
+
+            creationDate.setValue(request.getCreationDate());
+            getExecutionDate.setValue(request.getExecutionDate());
+            getEndDate.setValue(request.getEndDate());
+            getReasonForFailure.setText(request.getReasonForFailure());
+
+            getJustification.setText(request.getJustification());
+            if (request.getRequestContext() != null) {
+                if (request.getRequestContext() instanceof RequestContext) {
+                    RequestContext requestContext = (RequestContext) request.getRequestContext();
+                    getRequestContext.setText("Login User: " + requestContext.getLoginUserId());
+                    getRequestContext.append(System.lineSeparator());
+                    getRequestContext.append("Login User's Role: " + requestContext.getLoginUserRole());
+                    getRequestContext.append(System.lineSeparator());
+                    getRequestContext.append("Request ID: " + requestContext.getRequestId());
+                    getRequestContext.append(System.lineSeparator());
+                } else {
+                    getRequestContext.setText("Class: " + request.getRequestContext().getClass());
+                    getRequestContext.append(request.getRequestContext().toString());
+                }
+            } else {
+                getRequestContext.setText("");
+            }
+            additionalAttributesTable.tableModel.setRowCount(0);
+            for (RequestTemplateAttribute attribute : request.getAdditionalAttributes()) {
+                additionalAttributesTable.tableModel.addRow(new Object[]{attribute.getName(), attribute.getTypeHolder(), attribute.getValue()});
+            }
+            templateAttributesTable.tableModel.setRowCount(0);
+            for (RequestTemplateAttribute attribute : request.getTemplateAttributes()) {
+                templateAttributesTable.tableModel.addRow(new Object[]{attribute.getName(), attribute.getTypeHolder(), attribute.getValue()});
+            }
+            approvalDataTable.tableModel.setRowCount(0);
+            for (ApprovalData approvalData : request.getApprovalData()) {
+                approvalDataTable.tableModel.addRow(new Object[]{approvalData.getApprovalInstanceID(), approvalData.getApprovalKey(), approvalData.getStage(), approvalData.getStatus()});
+            }
+            beneficiaryTable.tableModel.setRowCount(0);
+            for (Beneficiary beneficiary : request.getBeneficiaries()) {
+                beneficiaryTable.tableModel.addRow(new Object[]{beneficiary.getBeneficiaryKey(), beneficiary.getBeneficiaryType(), beneficiary.getAttributes(), beneficiary.getTargetEntities()});
+            }
+            targetEntitiesOfBeneficiaryTable.tableModel.setRowCount(0);
+            beneficiaryTargetEntityValuesTable.tableModel.setRowCount(0);
+            beneficiaryTargetEntityAdditionalValuesTable.tableModel.setRowCount(0);
+            targetEntitiesTable.tableModel.setRowCount(0);
+            for (RequestEntity entity : request.getTargetEntities()) {
+                targetEntitiesTable.tableModel.addRow(new Object[]{entity.getEntityKey(), entity.getRequestEntityType(), entity.getEntitySubType(), entity.getOperation(), entity.getEntityData(), entity.getAdditionalEntityData()});
+            }
+            targetEntityValuesTable.tableModel.setRowCount(0);
+            targetEntityAdditionalValuesTable.tableModel.setRowCount(0);
+            childRequestTable.tableModel.setRowCount(0);
+            for (Request childRequest : request.getChildRequests()) {
+                childRequestTable.tableModel.addRow(new Object[]{childRequest.getRequestID(), childRequest.getRequestModelName(), childRequest.getRequestStatus()});
+            }
+            orchestrationDetailPanel.loadDetail(request.getOrchID());
+            //request.getEventID();
+        } catch (Exception exception) {
+            logger.warn("Failed to process request detail retrieval for " + requestIDValue, exception);
+        }
+    }
+
+    @Override
+    public void initializeComponent() {
+        dbConnection = new DBConnection();
+        dbConnection.initialize(configuration);
+        additionalAttributesTable = new DetailsTable(new String[]{"Name", "Type", "Value"});
+        approvalDataTable = new DetailsTable(new String[]{"Instance ID", "Key", "Stage", "Status"});
+        beneficiaryTable = new DetailsTable(new String[]{"Key", "Type", "Attributes", "Target Entities"});
+        targetEntitiesOfBeneficiaryTable = new DetailsTable(new String[]{"Key", "Type", "Sub-type",
+                "Operation", "Attributes", "Additional Attributes"});
+        beneficiaryTargetEntityValuesTable = new DetailsTable(new String[]{"Row Key", "Action", "Name", "Type", "Value",
+                "Parent", "Child", "Default", "MLS Map"});
+        beneficiaryTargetEntityAdditionalValuesTable = new DetailsTable(new String[]{"Row Key", "Action", "Name", "Type", "Value",
+                "Parent", "Child", "Default", "MLS Map"});
+        beneficiaryTable.removeColumn(beneficiaryTable.getColumn("Target Entities"));
+        beneficiaryTable.addActionListener(3, targetEntitiesOfBeneficiaryTable, RequestBeneficiaryEntity.class, (entity) -> {
+            return new Object[]{entity.getEntityKey(), entity.getRequestEntityType(),
+                    entity.getEntitySubType(), entity.getOperation(),
+                    entity.getEntityData(), entity.getAdditionalEntityData()};
+        });
+        targetEntitiesOfBeneficiaryTable.addActionListener(4, beneficiaryTargetEntityValuesTable, RequestBeneficiaryEntityAttribute.class, (entity) -> {
+            return new Object[]{
+                    entity.getRowKey(), entity.getActionHolder(),
+                    entity.getName(), entity.getTypeHolder(), entity.getValue(),
+                    entity.getParentAttribute(), entity.getChildAttributes(), entity.getDefaultMLSValue(), entity.getMlsMap()
+            };
+        });
+        targetEntitiesOfBeneficiaryTable.addActionListener(5, beneficiaryTargetEntityAdditionalValuesTable, RequestBeneficiaryEntityAttribute.class, (entity) -> {
+            return new Object[]{
+                    entity.getRowKey(), entity.getActionHolder(),
+                    entity.getName(), entity.getTypeHolder(), entity.getValue(),
+                    entity.getParentAttribute(), entity.getChildAttributes(), entity.getDefaultMLSValue(), entity.getMlsMap()
+            };
+        });
+
+        targetEntitiesTable = new DetailsTable(new String[]{"Key", "Type", "Sub-type", "Operation", "Attributes", "Additional Attributes"});
+        targetEntityValuesTable = new DetailsTable(new String[]{"Row Key", "Action", "Name", "Type", "Value",
+                "Parent", "Child", "Default", "MLS Map"});
+        targetEntityAdditionalValuesTable = new DetailsTable(new String[]{"Row Key", "Action", "Name", "Type", "Value",
+                "Parent", "Child", "Default", "MLS Map"});
+        targetEntitiesTable.addActionListener(4, targetEntityValuesTable, RequestEntityAttribute.class, (targetEntityValue) -> {
+            return new Object[]{
+                    targetEntityValue.getRowKey(), targetEntityValue.getActionHolder(),
+                    targetEntityValue.getName(), targetEntityValue.getTypeHolder(),
+                    targetEntityValue.getValueHolder(), targetEntityValue.getParentAttribute(),
+                    targetEntityValue.getChildAttributes(), targetEntityValue.getDefaultMLSValue(),
+                    targetEntityValue.getMlsMap()
+            };
+        });
+        targetEntitiesTable.addActionListener(5, targetEntityAdditionalValuesTable, RequestEntityAttribute.class, (targetEntityValue) -> {
+            return new Object[]{
+                    targetEntityValue.getRowKey(), targetEntityValue.getActionHolder(),
+                    targetEntityValue.getName(), targetEntityValue.getTypeHolder(),
+                    targetEntityValue.getValueHolder(), targetEntityValue.getParentAttribute(),
+                    targetEntityValue.getChildAttributes(), targetEntityValue.getDefaultMLSValue(),
+                    targetEntityValue.getMlsMap()
+            };
+        });
+
+        templateAttributesTable = new DetailsTable(new String[]{"Name", "Type", "Value", "Target"});
+        childRequestTable = new DetailsTable(new String[]{"ID", "Model Name", "Status"});
+        retrieve = JGComponentFactory.getCurrent().createButton("Retrieve..");
+        retrieve.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    String requestIDValue = requestID.getText();
+                    if (!Utils.isEmpty(requestIDValue)) {
+                        Utils.executeAsyncOperation("Loading Request Details " + requestIDValue, new Runnable() {
+                            @Override
+                            public void run() {
+                                retrieveRequestDetails(requestIDValue);
+                            }
+                        });
+                    }
+                } catch (Exception exception) {
+                    logger.warn("Failed to initiate retrieval of the request details Event: " + e, exception);
+                }
+            }
+        });
+        orchestrationDetailPanel = new OrchestrationDetailUI(dbConnection, connection).initialize();
+        JPanel searchCriteria = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
+                .rows("2dlu, p")
+                .addLabel("Request ID").xy(2, 2).add(requestID).xy(4, 2).add(retrieve).xy(8, 2)
+                .build();
+        JPanel requestAttributesDetailsPanel = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
+                .rows("2dlu, p, 2dlu, [p,100dlu], 2dlu, p, 2dlu, [p,100dlu], 2dlu, p")
+                .addSeparator("Request Attributes").xyw(2, 2, 7)
+                .add(additionalAttributesTable).xyw(2, 4, 7)
+                .addSeparator("Template Attributes").xyw(2, 6, 7)
+                .add(templateAttributesTable).xyw(2, 8, 7)
+                .build();
+        JPanel beneficiariesDetailsPanel = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
+                .rows("2dlu, [p,50dlu], 2dlu, p, 2dlu, [p,50dlu], 2dlu, p, 2dlu, [p,70dlu], 2dlu, p, 2dlu, [p,50dlu], 2dlu")
+                .add(beneficiaryTable).xyw(2, 2, 7)
+                .addSeparator("Targets").xyw(2, 4, 7)
+                .add(targetEntitiesOfBeneficiaryTable).xyw(2, 6, 7)
+                .addSeparator("Entity Data").xyw(2, 8, 7)
+                .add(beneficiaryTargetEntityValuesTable).xyw(2, 10, 7)
+                .addSeparator("Additional Entity Data").xyw(2, 12, 7)
+                .add(beneficiaryTargetEntityAdditionalValuesTable).xyw(2, 14, 7)
+                .build();
+        JPanel targetsDetailsPanel = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
+                .rows("2dlu, [p,70dlu], 5dlu, p, 2dlu, [p,100dlu], 5dlu, p, 2dlu, [p,70dlu]")
+                .add(targetEntitiesTable).xyw(2, 2, 7)
+                .addSeparator("Target Attributes").xyw(2, 4, 7)
+                .add(targetEntityValuesTable).xyw(2, 6, 7) // add attribute details
+                .addSeparator("Additional Attributes").xyw(2, 8, 7)
+                .add(targetEntityAdditionalValuesTable).xyw(2, 10, 7) // add attribute details
+                .build();
+        JButton retrieveSelectedRequest = JGComponentFactory.getCurrent().createButton("Retrieve Selected Request");
+        retrieveSelectedRequest.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    int selectedRow = childRequestTable.getSelectedRow();
+                    if (selectedRow == -1) {
+                        logger.trace("Nothing to do since no item is selected");
+                        return;
+                    }
+                    String requestId = (String) childRequestTable.tableModel.getValueAt(selectedRow, 0);
+                    Utils.executeAsyncOperation("Loading Child Request [" + requestId + "]", new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                TraceRequestDetails childRequestDetails = new TraceRequestDetails("Request (" + requestId + ")", true, connection, configuration, selectionTree, displayArea);
+                                childRequestDetails.initialize();
+                                childRequestDetails.retrieveRequestDetails(requestId);
+                            } catch (Exception exception) {
+                                logger.warn("Failed to load child request details for request " + requestId, exception);
+                            }
+                        }
+                    });
+                } catch (Exception exception) {
+                    logger.warn("Failed to process retrieval of child request event " + e, exception);
+                }
+            }
+        });
+
+        JPanel childRequestPanel = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
+                .rows("2dlu, p, 5dlu, [p,100dlu], 5dlu")
+                .add(retrieveSelectedRequest).xy(2, 2)
+                .add(childRequestTable).xyw(2, 4, 7)
+                .build();
+        JPanel approvalDetailPanel = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
+                .rows("2dlu, p, 5dlu, [p,100dlu], 5dlu")
+                .add(approvalDataTable).xyw(2, 4, 7)
+                .build();
+        JideTabbedPane requestDetailsTabbedPane = new JideTabbedPane();
+        requestDetailsTabbedPane.addTab("Request Attributes", requestAttributesDetailsPanel);
+        requestDetailsTabbedPane.addTab("Beneficiaries", beneficiariesDetailsPanel);
+        requestDetailsTabbedPane.addTab("Targets", targetsDetailsPanel);
+        requestDetailsTabbedPane.addTab("Child Requests", childRequestPanel);
+        JPanel requestDetailPanel = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
+                .rows("2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, fill:p:grow, 2dlu")
+                .addLabel("Request ID").xy(2, 2).add(getRequestID).xy(4, 2).addLabel("Request Key").xy(6, 2).add(getRequestKey).xy(8, 2)
+                .addLabel("Depends On").xy(2, 4).add(getDependsOnRequestId).xy(4, 4).addLabel("Requester Key").xy(6, 4).add(getRequesterKey).xy(8, 4)
+                .addLabel("Beneficiary Type").xy(2, 6).add(beneficiaryType).xy(4, 6).addLabel("Model").xy(6, 6).add(getRequestModelName).xy(8, 6)
+                .addLabel("Stage").xy(2, 8).add(getRequestStage).xy(4, 8).addLabel("Status").xy(6, 8).add(getRequestStatus).xy(8, 8)
+                .addLabel("Create Date").xy(2, 10).add(creationDate).xy(4, 10).addLabel("Execution Date").xy(6, 10).add(getExecutionDate).xy(8, 10)
+                .addLabel("End Date").xy(2, 12).add(getEndDate).xy(4, 12).addLabel("Reason for Failure").xy(6, 12).add(getReasonForFailure).xy(8, 12)
+                .addLabel("Justification").xy(2, 14).add(getJustification).xyw(4, 14, 5)
+                .addLabel("Request Context").xy(2, 16).add(getRequestContext).xyw(4, 16, 5)
+                .add(requestDetailsTabbedPane).xyw(2, 18, 7)
+                .build();
+        JideTabbedPane tabbedPane = new JideTabbedPane();
+        tabbedPane.addTab("Request Detail", requestDetailPanel);
+        tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getUIComponent());
+        tabbedPane.addTab("Approval Detail", approvalDetailPanel);
+        traceRequestUI = new JPanel(new BorderLayout());
+        traceRequestUI.add(searchCriteria, BorderLayout.NORTH);
+        traceRequestUI.add(tabbedPane, BorderLayout.CENTER);
+    }
+
+    @Override
+    public JPanel getComponent() {
+        return traceRequestUI;
+    }
+
+    @Override
+    public void destroyComponent() {
+        logger.debug("Destroying component {}", this);
+        if (dbConnection != null) {
+            dbConnection.destroy();
+            dbConnection = null;
+        }
+        logger.debug("Destroyed component {}", this);
+    }
+
+    @FunctionalInterface
+    public static interface RowExtractor<T> {
+
+        public Object[] getRowDetails(T dataObject);
+    }
+
+    public static class DetailsTable extends JGStripedTable {
+
+        public final DefaultTableModel tableModel;
+
+        public DetailsTable(String[] columnNames) {
+            super(new DefaultTableModel() {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return false;
+                }
+            });
+            tableModel = (DefaultTableModel) super.getModel();
+            super.setDefaultRenderer(Boolean.class, new JGBooleanTableCellRenderer());
+            for (String columnName : columnNames) {
+                tableModel.addColumn(columnName);
+            }
+        }
+
+        public <T> void addActionListener(int columnIndex, DetailsTable childTable, Class<T> rowType, RowExtractor<T> extractor) {
+            getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+                @Override
+                public void valueChanged(ListSelectionEvent e) {
+                    try {
+                        if (e.getValueIsAdjusting())
+                            return;
+                        int selectedRow = getSelectedRow();
+                        if (selectedRow == -1) {
+                            logger.warn("Incorrect selection has been made or selection made has become invalid. Selected Row={}", selectedRow);
+                            return;
+                        }
+                        childTable.tableModel.setRowCount(0);
+                        Object targetEntitiesObject = tableModel.getValueAt(selectedRow, columnIndex);
+                        if (targetEntitiesObject != null && targetEntitiesObject instanceof List) {
+                            List<?> targetEntities = (List) targetEntitiesObject;
+                            for (Object targetEntity : targetEntities) {
+                                if (rowType.isAssignableFrom(targetEntity.getClass())) {
+                                    T entity = (T) targetEntity;
+                                    Object[] rowDetails = extractor.getRowDetails(entity);
+                                    childTable.tableModel.addRow(rowDetails);
+                                } else {
+                                    logger.warn("Failed to locate an instance of {} in list {}, found {}", new Object[]{rowType, targetEntities, targetEntity});
+                                }
+                            }
+                        } else {
+                            logger.warn("Expected the column {} to have List of target entities but found {}", columnIndex, targetEntitiesObject);
+                        }
+                    } catch (Exception exception) {
+                        logger.warn("Failed to process row selection event " + e, exception);
+                    }
+                }
+            });
+        }
+    }
+
+}

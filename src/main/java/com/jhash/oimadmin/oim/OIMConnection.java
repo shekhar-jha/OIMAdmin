@@ -20,14 +20,18 @@ import com.jhash.oimadmin.Config.PLATFORM;
 import com.jhash.oimadmin.Connection;
 import com.jhash.oimadmin.OIMAdminException;
 import com.jhash.oimadmin.Utils;
+import com.thortech.xl.systemverification.api.DDKernelService;
 import oracle.iam.platform.OIMClient;
 import oracle.iam.platform.Role;
 import oracle.iam.platformservice.api.PlatformService;
 import oracle.iam.platformservice.api.PlatformUtilsService;
+import oracle.iam.request.api.RequestService;
+import oracle.iam.request.vo.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 
@@ -173,6 +177,36 @@ public class OIMConnection extends AbstractConnection {
         } catch (Exception exception) {
             throw new OIMAdminException("Failed to purge cache " + cacheName, exception);
         }
+    }
+
+    public Request getRequestDetails(String requestId) {
+        if (!isLogin)
+            throw new IllegalStateException("The OIM Connection " + this + " is not in a login state");
+        try {
+            RequestService requestService = oimClient.getService(RequestService.class);
+            Request request = requestService.getBasicRequestData(requestId);
+            return request;
+        }catch (Exception exception) {
+            throw new OIMAdminException("Error occurred while retrieving request details for request id " + requestId, exception);
+        }
+    }
+
+    public <T> T executeOrchestrationOperation(String method, Class[] parameterTypes, Object[] parameters) {
+        if (!isLogin)
+            throw new IllegalStateException("The OIM Connection " + this + " is not in a login state");
+        try {
+            DDKernelService kernelService = oimClient.getService(DDKernelService.class);
+            logger.trace("Trying to invoke method {} with parameters {} on DDKernelService {}", new Object[]{method, parameters, kernelService});
+            Object result = kernelService.invoke(method, parameters, parameterTypes);
+            logger.trace("Returned result {}", result);
+            return (T) result;
+        }catch (Exception exception) {
+            throw new OIMAdminException("Error occurred while invoking method " + method + " on DDKernelService with parameters " + Arrays.toString(parameters), exception);
+        }
+    }
+
+    public void getTaskDetails() {
+
     }
 
     public void logout() {

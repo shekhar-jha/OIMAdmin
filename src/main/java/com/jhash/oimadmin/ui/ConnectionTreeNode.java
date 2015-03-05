@@ -82,6 +82,12 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
         selectionTree.addChildNode(this, cacheNode);
         selectionTree.addChildNode(cacheNode, new OIMCacheNode("OIM Cache", connection, configuration, selectionTree, displayArea).initialize());
         selectionTree.addChildNode(this, new OIMPerformanceTreeNode("Performance", configuration, selectionTree, displayArea));
+        DummyAdminTreeNode trackerNode = new DummyAdminTreeNode("Track", configuration, selectionTree, displayArea);
+        selectionTree.addChildNode(trackerNode, new DisplayComponentNode<>("Request", new TraceRequestDetails("Request", connection, configuration, selectionTree, displayArea
+        ),null, configuration, selectionTree, displayArea).initialize());
+        selectionTree.addChildNode(trackerNode, new DisplayComponentNode<>("Orchestration", new TraceOrchestrationDetails("Orchestration", connection, configuration, selectionTree, displayArea
+        ),null, configuration, selectionTree, displayArea).initialize());
+        selectionTree.addChildNode(this, trackerNode);
         logger.debug("Initialized {}", this);
     }
 

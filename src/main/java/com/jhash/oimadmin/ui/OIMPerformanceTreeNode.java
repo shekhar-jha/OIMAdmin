@@ -152,7 +152,7 @@ public class OIMPerformanceTreeNode extends AbstractUIComponentTreeNode<OIMJMXWr
                 List<Map<String, Object>> performanceMetrics = performanceItemDetails.get(performanceItem);
                 AbstractUIComponentTreeNode node = new AbstractUIComponentTreeNode.DisplayComponentNode(performanceItem,
                         new OIMPerformanceDetails(performanceItem, connection, performanceMetrics, configuration, selectionTree, displayArea),
-                        connection, configuration, selectionTree, displayArea);
+                        connection, configuration, selectionTree, displayArea).initialize();
                 logger.trace("Adding node {} for item {}", node, performanceItem);
                 selectionTree.addChildNode(this, node);
             }

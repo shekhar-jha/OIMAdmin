@@ -22,8 +22,8 @@ import com.jhash.oimadmin.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
+import java.sql.*;
+import java.util.*;
 
 public class DBConnection extends AbstractConnection {
 
@@ -32,9 +32,9 @@ public class DBConnection extends AbstractConnection {
     public static final String ATTR_DB_USER = "db_user";
     public static final String ATTR_DB_PWD = "db_pwd";
     public static final String ATTR_DB_AUTOCOMMIT = "db_auto_commit";
-
+    public static final String GET_ORCHESTRATION_PROCESS_DETAILS = "select * from ORCHPROCESS where ID = ?";
+    public static final String GET_ORCHESTRATION_PROCESS_EVENT_HANDLER_DETAILS = "select * from ORCHEVENTS where PROCESSID = ? order by orchorder";
     private static final Logger logger = LoggerFactory.getLogger(DBConnection.class);
-
     private Connection dbConnection;
 
     public DBConnection() {
@@ -76,6 +76,47 @@ public class DBConnection extends AbstractConnection {
             }
         }
         logger.debug("Initialized Database.");
+    }
+
+    public OIMJMXWrapper.Details invokeSQL(String sqlID, Object... parameterValues) {
+        logger.trace("Trying to invoke SQL {} with parameters {}", sqlID, parameterValues);
+        try (PreparedStatement preparedStatement = dbConnection.prepareStatement(sqlID)){
+            ParameterMetaData parameterMetaData = preparedStatement.getParameterMetaData();
+            if (parameterMetaData.getParameterCount() != parameterValues.length) {
+                throw new NullPointerException("The number of values " + parameterValues
+                        + " do not match number of parameters "
+                        + parameterMetaData.getParameterCount() + " of SQL statement " + sqlID);
+            }
+            int parameterIndexCounter = 1;
+            for (Object parameterValue : parameterValues) {
+                preparedStatement.setObject(parameterIndexCounter, parameterValue);
+                parameterIndexCounter++;
+            }
+            try {
+                ResultSet result = preparedStatement.executeQuery();
+                ResultSetMetaData resultSetMetaData = preparedStatement.getMetaData();
+                int totalColumnsInResult = resultSetMetaData.getColumnCount();
+                List<String> columnNames = new ArrayList<>();
+                for (int columnCounter =1; columnCounter <= totalColumnsInResult; columnCounter++) {
+                    columnNames.add(resultSetMetaData.getColumnName(columnCounter));
+                }
+                List<Map<String, Object>> resultData = new ArrayList<>();
+                while (result.next()) {
+                    Map<String, Object> record = new HashMap<>();
+                    for (int columnCounter = 1; columnCounter <= totalColumnsInResult; columnCounter++) {
+                        String columnName = resultSetMetaData.getColumnLabel(columnCounter);
+                        Object columnValue = result.getObject(columnCounter);
+                        record.put(columnName, columnValue);
+                    }
+                    resultData.add(record);
+                }
+                return new OIMJMXWrapper.Details(resultData, columnNames.toArray(new String[0]));
+            }catch (Exception exception) {
+                throw new OIMAdminException("Failed to read result", exception);
+            }
+        } catch (Exception exception) {
+            throw new OIMAdminException("Failed to execute SQL " + sqlID + " with parameter " + parameterValues, exception);
+        }
     }
 
     @Override
