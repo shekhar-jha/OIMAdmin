@@ -279,10 +279,7 @@ public class Utils {
     }
 
     public static boolean isEmpty(String value) {
-        if (value == null || value.isEmpty())
-            return true;
-        else
-            return false;
+        return value == null || value.isEmpty();
     }
 
     public static String toString(Object objectValue) {
@@ -294,9 +291,9 @@ public class Utils {
     }
 
     @FunctionalInterface
-    public static interface JarFileProcessor {
+    public interface JarFileProcessor {
 
-        public void process(JarFile jarFile, JarEntry file);
+        void process(JarFile jarFile, JarEntry file);
 
     }
 

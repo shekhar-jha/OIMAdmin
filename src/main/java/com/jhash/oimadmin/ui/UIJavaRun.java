@@ -135,10 +135,7 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
         javaChooser.setFileFilter(new FileFilter() {
             @Override
             public boolean accept(File f) {
-                if (f.isFile() && f.canExecute() && f.getName().toLowerCase().startsWith("java"))
-                    return true;
-                else
-                    return false;
+                return f.isFile() && f.canExecute() && f.getName().toLowerCase().startsWith("java");
             }
 
             @Override

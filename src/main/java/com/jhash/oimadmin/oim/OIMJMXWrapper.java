@@ -367,7 +367,7 @@ public class OIMJMXWrapper extends AbstractConnection {
         logger.debug("Destroyed OIM JMX Connection");
     }
 
-    public static enum EVENT_HANDLER_DETAILS {
+    public enum EVENT_HANDLER_DETAILS {
         STAGE("Stage of Execution", "stage"), ORDER("Order of Execution", "order"), NAME("Name", "name"), CUSTOM(
                 "Is custom?", "custom"), CONDITIONAL("Conditional", "conditional"), OFFBAND("Executed Offband",
                 "offBand"), CLASS("class", "class"), LOCATION("location", "location");
@@ -377,7 +377,7 @@ public class OIMJMXWrapper extends AbstractConnection {
         public final String columnName;
         public final String name;
 
-        private EVENT_HANDLER_DETAILS(String columnName, String name) {
+        EVENT_HANDLER_DETAILS(String columnName, String name) {
             this.name = name;
             this.columnName = columnName;
         }
@@ -401,13 +401,13 @@ public class OIMJMXWrapper extends AbstractConnection {
 
     }
 
-    public static enum OIM_CACHE_ATTRS {
+    public enum OIM_CACHE_ATTRS {
         CLUSTERED("Clustered"), ENABLED("Enabled"), ExpirationTime("ExpirationTime"), Provider("Provider"), ThreadLocalCacheEnabled("ThreadLocalCacheEnabled"),
         MulticastAddress("MulticastAddress"), MulticastConfig("MulticastConfig"), Size("Size");
 
         public final String nameValue;
 
-        private OIM_CACHE_ATTRS(String nameValue) {
+        OIM_CACHE_ATTRS(String nameValue) {
             this.nameValue = nameValue;
         }
     }

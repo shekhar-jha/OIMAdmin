@@ -22,8 +22,8 @@ import javax.swing.*;
 
 public interface DisplayArea {
 
-    public void add(UIComponent<? extends JComponent> component);
+    void add(UIComponent<? extends JComponent> component);
 
-    public void remove(UIComponent<? extends JComponent> component);
+    void remove(UIComponent<? extends JComponent> component);
 
 }

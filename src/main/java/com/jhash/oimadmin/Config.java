@@ -352,7 +352,7 @@ public class Config {
 
         private final String name;
 
-        private PLATFORM(String name) {
+        PLATFORM(String name) {
             this.name = name;
         }
 

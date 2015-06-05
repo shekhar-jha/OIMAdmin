@@ -277,7 +277,7 @@ public class OIMAdmin extends JFrame {
         logger.debug("Destroyed OIMAdmin");
     }
 
-    public static enum STANDARD_MENUS {
+    public enum STANDARD_MENUS {
         NEW
     }
 

@@ -287,7 +287,7 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent> {
 
     }
 
-    public static enum DATA_POINT {MIN, MAX, AVG, MEDIAN, COMPLETED_TRANSACTIONS, TOTAL_TRANSACTION_TIME}
+    public enum DATA_POINT {MIN, MAX, AVG, MEDIAN, COMPLETED_TRANSACTIONS, TOTAL_TRANSACTION_TIME}
 
     private static class PerformanceData {
         public Map<DATA_POINT, Object> startSnapshot;

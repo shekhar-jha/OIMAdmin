@@ -301,7 +301,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
         }
         try {
             logger.debug("Trying to looking orchestration details for {}", orchestrationProcessID);
-            Orchestration orchestrationObject = (Orchestration) connection.executeOrchestrationOperation("getOrchestration", new Class[]{long.class}, new Object[]{orchestrationProcessID});
+            Orchestration orchestrationObject = connection.executeOrchestrationOperation("getOrchestration", new Class[]{long.class}, new Object[]{orchestrationProcessID});
             logger.debug("Retrieved orchestration details as {}", orchestrationObject);
             orcProcessObjContextVal.setText(orchestrationObject.getContextVal());
             orcProcessObjInterEventData.setText(Utils.toString(orchestrationObject.getInterEventData()));

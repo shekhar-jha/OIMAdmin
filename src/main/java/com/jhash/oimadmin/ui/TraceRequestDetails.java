@@ -355,9 +355,9 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
     }
 
     @FunctionalInterface
-    public static interface RowExtractor<T> {
+    public interface RowExtractor<T> {
 
-        public Object[] getRowDetails(T dataObject);
+        Object[] getRowDetails(T dataObject);
     }
 
     public static class DetailsTable extends JGStripedTable {

@@ -16,19 +16,19 @@
 package com.jhash.oimadmin;
 
 public interface UIComponent<T> {
-    public String getName();
+    String getName();
 
-    public Config.Configuration getConfiguration();
+    Config.Configuration getConfiguration();
 
-    public UIComponent initialize();
+    UIComponent initialize();
 
-    public abstract T getComponent();
+    T getComponent();
 
-    public void destroy();
+    void destroy();
 
     @FunctionalInterface
-    public static interface ExecuteCommand<T> {
-        public T run();
+    interface ExecuteCommand<T> {
+        T run();
     }
 
 }

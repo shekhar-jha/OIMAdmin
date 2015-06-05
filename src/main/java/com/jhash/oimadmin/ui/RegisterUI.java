@@ -24,7 +24,7 @@ import java.util.Map;
 
 public interface RegisterUI {
 
-    public void registerMenu(Config configuration, JMenuBar menu, Map<OIMAdmin.STANDARD_MENUS, JMenu> commonMenus, UIComponentTree selectionTree, DisplayArea displayArea);
+    void registerMenu(Config configuration, JMenuBar menu, Map<OIMAdmin.STANDARD_MENUS, JMenu> commonMenus, UIComponentTree selectionTree, DisplayArea displayArea);
 
-    public void registerSelectionTree(Config configuration, UIComponentTree selectionTree, DisplayArea displayArea);
+    void registerSelectionTree(Config configuration, UIComponentTree selectionTree, DisplayArea displayArea);
 }

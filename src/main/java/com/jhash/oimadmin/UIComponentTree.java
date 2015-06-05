@@ -20,12 +20,12 @@ import java.util.List;
 
 public interface UIComponentTree {
 
-    public void addChildNode(OIMAdminTreeNode parent, OIMAdminTreeNode child);
+    void addChildNode(OIMAdminTreeNode parent, OIMAdminTreeNode child);
 
-    public List<OIMAdminTreeNode> getChildNodes(OIMAdminTreeNode parent);
+    List<OIMAdminTreeNode> getChildNodes(OIMAdminTreeNode parent);
 
-    public void removeChildNode(OIMAdminTreeNode parent, OIMAdminTreeNode child);
+    void removeChildNode(OIMAdminTreeNode parent, OIMAdminTreeNode child);
 
-    public OIMAdminTreeNode getRootNode();
+    OIMAdminTreeNode getRootNode();
 
 }

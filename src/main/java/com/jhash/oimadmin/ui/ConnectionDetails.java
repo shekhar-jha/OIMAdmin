@@ -169,10 +169,7 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
 
             @Override
             public void focusLost(FocusEvent e) {
-                if (fileChooser.isShowing())
-                    focusAfterShowFileChooser = true;
-                else
-                    focusAfterShowFileChooser = false;
+                focusAfterShowFileChooser = fileChooser.isShowing();
             }
         });
         builder.add(oimHome, cellConstraint.xy(8, 2));

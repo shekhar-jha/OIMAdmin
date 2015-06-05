@@ -19,16 +19,16 @@ import com.jhash.oimadmin.Config.Configuration;
 
 public interface Connection {
 
-    public static final String NAME_UNAVAILABLE = "Connection Name Unavailable";
-    public static final String ATTR_CONN_NAME = "name";
-    public static final String ATTR_CONN_PLATFORM = "platform";
+    String NAME_UNAVAILABLE = "Connection Name Unavailable";
+    String ATTR_CONN_NAME = "name";
+    String ATTR_CONN_PLATFORM = "platform";
 
-    public String getName();
+    String getName();
 
-    public Configuration getConfiguration();
+    Configuration getConfiguration();
 
-    public void initialize(Configuration config);
+    void initialize(Configuration config);
 
-    public void destroy();
+    void destroy();
 
 }

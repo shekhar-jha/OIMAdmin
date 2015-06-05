@@ -20,8 +20,8 @@ import javax.swing.*;
 
 public interface ContextMenuEnabledNode<T extends JPopupMenu> {
 
-    public boolean hasContextMenu();
+    boolean hasContextMenu();
 
-    public T getContextMenu();
+    T getContextMenu();
 
 }

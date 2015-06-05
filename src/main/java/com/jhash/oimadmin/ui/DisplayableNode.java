@@ -20,7 +20,7 @@ import com.jhash.oimadmin.UIComponent;
 
 public interface DisplayableNode<T extends UIComponent> {
 
-    public boolean isDisplayable();
+    boolean isDisplayable();
 
-    public T getDisplayComponent();
+    T getDisplayComponent();
 }
