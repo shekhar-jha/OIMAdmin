@@ -186,7 +186,7 @@ public class OIMConnection extends AbstractConnection {
             RequestService requestService = oimClient.getService(RequestService.class);
             Request request = requestService.getBasicRequestData(requestId);
             return request;
-        }catch (Exception exception) {
+        } catch (Exception exception) {
             throw new OIMAdminException("Error occurred while retrieving request details for request id " + requestId, exception);
         }
     }
@@ -200,7 +200,7 @@ public class OIMConnection extends AbstractConnection {
             Object result = kernelService.invoke(method, parameters, parameterTypes);
             logger.trace("Returned result {}", result);
             return (T) result;
-        }catch (Exception exception) {
+        } catch (Exception exception) {
             throw new OIMAdminException("Error occurred while invoking method " + method + " on DDKernelService with parameters " + Arrays.toString(parameters), exception);
         }
     }

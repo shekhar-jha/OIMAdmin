@@ -69,7 +69,7 @@ public class OIMClientUI extends AbstractUIComponent<JPanel> {
                                 compileAndRunControlPanel.setSelectedComponent(javaRun.getComponent());
                                 javaRun.setWorkingDirectory(javaCompiler.getOutputDirectory());
                             }
-                        }catch(Exception exception){
+                        } catch (Exception exception) {
                             displayMessage("Compilation failed", "Failed to compile source code", exception);
                         }
                         compileButton.setEnabled(true);

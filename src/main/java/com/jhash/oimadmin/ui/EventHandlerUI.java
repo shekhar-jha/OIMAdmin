@@ -131,7 +131,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                         }
                         operations.add("ANY");
                         operationType.setModel(new DefaultComboBoxModel<String>(operations.toArray(new String[0])));
-                    }catch (Exception exception) {
+                    } catch (Exception exception) {
                         displayMessage("Entity Type selection failed", "Failed to load operation details associated with " + entityTypeSelected, exception);
                     }
                 } else {

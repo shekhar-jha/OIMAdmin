@@ -209,7 +209,9 @@ public class MDSConnectionJMX extends AbstractConnection {
             partition.savePartitionFile(this);
         }
 
-        public String toString() {return stringValue;}
+        public String toString() {
+            return stringValue;
+        }
 
     }
 

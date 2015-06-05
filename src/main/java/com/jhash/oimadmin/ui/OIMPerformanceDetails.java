@@ -58,6 +58,7 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent> {
     private JButton exportData = JGComponentFactory.getCurrent().createButton("Export");
     private JComponent performanceUI;
     private boolean isRecording = false;
+
     public OIMPerformanceDetails(String name, OIMJMXWrapper connection, List<Map<String, Object>> performanceMetrics, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
         this.connection = connection;

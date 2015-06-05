@@ -107,7 +107,7 @@ public class MDSFileDetails extends AbstractUIComponent<JPanel> {
             logger.debug("Trying to initialize the MDS Partition tree node {}", associatedPartition);
             associatedPartition.initialize();
             logger.debug("Initialized MDS Partition tree node. Completed MDS File saving process");
-        }catch(Exception exception) {
+        } catch (Exception exception) {
             displayMessage("MDS file save failed", "Failed to save MDS file " + mdsFile, exception);
         }
     }

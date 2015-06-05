@@ -23,7 +23,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class DBConnection extends AbstractConnection {
 
@@ -80,7 +83,7 @@ public class DBConnection extends AbstractConnection {
 
     public OIMJMXWrapper.Details invokeSQL(String sqlID, Object... parameterValues) {
         logger.trace("Trying to invoke SQL {} with parameters {}", sqlID, parameterValues);
-        try (PreparedStatement preparedStatement = dbConnection.prepareStatement(sqlID)){
+        try (PreparedStatement preparedStatement = dbConnection.prepareStatement(sqlID)) {
             ParameterMetaData parameterMetaData = preparedStatement.getParameterMetaData();
             if (parameterMetaData.getParameterCount() != parameterValues.length) {
                 throw new NullPointerException("The number of values " + parameterValues
@@ -97,7 +100,7 @@ public class DBConnection extends AbstractConnection {
                 ResultSetMetaData resultSetMetaData = preparedStatement.getMetaData();
                 int totalColumnsInResult = resultSetMetaData.getColumnCount();
                 List<String> columnNames = new ArrayList<>();
-                for (int columnCounter =1; columnCounter <= totalColumnsInResult; columnCounter++) {
+                for (int columnCounter = 1; columnCounter <= totalColumnsInResult; columnCounter++) {
                     columnNames.add(resultSetMetaData.getColumnName(columnCounter));
                 }
                 List<Map<String, Object>> resultData = new ArrayList<>();
@@ -111,7 +114,7 @@ public class DBConnection extends AbstractConnection {
                     resultData.add(record);
                 }
                 return new OIMJMXWrapper.Details(resultData, columnNames.toArray(new String[0]));
-            }catch (Exception exception) {
+            } catch (Exception exception) {
                 throw new OIMAdminException("Failed to read result", exception);
             }
         } catch (Exception exception) {
