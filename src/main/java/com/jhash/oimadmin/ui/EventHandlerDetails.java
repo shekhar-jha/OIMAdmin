@@ -99,7 +99,7 @@ public class EventHandlerDetails extends AbstractUIComponent<JPanel> {
     }
 
     @Override
-    public JPanel getComponent() {
+    public JPanel getDisplayComponent() {
         return eventHandlerUI;
     }
 

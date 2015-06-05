@@ -137,7 +137,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel> {
                     compile();
                     logger.debug("Completed action {} on {}", e, compileButton);
                 } catch (Exception exception) {
-                    logger.warn("Failed to perform operation associated with compile button", exception);
+                    displayMessage("Compilation failed", "Failed to compile", exception);
                 }
             }
         });
@@ -172,7 +172,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel> {
     }
 
     @Override
-    public JPanel getComponent() {
+    public JPanel getDisplayComponent() {
         return javaCompileUI;
     }
 

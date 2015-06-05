@@ -23,6 +23,7 @@ import com.jgoodies.jsdl.component.JGComponentFactory;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.Connection;
 import com.jhash.oimadmin.UIComponentTree;
+import com.jhash.oimadmin.Utils;
 import com.jhash.oimadmin.oim.DBConnection;
 import com.jhash.oimadmin.oim.JMXConnection;
 import com.jhash.oimadmin.oim.OIMConnection;
@@ -81,6 +82,7 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
         nameLabel.setText(connectionDetails.getProperty(OIMConnection.ATTR_CONN_NAME));
         oimHome.getDocument().addDocumentListener(new StandardDocumentListener(oimHome, connectionDetails, OIMConnection.ATTR_OIM_HOME));
         oimHome.setText(connectionDetails.getProperty(OIMConnection.ATTR_OIM_HOME, OIMConnection.VAL_DEFAULT_OIM_HOME));
+        oimURL.setColumns(20);
         oimURL.getDocument().addDocumentListener(new StandardDocumentListener(oimURL, connectionDetails, OIMConnection.ATTR_OIM_URL));
         oimURL.setText(connectionDetails.getProperty(OIMConnection.ATTR_OIM_URL, "t3://<hostname>:14000"));
         oimUser.getDocument().addDocumentListener(new StandardDocumentListener(oimUser, connectionDetails, OIMConnection.ATTR_OIM_USER));
@@ -111,6 +113,7 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
         platform.setSelectedIndex(selectedItemIndex);
         dbJDBCDriverClass.getDocument().addDocumentListener(new StandardDocumentListener(dbJDBCDriverClass, connectionDetails, DBConnection.ATTR_DB_JDBC));
         dbJDBCDriverClass.setText(connectionDetails.getProperty(DBConnection.ATTR_DB_JDBC, "oracle.jdbc.driver.OracleDriver"));
+        dbJDBCURL.setColumns(20);
         dbJDBCURL.getDocument().addDocumentListener(new StandardDocumentListener(dbJDBCURL, connectionDetails, DBConnection.ATTR_DB_URL));
         dbJDBCURL.setText(connectionDetails.getProperty(DBConnection.ATTR_DB_URL, "jdbc:oracle:thin:@<dbhost>:<dbport>:<service name>"));
         dbUser.getDocument().addDocumentListener(new StandardDocumentListener(dbUser, connectionDetails, DBConnection.ATTR_DB_USER));
@@ -133,7 +136,7 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
     }
 
     @Override
-    public JPanel getComponent() {
+    public JPanel getDisplayComponent() {
         return displayComponent;
     }
 
@@ -204,19 +207,24 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
         testDBButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                logger.debug("Trying to test connection using configuration {}", connectionDetails);
-                DBConnection connection = new DBConnection();
-                try {
-                    connection.initialize(connectionDetails);
-                } catch (Exception exception) {
-                    logger.error("Failed to create connection using details", exception);
-                }
-                try {
-                    connection.destroy();
-                } catch (Exception exception) {
-                    logger.warn("Failed to destroy new connection. Ignoring error", exception);
-                }
-                logger.debug("Tested connection");
+                Utils.executeAsyncOperation("Test Database Connection", new Runnable() {
+                    public void run() {
+                        logger.debug("Trying to test connection using configuration {}", connectionDetails);
+                        DBConnection connection = new DBConnection();
+                        try {
+                            connection.initialize(connectionDetails);
+                            displayMessage("Database Connection", "Successfully connected to database", null);
+                        } catch (Exception exception) {
+                            displayMessage("Database Connection Failed", "Failed to create data base connection using details", exception);
+                        }
+                        try {
+                            connection.destroy();
+                        } catch (Exception exception) {
+                            logger.warn("Failed to destroy new connection. Ignoring error", exception);
+                        }
+                        logger.debug("Tested connection");
+                    }
+                });
             }
         });
         builder.add(testDBButton, cellConstraint.xy(8, 18));

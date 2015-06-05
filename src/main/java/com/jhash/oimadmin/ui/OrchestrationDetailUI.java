@@ -46,10 +46,11 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-public class OrchestrationDetailUI {
+public class OrchestrationDetailUI<T extends JComponent> {
     private static final Logger logger = LoggerFactory.getLogger(OrchestrationDetailUI.class);
     private final DBConnection dbConnection;
     private final OIMConnection connection;
+    private final AbstractUIComponent<T> parent;
     private JTextField orcProcessID = UIUtils.createTextField();
     private JTextField orcProcessECID = UIUtils.createTextField();
     private JTextField orcProcessBulkParentID = UIUtils.createTextField();
@@ -84,9 +85,10 @@ public class OrchestrationDetailUI {
 
     private JPanel orchestrationDetailsUIPanel;
 
-    public OrchestrationDetailUI(DBConnection dbConnection, OIMConnection connection) {
+    public OrchestrationDetailUI(DBConnection dbConnection, OIMConnection connection, AbstractUIComponent<T> parent) {
         this.dbConnection = dbConnection;
         this.connection = connection;
+        this.parent = parent;
     }
 
     public OrchestrationDetailUI initialize() {
@@ -104,15 +106,17 @@ public class OrchestrationDetailUI {
                 Utils.executeAsyncOperation("Executing Orchestration Cancellation", new Runnable() {
                     @Override
                     public void run() {
+                        String orcProcessIDValue = "N/A";
                         try {
-                            long processId = Long.parseLong(orcProcessID.getText());
+                            orcProcessIDValue = orcProcessID.getText();
+                            long processId = Long.parseLong(orcProcessIDValue);
                             boolean compensate = compensateCancelled.isSelected();
                             boolean cascade = cascadeCancelled.isSelected();
                             logger.trace("Trying to invoke cancel method with parameters process id={}, compensate={}, cascade={}", new Object[]{processId, compensate, cascade});
                             connection.executeOrchestrationOperation("cancel", new Class[]{long.class, boolean.class, boolean.class},
                                     new Object[]{processId, compensate, cascade});
                         } catch (Exception exception) {
-                            logger.warn("Failed to cancel orchestration process ", exception);
+                            parent.displayMessage("Orchestration Cancellation failed", "Failed to cancel orchestration process " + orcProcessIDValue, exception);
                         }
                     }
                 });
@@ -125,13 +129,15 @@ public class OrchestrationDetailUI {
                 Utils.executeAsyncOperation("Executing Failed Orchestration Cancellation", new Runnable() {
                     @Override
                     public void run() {
+                        String orcProcessIDValue = "N/A";
                         try {
-                            long processId = Long.parseLong(orcProcessID.getText());
+                            orcProcessIDValue = orcProcessID.getText();
+                            long processId = Long.parseLong(orcProcessIDValue);
                             logger.trace("Trying to invoke cancel method with parameters process id={}", new Object[]{processId});
                             connection.executeOrchestrationOperation("cancelPendingFailedEvent", new Class[]{long.class},
                                     new Object[]{processId});
                         } catch (Exception exception) {
-                            logger.warn("Failed to cancel failed orchestration process ", exception);
+                            parent.displayMessage("Orchestration cancellation failed", "Failed to cancel failed orchestration process " + orcProcessIDValue, exception);
                         }
                     }
                 });
@@ -145,22 +151,25 @@ public class OrchestrationDetailUI {
                 Utils.executeAsyncOperation("Executing Handle Failed Orchestration", new Runnable() {
                     @Override
                     public void run() {
+                        FailedEventResult.Response response = FailedEventResult.Response.NULL;
+                        String orcProcessIDValue = "N/A";
                         try {
-                            long processId = Long.parseLong(orcProcessID.getText());
-                            FailedEventResult.Response response = (FailedEventResult.Response) responseResult.getSelectedItem();
+                            orcProcessIDValue = orcProcessID.getText();
+                            long processId = Long.parseLong(orcProcessIDValue);
+                            response = (FailedEventResult.Response) responseResult.getSelectedItem();
                             FailedEventResult result = new FailedEventResult(response);
                             logger.trace("Trying to invoke handleFailed method with parameters process id={}, result=", new Object[]{processId, response});
                             connection.executeOrchestrationOperation("handleFailed", new Class[]{long.class, FailedEventResult.class},
                                     new Object[]{processId, result});
                         } catch (Exception exception) {
-                            logger.warn("Failed to set failed event status ", exception);
+                            parent.displayMessage("Failed to handle failed orchestration", "Failed to set response " + response + " on event " + orcProcessIDValue, exception);
                         }
                     }
                 });
             }
         });
         eventDetails = new TraceRequestDetails.DetailsTable(new String[]{"ID", "Name", "Status", "Stage",
-                "Retry", "Start Time", "End Time", "Error Code", "Error Message", "Result"});
+                "Retry", "Start Time", "End Time", "Error Code", "Error Message", "Result"}, parent);
         eventDetails.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
@@ -194,7 +203,7 @@ public class OrchestrationDetailUI {
                         eventResult.setText("");
                     }
                 } catch (Exception exception) {
-                    logger.warn("Failed to display the Orchestration event based on event ", exception);
+                    parent.displayMessage("Orchestration display failed", "Failed to display the Orchestration event based on event ", exception);
                 }
             }
         });
@@ -254,7 +263,7 @@ public class OrchestrationDetailUI {
                 logger.warn("Expected 1 entry but received {}", result);
             }
         } catch (Exception exception) {
-            logger.warn("Failed to get orchestration details for process ID  " + orchestrationProcessID, exception);
+            parent.displayMessage("Orchestration retrieval failed", "Failed to get orchestration details for process ID  " + orchestrationProcessID, exception);
         }
         logger.debug("Result Values: {}", values);
         orcProcessEntityID.setText((String) values.get("ENTITYID"));
@@ -274,16 +283,21 @@ public class OrchestrationDetailUI {
         orcProcessECID.setText((String) values.get("ECID"));
         orcProcessParentProcessID.setText(Utils.toString(values.get("PARENTPROCESSID")));
         orcProcessID.setText(Utils.toString(values.get("ID")));
-        Clob contextVal = (Clob) values.get("CONTEXTVAL");
-        if (contextVal != null) {
-            try {
-                orcProcessContextValue.setText(contextVal.getSubString(1, (int) contextVal.length()));
-            } catch (SQLException exception) {
-                logger.warn("Failed to extract context value while processing result of orchestration process " + orchestrationProcessID, exception);
+        Object contextValObject = values.get("CONTEXTVAL");
+        if (contextValObject instanceof Clob) {
+            Clob contextVal = (Clob) contextValObject;
+            if (contextVal != null) {
+                try {
+                    orcProcessContextValue.setText(contextVal.getSubString(1, (int) contextVal.length()));
+                } catch (SQLException exception) {
+                    logger.warn("Failed to extract context value while processing result of orchestration process " + orchestrationProcessID, exception);
+                    orcProcessContextValue.setText("");
+                }
+            } else {
                 orcProcessContextValue.setText("");
             }
-        } else {
-            orcProcessContextValue.setText("");
+        } else if (contextValObject != null) {
+            orcProcessContextValue.setText(contextValObject.toString());
         }
         try {
             logger.debug("Trying to looking orchestration details for {}", orchestrationProcessID);
@@ -329,7 +343,7 @@ public class OrchestrationDetailUI {
                 orcProcessObjTarget.setText("");
             }
         } catch (Exception exception) {
-            logger.warn("Failed to extract Orchestration for process ID " + orchestrationProcessID, exception);
+            parent.displayMessage("Orchestration extraction failed", "Failed to extract Orchestration for process ID " + orchestrationProcessID, exception);
             orcProcessObjContextVal.setText("");
             orcProcessObjInterEventData.setText("");
             orcProcessObjNonSequential.setText("");
@@ -351,7 +365,7 @@ public class OrchestrationDetailUI {
                 eventDetails.tableModel.addRow(new Object[]{record[0], record[1], record[2], record[4], record[6], record[10], record[11], record[7], record[8], data});
             }
         } catch (Exception exception) {
-            logger.warn("Failed to extract Orchestration Events for process ID " + orchestrationProcessID, exception);
+            parent.displayMessage("Failed to extract Orchestration", "Failed to extract Orchestration Events for process ID " + orchestrationProcessID, exception);
         }
 
 

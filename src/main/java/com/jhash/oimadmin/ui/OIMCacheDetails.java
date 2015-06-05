@@ -236,40 +236,50 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
         saveDefaultValues.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                try {
-                    for (OIMJMXWrapper.OIM_CACHE_ATTRS cacheAttr : changedDefaultValues.keySet()) {
-                        connection.setCacheDetails(null, cacheAttr, changedDefaultValues.get(cacheAttr));
+                Utils.executeAsyncOperation("Save Cache Defaults", new Runnable() {
+                    @Override
+                    public void run() {
+                        for (OIMJMXWrapper.OIM_CACHE_ATTRS cacheAttr : changedDefaultValues.keySet()) {
+                            try {
+                                connection.setCacheDetails(null, cacheAttr, changedDefaultValues.get(cacheAttr));
+                            } catch (Exception exception) {
+                                displayMessage("Configuration update failed.", "Failed to set " + cacheAttr + " to " + changedDefaultValues.get(cacheAttr) + ". ", exception);
+                            }
+                        }
+                        changedDefaultValues.clear();
                     }
-                    changedDefaultValues.clear();
-                } catch (Exception exception) {
-                    logger.warn("Failed to set changed cache configuration " + changedDefaultValues, exception);
-                }
+                });
             }
         });
         saveCategoryValues.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                try {
-                    int selectedRow = cacheCategoryTable.getSelectedRow();
-                    Map<String, Object> detail = cacheCategory.getItemAt(selectedRow);
-                    for (OIMJMXWrapper.OIM_CACHE_ATTRS cacheAttr : changedCategoryValues.keySet()) {
-                        String value = changedCategoryValues.get(cacheAttr);
-                        connection.setCacheDetails(detail, cacheAttr, value);
-                        switch (cacheAttr) {
-                            case ENABLED:
-                                cacheCategoryTable.setValueAt(value, selectedRow, 1);
-                                detail.put("Enabled?", Boolean.valueOf(value));
-                                break;
-                            case ExpirationTime:
-                                cacheCategoryTable.setValueAt(value, selectedRow, 2);
-                                detail.put("Expires in", value);
-                                break;
+                Utils.executeAsyncOperation("Save Cache Category Changes", new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            int selectedRow = cacheCategoryTable.getSelectedRow();
+                            Map<String, Object> detail = cacheCategory.getItemAt(selectedRow);
+                            for (OIMJMXWrapper.OIM_CACHE_ATTRS cacheAttr : changedCategoryValues.keySet()) {
+                                String value = changedCategoryValues.get(cacheAttr);
+                                connection.setCacheDetails(detail, cacheAttr, value);
+                                switch (cacheAttr) {
+                                    case ENABLED:
+                                        cacheCategoryTable.setValueAt(value, selectedRow, 1);
+                                        detail.put("Enabled?", Boolean.valueOf(value));
+                                        break;
+                                    case ExpirationTime:
+                                        cacheCategoryTable.setValueAt(value, selectedRow, 2);
+                                        detail.put("Expires in", value);
+                                        break;
+                                }
+                            }
+                            changedCategoryValues.clear();
+                        } catch (Exception exception) {
+                            displayMessage("Configuration update failed.", "Failed to set changed cache configuration " + changedCategoryValues, exception);
                         }
                     }
-                    changedCategoryValues.clear();
-                } catch (Exception exception) {
-                    logger.warn("Failed to set changed cache configuration " + changedCategoryValues, exception);
-                }
+                });
             }
         });
         resetDefaultValues.addActionListener(new ActionListener() {
@@ -319,7 +329,7 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
     }
 
     @Override
-    public JComponent getComponent() {
+    public JComponent getDisplayComponent() {
         return cacheDetailUI;
     }
 

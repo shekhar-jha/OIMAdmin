@@ -107,7 +107,7 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent> {
                                 columnNames[lastColumnAdded] = new Date().toString();
                                 tableModel.setColumnIdentifiers(columnNames);
                             } catch (Exception exception) {
-                                logger.warn("Failed to take performance snapshot after stopping measurement", exception);
+                                displayMessage("Loading performance detail failed", "Failed to take performance snapshot after stopping measurement", exception);
                             }
                             isRecording = false;
                             startTracking.setText("Start");
@@ -130,7 +130,7 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent> {
                                 startTracking.setText("Stop");
                                 isRecording = true;
                             } catch (Exception exception) {
-                                logger.warn("Failed to take performance snapshot before starting measurement", exception);
+                                displayMessage("Loading performance detail failed", "Could not take a starting snapshot of values", exception);
                                 startTracking.setText("Start");
                                 isRecording = false;
                             }
@@ -245,7 +245,7 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent> {
                             fileWriter.newLine();
                         }
                     } catch (Exception exception) {
-                        logger.warn("Failed to save the Performance details to file " + saveFile, exception);
+                        displayMessage("Performance Data save failed", "Failed to save the Performance details to file " + saveFile, exception);
                     }
                 }
             }
@@ -278,7 +278,7 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent> {
     }
 
     @Override
-    public JComponent getComponent() {
+    public JComponent getDisplayComponent() {
         return performanceUI;
     }
 

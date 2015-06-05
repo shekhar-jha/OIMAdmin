@@ -72,7 +72,7 @@ public class MDSFileDetails extends AbstractUIComponent<JPanel> {
                     });
                     logger.debug("Completed setup of MDS File saving.");
                 } catch (Exception exception) {
-                    logger.warn("Failed to setup Saving of MDS File " +
+                    displayMessage("MDS file save failed", "Failed to setup Saving of MDS File " +
                             name, exception);
                 }
             }
@@ -84,7 +84,7 @@ public class MDSFileDetails extends AbstractUIComponent<JPanel> {
     }
 
     @Override
-    public JPanel getComponent() {
+    public JPanel getDisplayComponent() {
         return mdsPartitionFilePanel;
     }
 
@@ -94,17 +94,21 @@ public class MDSFileDetails extends AbstractUIComponent<JPanel> {
     }
 
     private void saveMDSFile() {
-        logger.debug("Trying to get content of MDS File to be saved.");
-        String operand = mdsFileTextArea.getText();
-        logger.trace("Content {}", operand);
-        logger.debug("Overwriting the content of MDS File {} with content", mdsFile);
-        mdsFile.setContent(operand);
-        logger.debug("Trying to save updated MDS File");
-        mdsFile.save();
-        logger.debug("Saved. Trying to start the refresh of the MDS Partition tree by destroying Partition Tree Node {}", associatedPartition);
-        associatedPartition.destroy();
-        logger.debug("Trying to initialize the MDS Partition tree node {}", associatedPartition);
-        associatedPartition.initialize();
-        logger.debug("Initialized MDS Partition tree node. Completed MDS File saving process");
+        try {
+            logger.debug("Trying to get content of MDS File to be saved.");
+            String operand = mdsFileTextArea.getText();
+            logger.trace("Content {}", operand);
+            logger.debug("Overwriting the content of MDS File {} with content", mdsFile);
+            mdsFile.setContent(operand);
+            logger.debug("Trying to save updated MDS File");
+            mdsFile.save();
+            logger.debug("Saved. Trying to start the refresh of the MDS Partition tree by destroying Partition Tree Node {}", associatedPartition);
+            associatedPartition.destroy();
+            logger.debug("Trying to initialize the MDS Partition tree node {}", associatedPartition);
+            associatedPartition.initialize();
+            logger.debug("Initialized MDS Partition tree node. Completed MDS File saving process");
+        }catch(Exception exception) {
+            displayMessage("MDS file save failed", "Failed to save MDS file " + mdsFile, exception);
+        }
     }
 }

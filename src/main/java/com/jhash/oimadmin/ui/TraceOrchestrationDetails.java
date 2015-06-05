@@ -66,7 +66,9 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
         retrieve.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                String orchestrationIDValueDuplicate = "N/A";
                 try {
+                    orchestrationIDValueDuplicate = orchestrationID.getText();
                     String orchestrationIDValue = orchestrationID.getText();
                     if (!Utils.isEmpty(orchestrationIDValue)) {
                         Utils.executeAsyncOperation("Loading Orchestration Details " + orchestrationIDValue, new Runnable() {
@@ -77,7 +79,7 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
                         });
                     }
                 } catch (Exception exception) {
-                    logger.warn("Failed to initiate retrieval of the request details Event: " + e, exception);
+                    displayMessage("Orchestration detail retrieval failed", "Failed to initiate retrieval of the orchestration Event: " + orchestrationIDValueDuplicate, exception);
                 }
             }
         });
@@ -85,7 +87,7 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
                 .rows("2dlu, p")
                 .addLabel("Orchestration ID").xy(2, 2).add(orchestrationID).xy(4, 2).add(retrieve).xy(8, 2)
                 .build();
-        orchestrationDetailPanel = new OrchestrationDetailUI(dbConnection, connection).initialize();
+        orchestrationDetailPanel = new OrchestrationDetailUI(dbConnection, connection, this).initialize();
         JideTabbedPane tabbedPane = new JideTabbedPane();
         tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getUIComponent());
         traceOrchestrationUI = new JPanel(new BorderLayout());
@@ -98,12 +100,12 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
             long orchestrationProcessID = Long.parseLong(orchestrationIDValue);
             orchestrationDetailPanel.loadDetail(orchestrationProcessID);
         } catch (Exception exception) {
-            logger.warn("Failed to process request detail retrieval for " + orchestrationIDValue, exception);
+            displayMessage("Failed to load orchestration details", "Failed to load orchestration details for " + orchestrationIDValue, exception);
         }
     }
 
     @Override
-    public JPanel getComponent() {
+    public JPanel getDisplayComponent() {
         return traceOrchestrationUI;
     }
 

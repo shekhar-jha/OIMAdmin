@@ -162,7 +162,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
             orchestrationDetailPanel.loadDetail(request.getOrchID());
             //request.getEventID();
         } catch (Exception exception) {
-            logger.warn("Failed to process request detail retrieval for " + requestIDValue, exception);
+            displayMessage("Failed to load request details", "Failed to process request detail retrieval for " + requestIDValue, exception);
         }
     }
 
@@ -170,15 +170,15 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
     public void initializeComponent() {
         dbConnection = new DBConnection();
         dbConnection.initialize(configuration);
-        additionalAttributesTable = new DetailsTable(new String[]{"Name", "Type", "Value"});
-        approvalDataTable = new DetailsTable(new String[]{"Instance ID", "Key", "Stage", "Status"});
-        beneficiaryTable = new DetailsTable(new String[]{"Key", "Type", "Attributes", "Target Entities"});
+        additionalAttributesTable = new DetailsTable(new String[]{"Name", "Type", "Value"}, this);
+        approvalDataTable = new DetailsTable(new String[]{"Instance ID", "Key", "Stage", "Status"}, this);
+        beneficiaryTable = new DetailsTable(new String[]{"Key", "Type", "Attributes", "Target Entities"}, this);
         targetEntitiesOfBeneficiaryTable = new DetailsTable(new String[]{"Key", "Type", "Sub-type",
-                "Operation", "Attributes", "Additional Attributes"});
+                "Operation", "Attributes", "Additional Attributes"}, this);
         beneficiaryTargetEntityValuesTable = new DetailsTable(new String[]{"Row Key", "Action", "Name", "Type", "Value",
-                "Parent", "Child", "Default", "MLS Map"});
+                "Parent", "Child", "Default", "MLS Map"}, this);
         beneficiaryTargetEntityAdditionalValuesTable = new DetailsTable(new String[]{"Row Key", "Action", "Name", "Type", "Value",
-                "Parent", "Child", "Default", "MLS Map"});
+                "Parent", "Child", "Default", "MLS Map"}, this);
         beneficiaryTable.removeColumn(beneficiaryTable.getColumn("Target Entities"));
         beneficiaryTable.addActionListener(3, targetEntitiesOfBeneficiaryTable, RequestBeneficiaryEntity.class, (entity) -> {
             return new Object[]{entity.getEntityKey(), entity.getRequestEntityType(),
@@ -200,11 +200,11 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
             };
         });
 
-        targetEntitiesTable = new DetailsTable(new String[]{"Key", "Type", "Sub-type", "Operation", "Attributes", "Additional Attributes"});
+        targetEntitiesTable = new DetailsTable(new String[]{"Key", "Type", "Sub-type", "Operation", "Attributes", "Additional Attributes"}, this);
         targetEntityValuesTable = new DetailsTable(new String[]{"Row Key", "Action", "Name", "Type", "Value",
-                "Parent", "Child", "Default", "MLS Map"});
+                "Parent", "Child", "Default", "MLS Map"}, this);
         targetEntityAdditionalValuesTable = new DetailsTable(new String[]{"Row Key", "Action", "Name", "Type", "Value",
-                "Parent", "Child", "Default", "MLS Map"});
+                "Parent", "Child", "Default", "MLS Map"}, this);
         targetEntitiesTable.addActionListener(4, targetEntityValuesTable, RequestEntityAttribute.class, (targetEntityValue) -> {
             return new Object[]{
                     targetEntityValue.getRowKey(), targetEntityValue.getActionHolder(),
@@ -224,8 +224,8 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
             };
         });
 
-        templateAttributesTable = new DetailsTable(new String[]{"Name", "Type", "Value", "Target"});
-        childRequestTable = new DetailsTable(new String[]{"ID", "Model Name", "Status"});
+        templateAttributesTable = new DetailsTable(new String[]{"Name", "Type", "Value", "Target"}, this);
+        childRequestTable = new DetailsTable(new String[]{"ID", "Model Name", "Status"}, this);
         retrieve = JGComponentFactory.getCurrent().createButton("Retrieve..");
         retrieve.addActionListener(new ActionListener() {
             @Override
@@ -241,11 +241,11 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                         });
                     }
                 } catch (Exception exception) {
-                    logger.warn("Failed to initiate retrieval of the request details Event: " + e, exception);
+                    displayMessage("Failed to initiate request detail loading", "Failed to initiate retrieval of the request details Event: " + e, exception);
                 }
             }
         });
-        orchestrationDetailPanel = new OrchestrationDetailUI(dbConnection, connection).initialize();
+        orchestrationDetailPanel = new OrchestrationDetailUI(dbConnection, connection, this).initialize();
         JPanel searchCriteria = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
                 .rows("2dlu, p")
                 .addLabel("Request ID").xy(2, 2).add(requestID).xy(4, 2).add(retrieve).xy(8, 2)
@@ -294,12 +294,12 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                                 childRequestDetails.initialize();
                                 childRequestDetails.retrieveRequestDetails(requestId);
                             } catch (Exception exception) {
-                                logger.warn("Failed to load child request details for request " + requestId, exception);
+                                displayMessage("Failed to load child request detail", "Failed to load child request details for request " + requestId, exception);
                             }
                         }
                     });
                 } catch (Exception exception) {
-                    logger.warn("Failed to process retrieval of child request event " + e, exception);
+                    displayMessage("Failed to initiate process retrieval", "Failed to process retrieval of child request event " + e, exception);
                 }
             }
         });
@@ -340,7 +340,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
     }
 
     @Override
-    public JPanel getComponent() {
+    public JPanel getDisplayComponent() {
         return traceRequestUI;
     }
 
@@ -363,8 +363,9 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
     public static class DetailsTable extends JGStripedTable {
 
         public final DefaultTableModel tableModel;
+        public final AbstractUIComponent parent;
 
-        public DetailsTable(String[] columnNames) {
+        public DetailsTable(String[] columnNames, AbstractUIComponent parent) {
             super(new DefaultTableModel() {
                 @Override
                 public boolean isCellEditable(int row, int column) {
@@ -376,6 +377,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
             for (String columnName : columnNames) {
                 tableModel.addColumn(columnName);
             }
+            this.parent = parent;
         }
 
         public <T> void addActionListener(int columnIndex, DetailsTable childTable, Class<T> rowType, RowExtractor<T> extractor) {
@@ -400,14 +402,14 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                                     Object[] rowDetails = extractor.getRowDetails(entity);
                                     childTable.tableModel.addRow(rowDetails);
                                 } else {
-                                    logger.warn("Failed to locate an instance of {} in list {}, found {}", new Object[]{rowType, targetEntities, targetEntity});
+                                    logger.debug("Failed to locate an instance of {} in list {}, found {}", new Object[]{rowType, targetEntities, targetEntity});
                                 }
                             }
                         } else {
-                            logger.warn("Expected the column {} to have List of target entities but found {}", columnIndex, targetEntitiesObject);
+                            logger.debug("Expected the column {} to have List of target entities but found {}", columnIndex, targetEntitiesObject);
                         }
                     } catch (Exception exception) {
-                        logger.warn("Failed to process row selection event " + e, exception);
+                        parent.displayMessage("Row selection failed", "Failed to process row selection event " + e, exception);
                     }
                 }
             });

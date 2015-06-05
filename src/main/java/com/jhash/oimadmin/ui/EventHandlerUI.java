@@ -121,15 +121,19 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
             public void actionPerformed(ActionEvent e) {
                 String entityTypeSelected = (String) entityType.getSelectedItem();
                 if (entityTypeSelected != null && entityNames.contains(entityTypeSelected)) {
-                    Set<String> operations = null;
-                    Map<String, Set<String>> operationDetails = OIMJMXWrapper.OperationDetail.getOperationDetails(connection);
-                    if (operationDetails.containsKey(entityTypeSelected)) {
-                        operations = operationDetails.get(entityTypeSelected);
-                    } else {
-                        operations = new HashSet<String>();
+                    try {
+                        Set<String> operations = null;
+                        Map<String, Set<String>> operationDetails = OIMJMXWrapper.OperationDetail.getOperationDetails(connection);
+                        if (operationDetails.containsKey(entityTypeSelected)) {
+                            operations = operationDetails.get(entityTypeSelected);
+                        } else {
+                            operations = new HashSet<String>();
+                        }
+                        operations.add("ANY");
+                        operationType.setModel(new DefaultComboBoxModel<String>(operations.toArray(new String[0])));
+                    }catch (Exception exception) {
+                        displayMessage("Entity Type selection failed", "Failed to load operation details associated with " + entityTypeSelected, exception);
                     }
-                    operations.add("ANY");
-                    operationType.setModel(new DefaultComboBoxModel<String>(operations.toArray(new String[0])));
                 } else {
                     logger.trace("Nothing to do since the selected entity type {} is not recognized",
                             entityTypeSelected);
@@ -262,7 +266,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
     }
 
     @Override
-    public JPanel getComponent() {
+    public JPanel getDisplayComponent() {
         return eventHandlerUI;
     }
 
@@ -346,7 +350,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
         }
 
         @Override
-        public JideSplitPane getComponent() {
+        public JideSplitPane getDisplayComponent() {
             return configurationSplitPane;
         }
 
@@ -395,7 +399,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                         Utils.createJarFileFromDirectory(javaCompiler.getOutputDirectory(), eventHandlerCodeJar);
                         jarFileLocationLabel.setText(eventHandlerCodeJar);
                     } catch (Exception exception) {
-                        logger.warn("Failed to create jar " + eventHandlerCodeJar + " with Event Handler code available in " + javaCompiler.getOutputDirectory() + " directory", exception);
+                        displayMessage("Packaging Event handler jar Failed", "Failed to create jar " + eventHandlerCodeJar + " with Event Handler code available in " + javaCompiler.getOutputDirectory() + " directory", exception);
                     }
                 }
             });
@@ -443,7 +447,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                         Utils.createJarFileFromContent(content, new String[]{"plugin.xml", "lib/EventHandler.jar", eventHandlerDetailFile}, eventHandlerPluginZip);
                         pluginFileLocationLabel.setText(eventHandlerPluginZip);
                     } catch (Exception exception) {
-                        logger.warn("Failed to create Event Handler Plugin zip file " + eventHandlerPluginZip, exception);
+                        displayMessage("Creating plugin zip failed", "Failed to create Event Handler Plugin zip file " + eventHandlerPluginZip, exception);
                     }
                 }
             });
@@ -454,7 +458,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                     try {
                         oimConnection.registerPlugin(FileUtils.readFileToByteArray(new File(pluginFileLocationLabel.getText())));
                     } catch (Exception exception) {
-                        logger.warn("Failed to register plugin " + pluginFileLocationLabel.getText(), exception);
+                        displayMessage("Plugin registeration failed", "Failed to register plugin " + pluginFileLocationLabel.getText(), exception);
                     }
                 }
             });
@@ -466,7 +470,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                     try {
                         oimConnection.unregisterPlugin(pluginName);
                     } catch (Exception exception) {
-                        logger.warn("Failed to unregister plugin " + pluginName, exception);
+                        displayMessage("Unregister plugin failed", "Failed to unregister plugin " + pluginName, exception);
                     }
                 }
             });
@@ -480,7 +484,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
         }
 
         @Override
-        public JPanel getComponent() {
+        public JPanel getDisplayComponent() {
             return packagePanel;
         }
 

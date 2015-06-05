@@ -86,7 +86,7 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
                 }
             }
         } catch (Exception exception) {
-            logger.warn("Failed to generate class path", exception);
+            displayMessage("Classpath error", "Failed to generate class path", exception);
         }
         String classPath = classPathBuilder.toString();
         logger.debug("Generated classpath for OIMClient");
@@ -189,7 +189,7 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
     }
 
     @Override
-    public JPanel getComponent() {
+    public JPanel getDisplayComponent() {
         return uiJavaRunPanel;
     }
 
@@ -270,7 +270,7 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
                     try {
                         runningProcess.getOutputStream().write(textToWrite.getBytes());
                     } catch (Exception exception) {
-                        logger.warn("Failed to write the input " + textToWrite + " to input of process " + processBuilder.command(), exception);
+                        displayMessage("Execution error", "Failed to write the input " + textToWrite + " to input of process " + processBuilder.command(), exception);
                     }
                     input.setText("");
                 }
@@ -290,7 +290,7 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
                             logger.trace("Trying to read line");
                         }
                     } catch (Exception exception) {
-                        logger.debug("Error occurred while trying to read output from process " + processBuilder.command(), exception);
+                        displayMessage("Reader setup failed", "Error occurred while trying to read output from process " + processBuilder.command(), exception);
                     }
                     logger.debug("Completed the reading of the process output and displaying it to text area");
                 }

@@ -19,12 +19,20 @@ package com.jhash.oimadmin.ui;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponent;
 import com.jhash.oimadmin.UIComponentTree;
+import com.jidesoft.swing.JideButton;
+import com.jidesoft.swing.JideLabel;
+import org.jdesktop.swingx.VerticalLayout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 
-public abstract class AbstractUIComponent<T extends JComponent> extends JPanel implements UIComponent<T> {
+public abstract class AbstractUIComponent<T extends JComponent> extends JPanel implements UIComponent<JComponent> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractUIComponent.class);
     protected final String name;
@@ -33,6 +41,9 @@ public abstract class AbstractUIComponent<T extends JComponent> extends JPanel i
     protected final DisplayArea displayArea;
     protected final boolean publish;
     private COMPONENT_STATE status = COMPONENT_STATE.NOT_INITIALIZED;
+    protected JPanel displayComponent;
+    protected JPanel messageDisplayComponent;
+    protected JPanel messagePanel;
 
     public AbstractUIComponent(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         this(name, true, configuration, selectionTree, displayArea);
@@ -102,7 +113,53 @@ public abstract class AbstractUIComponent<T extends JComponent> extends JPanel i
     public abstract void destroyComponent();
 
     @Override
-    public abstract T getComponent();
+    public final synchronized JPanel getComponent() {
+        if (displayComponent == null) {
+            JPanel packagedComponent = new JPanel(new BorderLayout());
+            packagedComponent.add(getDisplayComponent(), BorderLayout.CENTER);
+            messagePanel = new JPanel(new BorderLayout());
+            JideButton closeButton = new JideButton("X");
+            closeButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    messageDisplayComponent.removeAll();
+                    displayComponent.remove(messagePanel);
+                    displayComponent.revalidate();
+                }
+            });
+            messageDisplayComponent = new JPanel(new VerticalLayout());
+            messagePanel.add(messageDisplayComponent, BorderLayout.CENTER);
+            messagePanel.add(closeButton, BorderLayout.EAST);
+            displayComponent = packagedComponent;
+        }
+        return displayComponent;
+    }
+
+    public abstract T getDisplayComponent();
+
+    public void displayMessage(String title, String message, Exception exception) {
+        if (messageDisplayComponent != null & messagePanel != null) {
+            synchronized (messageDisplayComponent) {
+                messageDisplayComponent.add(new JideLabel("<html><b>" + title + "</b></html>"));
+                messageDisplayComponent.add(new JSeparator(SwingConstants.HORIZONTAL));
+                JideLabel messageLabel = new JideLabel(message);
+                if (exception != null) {
+                    messageLabel.setText(messageLabel.getText() + " Cause : " + exception.getCause());
+                    StringWriter exceptionAsStringWriter = new StringWriter();
+                    exception.printStackTrace(new PrintWriter(exceptionAsStringWriter));
+                    String exceptionStackTrace = exceptionAsStringWriter.toString();
+                    exceptionStackTrace = "<html>" + exceptionStackTrace.replace(System.lineSeparator(), "<br/>") + "</html>";
+                    messageLabel.setToolTipText(exceptionStackTrace);
+                }
+                messageDisplayComponent.add(messageLabel);
+                displayComponent.add(messagePanel, BorderLayout.NORTH);
+                displayComponent.revalidate();
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, message, title, JOptionPane.ERROR_MESSAGE);
+        }
+
+    }
 
     @Override
     public void destroy() {

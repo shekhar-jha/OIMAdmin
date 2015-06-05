@@ -185,11 +185,13 @@ public class MDSConnectionJMX extends AbstractConnection {
         private final JarFile jarFile;
         private final JarEntry file;
         private String content = null;
+        private final String stringValue;
 
         public MDSFile(MDSPartition partition, JarFile jarFile, JarEntry file) {
             this.partition = partition;
             this.jarFile = jarFile;
             this.file = file;
+            this.stringValue = partition + ":" + file;
         }
 
         public String getContent() {
@@ -206,6 +208,8 @@ public class MDSConnectionJMX extends AbstractConnection {
         public void save() {
             partition.savePartitionFile(this);
         }
+
+        public String toString() {return stringValue;}
 
     }
 

@@ -58,19 +58,35 @@ public class OIMClientUI extends AbstractUIComponent<JPanel> {
         compileButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (javaCompiler.compile()) {
-                    executeButton.setEnabled(true);
-                    compileAndRunControlPanel.setSelectedComponent(javaRun.getComponent());
-                    javaRun.setWorkingDirectory(javaCompiler.getOutputDirectory());
-                }
+                compileButton.setText("Compiling...");
+                compileButton.setEnabled(false);
+                Utils.executeAsyncOperation("Compiling Java Client", new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            if (javaCompiler.compile()) {
+                                executeButton.setEnabled(true);
+                                compileAndRunControlPanel.setSelectedComponent(javaRun.getComponent());
+                                javaRun.setWorkingDirectory(javaCompiler.getOutputDirectory());
+                            }
+                        }catch(Exception exception){
+                            displayMessage("Compilation failed", "Failed to compile source code", exception);
+                        }
+                        compileButton.setEnabled(true);
+                        compileButton.setText("Compile");
+                    }
+                });
             }
         });
         javaRun = new UIJavaRun("Execute", configuration, selectionTree, displayArea);
         executeButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                executeButton.setText("Starting...");
+                executeButton.setEnabled(false);
                 try {
                     javaRun.run();
+                    executeButton.setText("Running...");
                     if (javaRun.runningProcess != null) {
                         executeButton.setEnabled(false);
                         Utils.executeAsyncOperation("Waiting for Process " + javaRun.runningProcess, new Runnable() {
@@ -80,14 +96,17 @@ public class OIMClientUI extends AbstractUIComponent<JPanel> {
                                     javaRun.runningProcess.waitFor();
                                     executeButton.setEnabled(true);
                                 } catch (Exception exception) {
-                                    logger.warn("Failed to wait for process " + javaRun.runningProcess + " to complete");
+                                    displayMessage("Execution failed", "Failed to wait for process " + javaRun.runningProcess + " to complete", exception);
                                 }
-
+                                executeButton.setEnabled(true);
+                                executeButton.setText("Run..");
                             }
                         });
                     }
                 } catch (Exception exception) {
-                    logger.warn("Execution failed", exception);
+                    displayMessage("Execution failed", "Could not run application", exception);
+                    executeButton.setEnabled(true);
+                    executeButton.setText("Run..");
                 }
             }
         });
@@ -137,7 +156,7 @@ public class OIMClientUI extends AbstractUIComponent<JPanel> {
     }
 
     @Override
-    public JPanel getComponent() {
+    public JPanel getDisplayComponent() {
         return oimClientUI;
     }
 
