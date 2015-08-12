@@ -24,6 +24,7 @@ public class UIUtils {
 
     public static JTextField createTextField() {
         JTextField textField = JGComponentFactory.getCurrent().createTextField();
+        textField.setColumns(25);
         textField.setEditable(false);
         textField.setBackground(null);
         textField.setBorder(null);
@@ -49,10 +50,17 @@ public class UIUtils {
     public static JTextArea createTextArea() {
         JTextArea textArea = JGComponentFactory.getCurrent().createReadOnlyTextArea();
         textArea.setRows(4);
+        textArea.setColumns(25);
         textArea.setEditable(false);
         textArea.setBackground(null);
         textArea.setBorder(null);
         return textArea;
+    }
+
+    public static JCheckBox createBooleanCheckbox(String value) {
+        JCheckBox checkBox = JGComponentFactory.getCurrent().createCheckBox(value);
+        checkBox.setEnabled(false);
+        return checkBox;
     }
 
 }

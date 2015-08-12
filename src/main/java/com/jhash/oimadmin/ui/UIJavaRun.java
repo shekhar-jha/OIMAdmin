@@ -28,7 +28,6 @@ import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
 import com.jidesoft.swing.JideButton;
 import com.jidesoft.swing.JideScrollPane;
-import oracle.iam.platform.OIMClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,25 +70,19 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
         logger.debug("Trying to generate class path for OIMClient");
         StringBuilder classPathBuilder = new StringBuilder();
         try {
-            String oimClientURL = OIMClient.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
-            File oimClientJar = new File(oimClientURL);
-            if (oimClientJar.exists()) {
-                File parentDirectory = oimClientJar.getParentFile();
-                if (parentDirectory.exists() && parentDirectory.isDirectory()) {
-                    for (String jarName : new String[]{"commons-logging.jar", "eclipselink.jar", "jrf-api.jar", "oimclient.jar", "spring.jar", "wlfullclient.jar"}) {
-                        File jarFile = new File(parentDirectory, jarName);
-                        if (jarFile.exists()) {
-                            classPathBuilder.append(File.pathSeparator);
-                            classPathBuilder.append(jarFile.getAbsoluteFile());
-                        }
-                    }
+            File parentDirectory = Utils.getDirectoryContainingJarForClass("oracle.iam.platform.OIMClient");
+            for (String jarName : new String[]{"commons-logging.jar", "eclipselink.jar", "jrf-api.jar", "oimclient.jar", "spring.jar", "wlfullclient.jar"}) {
+                File jarFile = new File(parentDirectory, jarName);
+                if (jarFile.exists()) {
+                    classPathBuilder.append(File.pathSeparator);
+                    classPathBuilder.append(jarFile.getAbsoluteFile());
                 }
             }
         } catch (Exception exception) {
             displayMessage("Classpath error", "Failed to generate class path", exception);
         }
         String classPath = classPathBuilder.toString();
-        logger.debug("Generated classpath for OIMClient");
+        logger.debug("Generated classpath for OIMClient {}", classPath);
         return classPath;
     }
 

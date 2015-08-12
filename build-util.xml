@@ -67,6 +67,7 @@
         <pathelement location="${basedir}/lib/oim/jrf-api.jar"/>
         <pathelement location="${basedir}/lib/oim/spring.jar"/>
         <pathelement location="${basedir}/lib/oim/wlfullclient.jar"/>
+        <pathelement location="${basedir}/lib/oim/oimclient11gR2PS3.jar"/>
     </path>
 
     <path id="library.ojdbc6.classpath">
@@ -102,6 +103,7 @@
         <pathelement location="${basedir}/lib/jgoodies/jgoodies-looks-2.6.0.jar"/>
         <pathelement location="${basedir}/lib/jgoodies/jgoodies-validation-2.5.0.jar"/>
         <pathelement location="${basedir}/lib/jide/jide-oss-3.6.1.jar"/>
+        <pathelement location="${basedir}/lib/oim/oimclient11gR2PS3.jar"/>
         <pathelement location="${basedir}/lib/oim/oimclient.jar"/>
         <pathelement location="${basedir}/lib/slf4j/slf4j-api-1.5.11.jar"/>
         <pathelement location="${basedir}/lib/mds/mdsrt.jar"/>
@@ -119,6 +121,7 @@
         <pathelement location="${basedir}/lib/jgoodies/jgoodies-looks-2.6.0.jar"/>
         <pathelement location="${basedir}/lib/jgoodies/jgoodies-validation-2.5.0.jar"/>
         <pathelement location="${basedir}/lib/jide/jide-oss-3.6.1.jar"/>
+        <pathelement location="${basedir}/lib/oim/oimclient11gR2PS3.jar"/>
         <pathelement location="${basedir}/lib/oim/oimclient.jar"/>
         <pathelement location="${basedir}/lib/slf4j/slf4j-api-1.5.11.jar"/>
         <pathelement location="${basedir}/lib/mds/mdsrt.jar"/>
@@ -149,6 +152,7 @@
         <pathelement location="${basedir}/lib/jgoodies/jgoodies-looks-2.6.0.jar"/>
         <pathelement location="${basedir}/lib/jgoodies/jgoodies-validation-2.5.0.jar"/>
         <pathelement location="${basedir}/lib/jide/jide-oss-3.6.1.jar"/>
+        <pathelement location="${basedir}/lib/oim/oimclient11gR2PS3.jar"/>
         <pathelement location="${basedir}/lib/oim/oimclient.jar"/>
         <pathelement location="${basedir}/lib/slf4j/slf4j-api-1.5.11.jar"/>
         <pathelement location="${basedir}/lib/mds/mdsrt.jar"/>
@@ -180,6 +184,7 @@
         <pathelement location="${basedir}/lib/jgoodies/jgoodies-looks-2.6.0.jar"/>
         <pathelement location="${basedir}/lib/jgoodies/jgoodies-validation-2.5.0.jar"/>
         <pathelement location="${basedir}/lib/jide/jide-oss-3.6.1.jar"/>
+        <pathelement location="${basedir}/lib/oim/oimclient11gR2PS3.jar"/>
         <pathelement location="${basedir}/lib/oim/oimclient.jar"/>
         <pathelement location="${basedir}/lib/slf4j/slf4j-api-1.5.11.jar"/>
         <pathelement location="${basedir}/lib/mds/mdsrt.jar"/>
@@ -336,6 +341,10 @@
         <copy file="${basedir}/lib/jide/jide-oss-3.6.1.jar"
               tofile="${artifact.output.oimadmin:jar}/jide-oss-3.6.1.jar"/>
         <copy file="${basedir}/lib/oim/oimclient.jar" tofile="${artifact.output.oimadmin:jar}/oimclient.jar"/>
+        <copy file="${basedir}/lib/oim/oimclient11gR2PS3.jar"
+              tofile="${artifact.output.oimadmin:jar}/oimclient11gR2PS3.jar"/>
+        <copy file="${basedir}/lib/oim/iam-platform-kernel.jar"
+              tofile="${artifact.output.oimadmin:jar}/iam-platform-kernel.jar"/>
         <copy file="${basedir}/lib/jgoodies/jgoodies-forms-1.8.0.jar"
               tofile="${artifact.output.oimadmin:jar}/jgoodies-forms-1.8.0.jar"/>
         <copy file="${basedir}/lib/oim/commons-logging.jar"

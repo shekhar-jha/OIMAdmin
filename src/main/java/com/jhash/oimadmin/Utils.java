@@ -22,6 +22,8 @@ import org.slf4j.LoggerFactory;
 import javax.tools.*;
 import java.io.*;
 import java.net.URI;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.security.InvalidParameterException;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -287,6 +289,56 @@ public class Utils {
             return objectValue.toString();
         } else {
             return "";
+        }
+    }
+
+    public static File getDirectoryContainingJarForClass(String className) {
+        logger.debug("Locating directory containing jar file with class {}", className);
+        try {
+            String oimClientURL = Class.forName(className).getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+            File oimClientJar = new File(oimClientURL);
+            if (oimClientJar.exists()) {
+                File parentDirectory = oimClientJar.getParentFile();
+                if (parentDirectory.exists() && parentDirectory.isDirectory()) {
+                    return parentDirectory;
+                }
+                throw new FileNotFoundException("Failed to located directory " + parentDirectory);
+            }
+            throw new FileNotFoundException("Failed to located jar file " + oimClientURL);
+        } catch (Exception exception) {
+            throw new OIMAdminException("Failed to locate directory of jar containing class" + className, exception);
+        }
+    }
+
+    public static ObjectInputStream getObjectInputStream(InputStream inputStream, URL... jars) throws IOException {
+        logger.debug("Creating new Input Stream with input stream {}, URLS {}", inputStream, jars);
+        if (jars != null) {
+            try {
+                ClassLoader urlClassLoader = new URLClassLoader(jars, null);
+                return new ObjectInputStream(inputStream) {
+
+                    protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
+                        logger.debug("Trying to resolve class using description {}", desc);
+                        String name = null;
+                        try {
+                            name = desc.getName();
+                            logger.debug("Trying to load class {} using URL Class Loader {}", name, urlClassLoader);
+                            Class<?> classValue = Class.forName(name, false, urlClassLoader);
+                            logger.debug("Located class as {}", classValue);
+                            return classValue;
+                        } catch (ClassNotFoundException ex) {
+                            logger.debug("Failed to locate Class " + name + ". Invoking parent method.", ex);
+                            return super.resolveClass(desc);
+                        }
+                    }
+                };
+            } catch (Exception exception) {
+                logger.warn("Failed to create Class Loader with URL " + jars + ". Returning standard object input stream with input stream " + inputStream, exception);
+                return new ObjectInputStream(inputStream);
+            }
+        } else {
+            logger.debug("Returning standard object input stream since no additional urls were provided.");
+            return new ObjectInputStream(inputStream);
         }
     }
 

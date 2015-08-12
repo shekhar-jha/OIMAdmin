@@ -23,6 +23,7 @@ import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
 import com.jhash.oimadmin.oim.DBConnection;
 import com.jhash.oimadmin.oim.OIMConnection;
+import com.jhash.oimadmin.oim.OIMJMXWrapper;
 import com.jidesoft.swing.JideTabbedPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,7 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
     private final OIMConnection connection;
     private final boolean destroyOnClose;
     private DBConnection dbConnection;
+    private OIMJMXWrapper oimjmxWrapper;
     private JButton retrieve;
     private JTextField orchestrationID = JGComponentFactory.getCurrent().createTextField();
     private OrchestrationDetailUI orchestrationDetailPanel;
@@ -62,6 +64,8 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
     public void initializeComponent() {
         dbConnection = new DBConnection();
         dbConnection.initialize(configuration);
+        oimjmxWrapper = new OIMJMXWrapper();
+        oimjmxWrapper.initialize(configuration);
         retrieve = JGComponentFactory.getCurrent().createButton("Retrieve..");
         retrieve.addActionListener(new ActionListener() {
             @Override
@@ -87,7 +91,7 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
                 .rows("2dlu, p")
                 .addLabel("Orchestration ID").xy(2, 2).add(orchestrationID).xy(4, 2).add(retrieve).xy(8, 2)
                 .build();
-        orchestrationDetailPanel = new OrchestrationDetailUI(dbConnection, connection, this).initialize();
+        orchestrationDetailPanel = new OrchestrationDetailUI(dbConnection, oimjmxWrapper, connection, this).initialize();
         JideTabbedPane tabbedPane = new JideTabbedPane();
         tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getUIComponent());
         traceOrchestrationUI = new JPanel(new BorderLayout());
@@ -113,8 +117,20 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
     public void destroyComponent() {
         logger.debug("Destroying component {}", this);
         if (dbConnection != null) {
-            dbConnection.destroy();
+            try {
+                dbConnection.destroy();
+            } catch (Exception exception) {
+                logger.debug("Failed to destroy DB Connection", exception);
+            }
             dbConnection = null;
+        }
+        if (oimjmxWrapper != null) {
+            try {
+                oimjmxWrapper.destroy();
+            } catch (Exception exception) {
+                logger.debug("Failed to destroy JMX Connection", exception);
+            }
+            oimjmxWrapper = null;
         }
         logger.debug("Destroyed component {}", this);
     }

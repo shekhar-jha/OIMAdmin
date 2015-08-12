@@ -25,8 +25,8 @@ import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
 import com.jhash.oimadmin.oim.DBConnection;
 import com.jhash.oimadmin.oim.OIMConnection;
+import com.jhash.oimadmin.oim.OIMJMXWrapper;
 import com.jidesoft.swing.JideTabbedPane;
-import oracle.iam.request.vo.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +45,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
 
     private final OIMConnection connection;
     private final boolean destroyOnClose;
+    private OIMJMXWrapper oimjmxWrapper;
     private DBConnection dbConnection;
     private JButton retrieve;
     private JTextField beneficiaryType = UIUtils.createTextField();
@@ -52,7 +53,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
     private JTextField getDependsOnRequestId = UIUtils.createTextField();
     private JFormattedTextField getEndDate = UIUtils.createDateField();
     private JFormattedTextField getExecutionDate = UIUtils.createDateField();
-    private JTextField getReasonForFailure = UIUtils.createTextField();
+    private JTextArea getReasonForFailure = UIUtils.createTextArea();
     private JFormattedTextField getRequesterKey = UIUtils.createLongField();
     private JTextField getRequestModelName = UIUtils.createTextField();
     private JFormattedTextField getRequestStage = UIUtils.createLongField();
@@ -96,7 +97,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
 
     private void retrieveRequestDetails(String requestIDValue) {
         try {
-            Request request = connection.getRequestDetails(requestIDValue);
+            OIMConnection.Request request = connection.getRequestDetails(requestIDValue);
 
             getRequestID.setText(request.getRequestID());
             getRequestKey.setValue(request.getRequestKey());
@@ -115,48 +116,43 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
 
             getJustification.setText(request.getJustification());
             if (request.getRequestContext() != null) {
-                if (request.getRequestContext() instanceof RequestContext) {
-                    RequestContext requestContext = (RequestContext) request.getRequestContext();
-                    getRequestContext.setText("Login User: " + requestContext.getLoginUserId());
-                    getRequestContext.append(System.lineSeparator());
-                    getRequestContext.append("Login User's Role: " + requestContext.getLoginUserRole());
-                    getRequestContext.append(System.lineSeparator());
-                    getRequestContext.append("Request ID: " + requestContext.getRequestId());
-                    getRequestContext.append(System.lineSeparator());
-                } else {
-                    getRequestContext.setText("Class: " + request.getRequestContext().getClass());
-                    getRequestContext.append(request.getRequestContext().toString());
-                }
+                OIMConnection.RequestContext requestContext = request.getRequestContext();
+                getRequestContext.setText("Login User: " + requestContext.getLoginUserId());
+                getRequestContext.append(System.lineSeparator());
+                getRequestContext.append("Login User's Role: " + requestContext.getLoginUserRole());
+                getRequestContext.append(System.lineSeparator());
+                getRequestContext.append("Request ID: " + requestContext.getRequestId());
+                getRequestContext.append(System.lineSeparator());
             } else {
                 getRequestContext.setText("");
             }
             additionalAttributesTable.tableModel.setRowCount(0);
-            for (RequestTemplateAttribute attribute : request.getAdditionalAttributes()) {
+            for (OIMConnection.TemplateAttribute attribute : request.getAdditionalAttributes()) {
                 additionalAttributesTable.tableModel.addRow(new Object[]{attribute.getName(), attribute.getTypeHolder(), attribute.getValue()});
             }
             templateAttributesTable.tableModel.setRowCount(0);
-            for (RequestTemplateAttribute attribute : request.getTemplateAttributes()) {
+            for (OIMConnection.TemplateAttribute attribute : request.getTemplateAttributes()) {
                 templateAttributesTable.tableModel.addRow(new Object[]{attribute.getName(), attribute.getTypeHolder(), attribute.getValue()});
             }
             approvalDataTable.tableModel.setRowCount(0);
-            for (ApprovalData approvalData : request.getApprovalData()) {
+            for (OIMConnection.ApprovalData approvalData : request.getApprovalData()) {
                 approvalDataTable.tableModel.addRow(new Object[]{approvalData.getApprovalInstanceID(), approvalData.getApprovalKey(), approvalData.getStage(), approvalData.getStatus()});
             }
             beneficiaryTable.tableModel.setRowCount(0);
-            for (Beneficiary beneficiary : request.getBeneficiaries()) {
+            for (OIMConnection.Beneficiary beneficiary : request.getBeneficiaries()) {
                 beneficiaryTable.tableModel.addRow(new Object[]{beneficiary.getBeneficiaryKey(), beneficiary.getBeneficiaryType(), beneficiary.getAttributes(), beneficiary.getTargetEntities()});
             }
             targetEntitiesOfBeneficiaryTable.tableModel.setRowCount(0);
             beneficiaryTargetEntityValuesTable.tableModel.setRowCount(0);
             beneficiaryTargetEntityAdditionalValuesTable.tableModel.setRowCount(0);
             targetEntitiesTable.tableModel.setRowCount(0);
-            for (RequestEntity entity : request.getTargetEntities()) {
+            for (OIMConnection.RequestEntity entity : request.getTargetEntities()) {
                 targetEntitiesTable.tableModel.addRow(new Object[]{entity.getEntityKey(), entity.getRequestEntityType(), entity.getEntitySubType(), entity.getOperation(), entity.getEntityData(), entity.getAdditionalEntityData()});
             }
             targetEntityValuesTable.tableModel.setRowCount(0);
             targetEntityAdditionalValuesTable.tableModel.setRowCount(0);
             childRequestTable.tableModel.setRowCount(0);
-            for (Request childRequest : request.getChildRequests()) {
+            for (OIMConnection.Request childRequest : request.getChildRequests()) {
                 childRequestTable.tableModel.addRow(new Object[]{childRequest.getRequestID(), childRequest.getRequestModelName(), childRequest.getRequestStatus()});
             }
             orchestrationDetailPanel.loadDetail(request.getOrchID());
@@ -170,6 +166,8 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
     public void initializeComponent() {
         dbConnection = new DBConnection();
         dbConnection.initialize(configuration);
+        oimjmxWrapper = new OIMJMXWrapper();
+        oimjmxWrapper.initialize(configuration);
         additionalAttributesTable = new DetailsTable(new String[]{"Name", "Type", "Value"}, this);
         approvalDataTable = new DetailsTable(new String[]{"Instance ID", "Key", "Stage", "Status"}, this);
         beneficiaryTable = new DetailsTable(new String[]{"Key", "Type", "Attributes", "Target Entities"}, this);
@@ -180,19 +178,19 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
         beneficiaryTargetEntityAdditionalValuesTable = new DetailsTable(new String[]{"Row Key", "Action", "Name", "Type", "Value",
                 "Parent", "Child", "Default", "MLS Map"}, this);
         beneficiaryTable.removeColumn(beneficiaryTable.getColumn("Target Entities"));
-        beneficiaryTable.addActionListener(3, targetEntitiesOfBeneficiaryTable, RequestBeneficiaryEntity.class, (entity) -> {
+        beneficiaryTable.addActionListener(3, targetEntitiesOfBeneficiaryTable, OIMConnection.RequestBeneficiaryEntity.class, (entity) -> {
             return new Object[]{entity.getEntityKey(), entity.getRequestEntityType(),
                     entity.getEntitySubType(), entity.getOperation(),
                     entity.getEntityData(), entity.getAdditionalEntityData()};
         });
-        targetEntitiesOfBeneficiaryTable.addActionListener(4, beneficiaryTargetEntityValuesTable, RequestBeneficiaryEntityAttribute.class, (entity) -> {
+        targetEntitiesOfBeneficiaryTable.addActionListener(4, beneficiaryTargetEntityValuesTable, OIMConnection.RequestBeneficiaryEntityAttribute.class, (entity) -> {
             return new Object[]{
                     entity.getRowKey(), entity.getActionHolder(),
                     entity.getName(), entity.getTypeHolder(), entity.getValue(),
                     entity.getParentAttribute(), entity.getChildAttributes(), entity.getDefaultMLSValue(), entity.getMlsMap()
             };
         });
-        targetEntitiesOfBeneficiaryTable.addActionListener(5, beneficiaryTargetEntityAdditionalValuesTable, RequestBeneficiaryEntityAttribute.class, (entity) -> {
+        targetEntitiesOfBeneficiaryTable.addActionListener(5, beneficiaryTargetEntityAdditionalValuesTable, OIMConnection.RequestBeneficiaryEntityAttribute.class, (entity) -> {
             return new Object[]{
                     entity.getRowKey(), entity.getActionHolder(),
                     entity.getName(), entity.getTypeHolder(), entity.getValue(),
@@ -205,7 +203,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                 "Parent", "Child", "Default", "MLS Map"}, this);
         targetEntityAdditionalValuesTable = new DetailsTable(new String[]{"Row Key", "Action", "Name", "Type", "Value",
                 "Parent", "Child", "Default", "MLS Map"}, this);
-        targetEntitiesTable.addActionListener(4, targetEntityValuesTable, RequestEntityAttribute.class, (targetEntityValue) -> {
+        targetEntitiesTable.addActionListener(4, targetEntityValuesTable, OIMConnection.RequestEntityAttribute.class, (targetEntityValue) -> {
             return new Object[]{
                     targetEntityValue.getRowKey(), targetEntityValue.getActionHolder(),
                     targetEntityValue.getName(), targetEntityValue.getTypeHolder(),
@@ -214,7 +212,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                     targetEntityValue.getMlsMap()
             };
         });
-        targetEntitiesTable.addActionListener(5, targetEntityAdditionalValuesTable, RequestEntityAttribute.class, (targetEntityValue) -> {
+        targetEntitiesTable.addActionListener(5, targetEntityAdditionalValuesTable, OIMConnection.RequestEntityAttribute.class, (targetEntityValue) -> {
             return new Object[]{
                     targetEntityValue.getRowKey(), targetEntityValue.getActionHolder(),
                     targetEntityValue.getName(), targetEntityValue.getTypeHolder(),
@@ -245,7 +243,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                 }
             }
         });
-        orchestrationDetailPanel = new OrchestrationDetailUI(dbConnection, connection, this).initialize();
+        orchestrationDetailPanel = new OrchestrationDetailUI(dbConnection, oimjmxWrapper, connection, this).initialize();
         JPanel searchCriteria = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
                 .rows("2dlu, p")
                 .addLabel("Request ID").xy(2, 2).add(requestID).xy(4, 2).add(retrieve).xy(8, 2)
@@ -319,16 +317,17 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
         requestDetailsTabbedPane.addTab("Targets", targetsDetailsPanel);
         requestDetailsTabbedPane.addTab("Child Requests", childRequestPanel);
         JPanel requestDetailPanel = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
-                .rows("2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, fill:p:grow, 2dlu")
+                .rows("2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, fill:p:grow, 2dlu")
                 .addLabel("Request ID").xy(2, 2).add(getRequestID).xy(4, 2).addLabel("Request Key").xy(6, 2).add(getRequestKey).xy(8, 2)
                 .addLabel("Depends On").xy(2, 4).add(getDependsOnRequestId).xy(4, 4).addLabel("Requester Key").xy(6, 4).add(getRequesterKey).xy(8, 4)
                 .addLabel("Beneficiary Type").xy(2, 6).add(beneficiaryType).xy(4, 6).addLabel("Model").xy(6, 6).add(getRequestModelName).xy(8, 6)
                 .addLabel("Stage").xy(2, 8).add(getRequestStage).xy(4, 8).addLabel("Status").xy(6, 8).add(getRequestStatus).xy(8, 8)
                 .addLabel("Create Date").xy(2, 10).add(creationDate).xy(4, 10).addLabel("Execution Date").xy(6, 10).add(getExecutionDate).xy(8, 10)
-                .addLabel("End Date").xy(2, 12).add(getEndDate).xy(4, 12).addLabel("Reason for Failure").xy(6, 12).add(getReasonForFailure).xy(8, 12)
-                .addLabel("Justification").xy(2, 14).add(getJustification).xyw(4, 14, 5)
-                .addLabel("Request Context").xy(2, 16).add(getRequestContext).xyw(4, 16, 5)
-                .add(requestDetailsTabbedPane).xyw(2, 18, 7)
+                .addLabel("End Date").xy(2, 12).add(getEndDate).xy(4, 12)
+                .addLabel("Reason for Failure").xy(2, 14).add(getReasonForFailure).xyw(4, 14, 5)
+                .addLabel("Justification").xy(2, 16).add(getJustification).xyw(4, 16, 5)
+                .addLabel("Request Context").xy(2, 18).add(getRequestContext).xyw(4, 18, 5)
+                .add(requestDetailsTabbedPane).xyw(2, 20, 7)
                 .build();
         JideTabbedPane tabbedPane = new JideTabbedPane();
         tabbedPane.addTab("Request Detail", requestDetailPanel);
@@ -350,6 +349,10 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
         if (dbConnection != null) {
             dbConnection.destroy();
             dbConnection = null;
+        }
+        if (oimjmxWrapper != null) {
+            oimjmxWrapper.destroy();
+            oimjmxWrapper = null;
         }
         logger.debug("Destroyed component {}", this);
     }

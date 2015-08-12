@@ -27,6 +27,7 @@ import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 import javax.management.openmbean.CompositeData;
 import java.io.Serializable;
+import java.security.InvalidParameterException;
 import java.util.*;
 
 public class OIMJMXWrapper extends AbstractConnection {
@@ -36,6 +37,7 @@ public class OIMJMXWrapper extends AbstractConnection {
     private JMXConnection jmxConnection = null;
     private Map<OIM_JMX_BEANS, ObjectInstance> beanCache = new HashMap<OIM_JMX_BEANS, ObjectInstance>();
     private Map<OIM_JMX_BEANS, List<ObjectInstance>> beanTypeCache = new HashMap<>();
+    private OIM_VERSION connectionOIMVersion = OIM_VERSION.NOT_AVAILABLE;
 
     @Override
     protected void initializeConnection(Configuration config) {
@@ -45,6 +47,7 @@ public class OIMJMXWrapper extends AbstractConnection {
         tmpConnection.initialize(config);
         logger.debug("Trying to get JMX Server Connection.");
         jmxConnection = tmpConnection;
+        connectionOIMVersion = getVersion();
         STRING_REPRESENTATION += "(" + jmxConnection + ")";
     }
 
@@ -63,7 +66,13 @@ public class OIMJMXWrapper extends AbstractConnection {
                         // TODO: May need to support additional validations
                         // later in case of conflict
                         String beanName = bean.getObjectName().getKeyPropertyList().get("name");
+                        if (Utils.isEmpty(beanName)) {
+                            beanName = bean.getObjectName().getKeyPropertyList().get("Name");
+                        }
                         String beanType = bean.getObjectName().getKeyPropertyList().get("type");
+                        if (Utils.isEmpty(beanType)) {
+                            beanType = bean.getObjectName().getKeyPropertyList().get("Type");
+                        }
                         if (beanName != null && OIM_JMX_BEANS.beanNames.contains(beanName)) {
                             OIM_JMX_BEANS mappedBean = OIM_JMX_BEANS.beanMapping.get(beanName);
                             if (mappedBean.type == null) {
@@ -169,44 +178,71 @@ public class OIMJMXWrapper extends AbstractConnection {
     }
 
     public Details getEventHandlers(OperationDetail operation) {
-        ObjectInstance configMBean = getBean(OIM_JMX_BEANS.OPERATION_CONFIG_MBEAN_NAME);
         Object methodInvocationResult;
-        Object[] parameters = new Object[]{operation.name};
-        try {
-            methodInvocationResult = jmxConnection.getConnection().invoke(configMBean.getObjectName(),
-                    "findEventHandlers", parameters, new String[]{"java.lang.String"});
-        } catch (Exception exception) {
-            throw new OIMAdminException("Failed to invoke findEventHandlers on " + configMBean + " with parameters "
-                    + operation.name, exception);
+        Object[] parameters;
+        ObjectInstance configMBean;
+        switch (getVersion()) {
+            case OIM11GR2PS2: {
+                configMBean = getBean(OIM_JMX_BEANS.OPERATION_CONFIG_MBEAN_NAME);
+                parameters = new Object[]{operation.name};
+                try {
+                    methodInvocationResult = jmxConnection.getConnection().invoke(configMBean.getObjectName(),
+                            "findEventHandlers", parameters, new String[]{"java.lang.String"});
+                } catch (Exception exception) {
+                    throw new OIMAdminException("Failed to invoke findEventHandlers on " + configMBean + " with parameters "
+                            + Arrays.toString(parameters), exception);
+                }
+                if (methodInvocationResult == null || !(methodInvocationResult instanceof CompositeData[])) {
+                    throw new NullPointerException("Returned " + methodInvocationResult + "  of type "
+                            + (methodInvocationResult == null ? "null" : methodInvocationResult.getClass())
+                            + " on invoking " + operation + " on " + configMBean + " using parameters "
+                            + Arrays.toString(parameters));
+                }
+                return extractCompositeData((CompositeData[]) methodInvocationResult);
+            }
+            default: {
+                configMBean = getBean(OIM_JMX_BEANS.ORCH_ENGINE_MBEAN_NAME);
+                parameters = new Object[]{operation.entity, operation.operation};
+                try {
+                    methodInvocationResult = jmxConnection.getConnection().invoke(configMBean.getObjectName(),
+                            "findEventHandlers", parameters, new String[]{"java.lang.String", "java.lang.String"});
+                } catch (Exception exception) {
+                    throw new OIMAdminException("Failed to invoke findEventHandlers on " + configMBean + " with parameters "
+                            + Arrays.toString(parameters), exception);
+                }
+                if (methodInvocationResult == null || !(methodInvocationResult instanceof CompositeData[])) {
+                    throw new NullPointerException("Returned " + methodInvocationResult + "  of type "
+                            + (methodInvocationResult == null ? "null" : methodInvocationResult.getClass())
+                            + " on invoking " + operation + " on " + configMBean + " using parameters "
+                            + Arrays.toString(parameters));
+                }
+                return extractCompositeData((CompositeData[]) methodInvocationResult);
+            }
         }
+    }
+
+    private Details extractCompositeData(CompositeData[] methodInvocationResult) {
         Set<String> columns = new HashSet<String>();
         List<Map<String, Object>> result = new ArrayList<Map<String, Object>>();
         Map<String, String> nameToColumnNameMapping = EVENT_HANDLER_DETAILS.getNameToColumnNameMapping();
-        if (methodInvocationResult != null && methodInvocationResult instanceof CompositeData[]) {
-            try {
-                for (CompositeData data : ((CompositeData[]) methodInvocationResult)) {
-                    Map<String, Object> dataMap = new HashMap<String, Object>();
-                    Set<String> columnNames = data.getCompositeType().keySet();
-                    columns.addAll(columnNames);
-                    for (String columnName : columnNames) {
-                        dataMap.put(nameToColumnNameMapping.getOrDefault(columnName, columnName), data.get(columnName));
-                    }
-                    result.add(dataMap);
+        try {
+            for (CompositeData data : ((CompositeData[]) methodInvocationResult)) {
+                Map<String, Object> dataMap = new HashMap<String, Object>();
+                Set<String> columnNames = data.getCompositeType().keySet();
+                columns.addAll(columnNames);
+                for (String columnName : columnNames) {
+                    dataMap.put(nameToColumnNameMapping.getOrDefault(columnName, columnName), data.get(columnName));
                 }
-            } catch (Exception exception) {
-                throw new OIMAdminException("Failed to read the event handler details from result "
-                        + methodInvocationResult, exception);
+                result.add(dataMap);
             }
-        } else {
-            throw new NullPointerException("Returned " + methodInvocationResult + "  of type "
-                    + (methodInvocationResult == null ? "null" : methodInvocationResult.getClass())
-                    + " on invoking getEventHandlers on " + configMBean + " using parameters "
-                    + Arrays.toString(parameters));
+        } catch (Exception exception) {
+            throw new OIMAdminException("Failed to read the event handler details from result "
+                    + methodInvocationResult, exception);
         }
         return new Details(result, EVENT_HANDLER_DETAILS.getColumnNames());
     }
 
-    public Set<OperationDetail> getOperations() {
+    private Set<OperationDetail> getOperationsOIM11gR2PS2() {
         Set<OperationDetail> operations = new HashSet<OperationDetail>();
         ObjectInstance operationConfigObjectInstance = getBean(OIM_JMX_BEANS.OPERATION_CONFIG_MBEAN_NAME);
         try {
@@ -227,6 +263,60 @@ public class OIMJMXWrapper extends AbstractConnection {
                     + operationConfigObjectInstance, exception);
         }
         return operations;
+    }
+
+    public Set<OperationDetail> getOperations() {
+        switch (connectionOIMVersion) {
+            case OIM11GR2PS2:
+                return getOperationsOIM11gR2PS2();
+            default: {
+                Set<OperationDetail> operationDetails = new HashSet<>();
+                ObjectInstance operationConfigObjectInstance = getBean(OIM_JMX_BEANS.ORCH_ENGINE_MBEAN_NAME);
+                String[] entityTypes = null;
+                try {
+                    Object result = jmxConnection.getConnection().invoke(operationConfigObjectInstance.getObjectName(), "listEntityTypes", new Object[]{}, new String[]{});
+                    if (result == null)
+                        throw new NullPointerException("Invocation of listEntityTypes on " + operationConfigObjectInstance + " returned null");
+                    if (!(result instanceof String[]))
+                        throw new ClassCastException("Invocation of listEntityTypes on " + operationConfigObjectInstance + " returned object " + result + " of type " + result.getClass() + ", Expected: String[]");
+                    entityTypes = (String[]) result;
+                } catch (Exception exception) {
+                    throw new OIMAdminException("Failed to invoke operation listEntityTypes on "
+                            + operationConfigObjectInstance, exception);
+                }
+                for (String entityType : entityTypes) {
+                    try {
+                        Object result = jmxConnection.getConnection().invoke(operationConfigObjectInstance.getObjectName(), "findOperations", new Object[]{entityType}, new String[]{"java.lang.String"});
+                        if (result == null)
+                            throw new NullPointerException("Invocation of findOperations(String) on " + operationConfigObjectInstance + " with parameter " + entityType + " returned null");
+                        if (!(result instanceof String[]))
+                            throw new ClassCastException("Invocation of findOperations(String)  on " + operationConfigObjectInstance + " with parameter " + entityType + " returned object " + result + " of type " + result.getClass() + ", Expected: String[]");
+                        for (String operation : (String[]) result) {
+                            operationDetails.add(new OperationDetail(entityType, operation, operation + " on " + entityType,
+                                    this));
+                        }
+                    } catch (Exception exception) {
+                        throw new OIMAdminException("Failed to invoke operation listEntityTypes on "
+                                + operationConfigObjectInstance, exception);
+                    }
+
+                }
+                return operationDetails;
+            }
+        }
+    }
+
+    public OIM_VERSION getVersion() {
+        if (connectionOIMVersion == OIM_VERSION.NOT_AVAILABLE) {
+            String versionValue = getValue(OIM_JMX_BEANS.OIM_VERSION_INFO_MBEAN_NAME, "Version");
+            if (versionValue.startsWith("11.1.2.3"))
+                connectionOIMVersion = OIM_VERSION.OIM11GR2PS3;
+            else if (versionValue.startsWith("11.1.2.2"))
+                connectionOIMVersion = OIM_VERSION.OIM11GR2PS2;
+            else
+                connectionOIMVersion = OIM_VERSION.UNKNOWN;
+        }
+        return connectionOIMVersion;
     }
 
     public void setCacheDetails(Map<String, Object> cacheItem, OIM_CACHE_ATTRS cacheAttr, String value) {
@@ -280,15 +370,36 @@ public class OIMJMXWrapper extends AbstractConnection {
         try {
             switch (attributeRequested) {
                 case CLUSTERED: {
-                    returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isClustered", new Object[]{}, new String[]{});
+                    switch (getVersion()) {
+                        case OIM11GR2PS2:
+                            returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isClustered", new Object[]{}, new String[]{});
+                            break;
+                        default:
+                            returnValue = getValue(OIM_JMX_BEANS.CACHE_MBEAN_NAME, "Clustered");
+                            break;
+                    }
                     break;
                 }
                 case ENABLED: {
-                    returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isEnabled", new Object[]{}, new String[]{});
+                    switch (getVersion()) {
+                        case OIM11GR2PS2:
+                            returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isEnabled", new Object[]{}, new String[]{});
+                            break;
+                        default:
+                            returnValue = getValue(OIM_JMX_BEANS.CACHE_MBEAN_NAME, "Enabled");
+                            break;
+                    }
                     break;
                 }
                 case ThreadLocalCacheEnabled: {
-                    returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isThreadLocalCacheEnabled", new Object[]{}, new String[]{});
+                    switch (getVersion()) {
+                        case OIM11GR2PS2:
+                            returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isThreadLocalCacheEnabled", new Object[]{}, new String[]{});
+                            break;
+                        default:
+                            returnValue = getValue(OIM_JMX_BEANS.CACHE_MBEAN_NAME, "ThreadLocalCacheEnabled");
+                            break;
+                    }
                     break;
                 }
                 case ExpirationTime:
@@ -367,13 +478,20 @@ public class OIMJMXWrapper extends AbstractConnection {
         logger.debug("Destroyed OIM JMX Connection");
     }
 
+    public static enum OIM_VERSION {
+        OIM11GR2PS2, OIM11GR2PS3, LATEST, NOT_AVAILABLE, UNKNOWN
+
+
+    }
+
     public enum EVENT_HANDLER_DETAILS {
         STAGE("Stage of Execution", "stage"), ORDER("Order of Execution", "order"), NAME("Name", "name"), CUSTOM(
                 "Is custom?", "custom"), CONDITIONAL("Conditional", "conditional"), OFFBAND("Executed Offband",
-                "offBand"), CLASS("class", "class"), LOCATION("location", "location");
+                "offBand"), CLASS("class", "class"), LOCATION("location", "location"), EXCEPTION("Exception", "exception"),
+        SYNC("Sync", "sync"), TRANSACTIONAL("Transactional", "transactional");
 
         private static final EVENT_HANDLER_DETAILS[] allValues = new EVENT_HANDLER_DETAILS[]{STAGE, ORDER, NAME,
-                CUSTOM, CONDITIONAL, OFFBAND};
+                CONDITIONAL};
         public final String columnName;
         public final String name;
 
@@ -416,6 +534,8 @@ public class OIMJMXWrapper extends AbstractConnection {
         private static final long serialVersionUID = 1L;
         private static final Map<OIMJMXWrapper, Map<String, Set<String>>> allowedOperations = new HashMap<OIMJMXWrapper, Map<String, Set<String>>>();
         public final String name;
+        public final String entity;
+        public final String operation;
         public final String description;
         private OIMJMXWrapper connection;
 
@@ -425,8 +545,10 @@ public class OIMJMXWrapper extends AbstractConnection {
             this.connection = connection;
             String[] nameSplits = name.split("-");
             if (nameSplits == null || nameSplits.length != 2) {
-                logger.debug("ignoring the name {} since it does not have two components with - inbetween", name);
+                throw new InvalidParameterException("The name " + name + " does not have two components with - inbetween");
             } else {
+                entity = nameSplits[0];
+                operation = nameSplits[1];
                 Map<String, Set<String>> allowedEntityOperationsForConnection = null;
                 if (allowedOperations.containsKey(connection)) {
                     allowedEntityOperationsForConnection = allowedOperations.get(connection);
@@ -444,6 +566,30 @@ public class OIMJMXWrapper extends AbstractConnection {
                 allowedOperationsForEntityConnection.add(nameSplits[1]);
             }
         }
+
+        private OperationDetail(String entity, String operation, String description, OIMJMXWrapper connection) {
+            this.entity = entity;
+            this.operation = operation;
+            this.name = entity + "-" + operation;
+            this.description = description;
+            this.connection = connection;
+            Map<String, Set<String>> allowedEntityOperationsForConnection = null;
+            if (allowedOperations.containsKey(connection)) {
+                allowedEntityOperationsForConnection = allowedOperations.get(connection);
+            } else {
+                allowedEntityOperationsForConnection = new HashMap<String, Set<String>>();
+                allowedOperations.put(connection, allowedEntityOperationsForConnection);
+            }
+            Set<String> allowedOperationsForEntityConnection = null;
+            if (allowedEntityOperationsForConnection.containsKey(entity)) {
+                allowedOperationsForEntityConnection = allowedEntityOperationsForConnection.get(entity);
+            } else {
+                allowedOperationsForEntityConnection = new HashSet<String>();
+                allowedEntityOperationsForConnection.put(entity, allowedOperationsForEntityConnection);
+            }
+            allowedOperationsForEntityConnection.add(operation);
+        }
+
 
         public static Map<String, Set<String>> getOperationDetails(OIMJMXWrapper connection) {
             return allowedOperations.get(connection);
@@ -465,6 +611,18 @@ public class OIMJMXWrapper extends AbstractConnection {
 
         public Map<String, Object> getItemAt(int index) {
             return values.get(index);
+        }
+
+        public Object getItemAt(int index, String key, Object defaultValue) {
+            Map<String, Object> item = values.get(index);
+            if (item == null)
+                return defaultValue;
+            if (!item.containsKey(key))
+                return defaultValue;
+            Object value = item.get(key);
+            if (value == null)
+                return defaultValue;
+            return value;
         }
 
         public Object[][] getData() {
@@ -498,6 +656,8 @@ public class OIMJMXWrapper extends AbstractConnection {
         private static final Map<String, OIM_JMX_BEANS> beanTypeMapping = new HashMap<>();
         public static final OIM_JMX_BEANS CONFIG_QUERY_MBEAN_NAME = new OIM_JMX_BEANS("ConfigQueryMBeanName");
         public static final OIM_JMX_BEANS OPERATION_CONFIG_MBEAN_NAME = new OIM_JMX_BEANS("OperationConfigMXBean");
+        public static final OIM_JMX_BEANS ORCH_ENGINE_MBEAN_NAME = new OIM_JMX_BEANS("OrchestrationEngine", "Kernel");
+        public static final OIM_JMX_BEANS OIM_VERSION_INFO_MBEAN_NAME = new OIM_JMX_BEANS("oim#11.1.2.0.0", "EMIntegration");
         public static final OIM_JMX_BEANS CACHE_MBEAN_NAME = new OIM_JMX_BEANS("Cache");
         public static final OIM_JMX_BEANS CACHE_PROVIDER_MBEAN_NAME = new OIM_JMX_BEANS("XLCacheProvider");
         public static final OIM_JMX_BEANS CACHE_CATEGORIES = new OIM_JMX_BEANS(null, "XMLConfig.CacheConfig.CacheCategoryConfig");
