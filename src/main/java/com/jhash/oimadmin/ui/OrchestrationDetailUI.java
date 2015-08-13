@@ -237,7 +237,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
                                 eventResult.setText("");
                             }
                         } catch (Exception exception) {
-                            parent.displayMessage("Orchestration display failed", "Failed to display the Orchestration event based on event ", exception);
+                            parent.displayMessage("Event Result display failed", "Failed to display the Orchestration result for selected event", exception);
                         }
                     }
                 });
@@ -246,6 +246,41 @@ public class OrchestrationDetailUI<T extends JComponent> {
             default:
                 eventDetails = new TraceRequestDetails.DetailsTable(new String[]{"Order", "ID", "Name", "Operation", "Status", "Stage", "Is sync", "Handler Class",
                         "Result"}, parent);
+                eventDetails.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+                    @Override
+                    public void valueChanged(ListSelectionEvent e) {
+                        try {
+                            if (e.getValueIsAdjusting())
+                                return;
+                            int selectedRow = eventDetails.getSelectedRow();
+                            if (selectedRow == -1) {
+                                logger.warn("Incorrect selection has been made or selection made has become invalid. Selected Row={}", selectedRow);
+                                return;
+                            }
+                            Object result = eventDetails.getValueAt(selectedRow, 8);
+                            eventErrorCode.setText("");
+                            eventErrorMessage.setText("");
+                            if (result != null) {
+                                if (result instanceof Exception) {
+                                    StringWriter output = new StringWriter();
+                                    ((Exception) result).printStackTrace(new PrintWriter(output));
+                                    eventResult.setText(output.toString());
+                                } else if (result instanceof ContextAware) {
+                                    ContextAware contextAwareResult = ((ContextAware) result);
+                                    eventResult.setText("Type: " + contextAwareResult.getType());
+                                    eventResult.append(System.lineSeparator());
+                                    eventResult.append("Value: " + contextAwareResult.getObjectValue());
+                                } else {
+                                    eventResult.setText(result.toString());
+                                }
+                            } else {
+                                eventResult.setText("");
+                            }
+                        } catch (Exception exception) {
+                            parent.displayMessage("Event Result display failed", "Failed to display the Orchestration result for selected event", exception);
+                        }
+                    }
+                });
                 break;
         }
         processObjLogStatementMethod.setColumns(10);
@@ -324,6 +359,14 @@ public class OrchestrationDetailUI<T extends JComponent> {
         return orchestrationDetailsUIPanel;
     }
 
+    public void reset() {
+        resetBaseDetails();
+        resetProcessDetails();
+        resetOrchestrationDetails();
+        eventDetails.tableModel.setRowCount(0);
+        orcProcessContextValue.setText("");
+    }
+
     public void loadDetail(long orchestrationProcessID) {
         switch (oimjmxWrapper.getVersion()) {
             case OIM11GR2PS2:
@@ -382,35 +425,59 @@ public class OrchestrationDetailUI<T extends JComponent> {
                                         record.getOperation(), record.getStatus(), record.getStage(), record.isSync(), record.getResult()});
                             }
                         } catch (Exception exception) {
-                            parent.displayMessage("Failed to extract Orchestration", "Failed to extract Orchestration Events for process ID " + orchestrationProcessID, exception);
+                            parent.displayMessage("Failed to extract event details", "Failed to extract Orchestration Events for process ID " + orchestrationProcessID, exception);
+                            eventDetails.tableModel.setRowCount(0);
                         }
                     } catch (Exception exception) {
                         parent.displayMessage("Failed to extract process details", "Failed to extract process details for process ID " + orchestrationProcessID, exception);
                         resetOrchestrationDetails();
                         resetProcessDetails();
+                        eventDetails.tableModel.setRowCount(0);
                     }
                 }
+            } else {
+                resetProcessDetails();
+                resetOrchestrationDetails();
+                eventDetails.tableModel.setRowCount(0);
             }
         } catch (Exception exception) {
             parent.displayMessage("Orchestration retrieval failed", "Failed to get orchestration details for process ID  " + orchestrationProcessID, exception);
-            orcProcessEntityID.setText("");
-            orcProcessDeProcessID.setText(""); //????
-            orcProcessCreatedOn.setText("");
-            orcProcessStatus.setText("");
-            orcProcessChangeType.setText("");
-            orcProcessRetry.setText("");
-            orcProcessModifiedOn.setText("");
-            orcProcessEntityType.setText("");
-            orcProcessTarget.setText("");
-            orcProcessBulkParentID.setText("");
-            orcProcessStatus.setText("");
-            orcProcessOperation.setText("");
-            orcProcessParentProcessID.setText("");
-            orcProcessID.setText("");
-            orcProcessName.setText("");
-            orcProcessSeqEntity.setText("N/A for this version");
-            orcProcessSequence.setText("N/A for this version");
-            orcProcessECID.setText("N/A for this version");
+            resetBaseDetails();
+            resetProcessDetails();
+            resetOrchestrationDetails();
+            eventDetails.tableModel.setRowCount(0);
+        }
+    }
+
+    public void resetBaseDetails() {
+        orcProcessEntityID.setText("");
+        orcProcessDeProcessID.setText(""); //????
+        orcProcessCreatedOn.setText("");
+        orcProcessStatus.setText("");
+        orcProcessChangeType.setText("");
+        orcProcessRetry.setText("");
+        orcProcessModifiedOn.setText("");
+        orcProcessEntityType.setText("");
+        orcProcessTarget.setText("");
+        orcProcessBulkParentID.setText("");
+        orcProcessStatus.setText("");
+        orcProcessOperation.setText("");
+        orcProcessParentProcessID.setText("");
+        orcProcessID.setText("");
+        switch (oimjmxWrapper.getVersion()) {
+            case OIM11GR2PS2:
+                orcProcessSeqEntity.setText("");
+                orcProcessSequence.setText("");
+                orcProcessECID.setText("");
+                orcProcessName.setText("N/A for this version");
+                break;
+            case OIM11GR2PS3:
+            default:
+                orcProcessSeqEntity.setText("N/A for this version");
+                orcProcessSequence.setText("N/A for this version");
+                orcProcessECID.setText("N/A for this version");
+                orcProcessName.setText("");
+                break;
         }
     }
 
@@ -459,7 +526,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
             processObjStopStage.setText("" + process.getStopStage());
             processObjRetryCount.setText("" + process.getRetryCount());
             processObjTargetType.setText("" + process.getTargetType());
-            processObjCurrentHandler.setText("" + process.getCurrentHandler());
+            processObjCurrentHandler.setText("" + process.getCurrentHandler().getEventId());
             processObjHasChildrenFromBulk.setSelected(process.hasChildrenFromBulk());
             processObjHasDifferedChanges.setSelected(process.hasDeferredChanges());
             processObjObjectSaved.setSelected(process.isObjectSaved());
@@ -488,6 +555,10 @@ public class OrchestrationDetailUI<T extends JComponent> {
             }
         } catch (Exception exception) {
             parent.displayMessage("Orchestration retrieval failed", "Failed to get orchestration details for process ID  " + orchestrationProcessID, exception);
+            resetBaseDetails();
+            orcProcessContextValue.setText("");
+            resetOrchestrationDetails();
+            eventDetails.tableModel.setRowCount(0);
         }
         logger.debug("Result Values: {}", values);
         orcProcessEntityID.setText((String) values.get("ENTITYID"));
@@ -549,6 +620,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
             }
         } catch (Exception exception) {
             parent.displayMessage("Failed to extract Orchestration", "Failed to extract Orchestration Events for process ID " + orchestrationProcessID, exception);
+            eventDetails.tableModel.setRowCount(0);
         }
     }
 

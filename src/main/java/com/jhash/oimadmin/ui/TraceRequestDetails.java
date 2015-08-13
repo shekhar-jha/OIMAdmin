@@ -159,7 +159,40 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
             //request.getEventID();
         } catch (Exception exception) {
             displayMessage("Failed to load request details", "Failed to process request detail retrieval for " + requestIDValue, exception);
+            reset();
         }
+    }
+
+    public void reset() {
+        getRequestID.setText("");
+        getRequestKey.setText("");
+        getDependsOnRequestId.setText("");
+        getRequesterKey.setText("");
+
+        beneficiaryType.setText("");
+        getRequestModelName.setText("");
+        getRequestStage.setText("");
+        getRequestStatus.setText("");
+
+        creationDate.setText("");
+        getExecutionDate.setText("");
+        getEndDate.setText("");
+        getReasonForFailure.setText("");
+
+        getJustification.setText("");
+        getRequestContext.setText("");
+        additionalAttributesTable.tableModel.setRowCount(0);
+        templateAttributesTable.tableModel.setRowCount(0);
+        approvalDataTable.tableModel.setRowCount(0);
+        beneficiaryTable.tableModel.setRowCount(0);
+        targetEntitiesOfBeneficiaryTable.tableModel.setRowCount(0);
+        beneficiaryTargetEntityValuesTable.tableModel.setRowCount(0);
+        beneficiaryTargetEntityAdditionalValuesTable.tableModel.setRowCount(0);
+        targetEntitiesTable.tableModel.setRowCount(0);
+        targetEntityValuesTable.tableModel.setRowCount(0);
+        targetEntityAdditionalValuesTable.tableModel.setRowCount(0);
+        childRequestTable.tableModel.setRowCount(0);
+        orchestrationDetailPanel.reset();
     }
 
     @Override
@@ -317,7 +350,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
         requestDetailsTabbedPane.addTab("Targets", targetsDetailsPanel);
         requestDetailsTabbedPane.addTab("Child Requests", childRequestPanel);
         JPanel requestDetailPanel = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
-                .rows("2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, fill:p:grow, 2dlu")
+                .rows("2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, fill:p:grow, 2dlu")
                 .addLabel("Request ID").xy(2, 2).add(getRequestID).xy(4, 2).addLabel("Request Key").xy(6, 2).add(getRequestKey).xy(8, 2)
                 .addLabel("Depends On").xy(2, 4).add(getDependsOnRequestId).xy(4, 4).addLabel("Requester Key").xy(6, 4).add(getRequesterKey).xy(8, 4)
                 .addLabel("Beneficiary Type").xy(2, 6).add(beneficiaryType).xy(4, 6).addLabel("Model").xy(6, 6).add(getRequestModelName).xy(8, 6)
@@ -325,9 +358,8 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                 .addLabel("Create Date").xy(2, 10).add(creationDate).xy(4, 10).addLabel("Execution Date").xy(6, 10).add(getExecutionDate).xy(8, 10)
                 .addLabel("End Date").xy(2, 12).add(getEndDate).xy(4, 12)
                 .addLabel("Reason for Failure").xy(2, 14).add(getReasonForFailure).xyw(4, 14, 5)
-                .addLabel("Justification").xy(2, 16).add(getJustification).xyw(4, 16, 5)
-                .addLabel("Request Context").xy(2, 18).add(getRequestContext).xyw(4, 18, 5)
-                .add(requestDetailsTabbedPane).xyw(2, 20, 7)
+                .addLabel("Justification").xy(2, 16).add(getJustification).xy(4, 16).addLabel("Request Context").xy(6, 16).add(getRequestContext).xy(8, 16)
+                .add(requestDetailsTabbedPane).xyw(2, 18, 7)
                 .build();
         JideTabbedPane tabbedPane = new JideTabbedPane();
         tabbedPane.addTab("Request Detail", requestDetailPanel);
