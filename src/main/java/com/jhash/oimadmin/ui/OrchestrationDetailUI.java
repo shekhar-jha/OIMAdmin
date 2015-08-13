@@ -363,8 +363,15 @@ public class OrchestrationDetailUI<T extends JComponent> {
         resetBaseDetails();
         resetProcessDetails();
         resetOrchestrationDetails();
-        eventDetails.tableModel.setRowCount(0);
         orcProcessContextValue.setText("");
+    }
+
+    private void resetEventDetails() {
+        eventDetails.tableModel.setRowCount(0);
+        eventResult.setText("");
+        eventErrorCode.setText("");
+        eventErrorMessage.setText("");
+
     }
 
     public void loadDetail(long orchestrationProcessID) {
@@ -426,26 +433,26 @@ public class OrchestrationDetailUI<T extends JComponent> {
                             }
                         } catch (Exception exception) {
                             parent.displayMessage("Failed to extract event details", "Failed to extract Orchestration Events for process ID " + orchestrationProcessID, exception);
-                            eventDetails.tableModel.setRowCount(0);
+                            resetEventDetails();
                         }
                     } catch (Exception exception) {
                         parent.displayMessage("Failed to extract process details", "Failed to extract process details for process ID " + orchestrationProcessID, exception);
                         resetOrchestrationDetails();
                         resetProcessDetails();
-                        eventDetails.tableModel.setRowCount(0);
+                        resetEventDetails();
                     }
                 }
             } else {
                 resetProcessDetails();
                 resetOrchestrationDetails();
-                eventDetails.tableModel.setRowCount(0);
+                resetEventDetails();
             }
         } catch (Exception exception) {
             parent.displayMessage("Orchestration retrieval failed", "Failed to get orchestration details for process ID  " + orchestrationProcessID, exception);
             resetBaseDetails();
             resetProcessDetails();
             resetOrchestrationDetails();
-            eventDetails.tableModel.setRowCount(0);
+            resetEventDetails();
         }
     }
 
@@ -558,7 +565,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
             resetBaseDetails();
             orcProcessContextValue.setText("");
             resetOrchestrationDetails();
-            eventDetails.tableModel.setRowCount(0);
+            resetEventDetails();
         }
         logger.debug("Result Values: {}", values);
         orcProcessEntityID.setText((String) values.get("ENTITYID"));
@@ -620,7 +627,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
             }
         } catch (Exception exception) {
             parent.displayMessage("Failed to extract Orchestration", "Failed to extract Orchestration Events for process ID " + orchestrationProcessID, exception);
-            eventDetails.tableModel.setRowCount(0);
+            resetEventDetails();
         }
     }
 
