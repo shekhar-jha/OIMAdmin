@@ -26,6 +26,7 @@ import com.jhash.oimadmin.Utils;
 import com.jhash.oimadmin.oim.DBConnection;
 import com.jhash.oimadmin.oim.OIMConnection;
 import com.jhash.oimadmin.oim.OIMJMXWrapper;
+import com.jidesoft.swing.JideScrollPane;
 import com.jidesoft.swing.JideTabbedPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -350,15 +351,15 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
         requestDetailsTabbedPane.addTab("Targets", targetsDetailsPanel);
         requestDetailsTabbedPane.addTab("Child Requests", childRequestPanel);
         JPanel requestDetailPanel = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
-                .rows("2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, fill:p:grow, 2dlu")
+                .rows("2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, p, 2dlu, [p,70], 2dlu, [p,70], 2dlu, fill:p:grow, 2dlu")
                 .addLabel("Request ID").xy(2, 2).add(getRequestID).xy(4, 2).addLabel("Request Key").xy(6, 2).add(getRequestKey).xy(8, 2)
                 .addLabel("Depends On").xy(2, 4).add(getDependsOnRequestId).xy(4, 4).addLabel("Requester Key").xy(6, 4).add(getRequesterKey).xy(8, 4)
                 .addLabel("Beneficiary Type").xy(2, 6).add(beneficiaryType).xy(4, 6).addLabel("Model").xy(6, 6).add(getRequestModelName).xy(8, 6)
                 .addLabel("Stage").xy(2, 8).add(getRequestStage).xy(4, 8).addLabel("Status").xy(6, 8).add(getRequestStatus).xy(8, 8)
                 .addLabel("Create Date").xy(2, 10).add(creationDate).xy(4, 10).addLabel("Execution Date").xy(6, 10).add(getExecutionDate).xy(8, 10)
                 .addLabel("End Date").xy(2, 12).add(getEndDate).xy(4, 12)
-                .addLabel("Reason for Failure").xy(2, 14).add(getReasonForFailure).xyw(4, 14, 5)
-                .addLabel("Justification").xy(2, 16).add(getJustification).xy(4, 16).addLabel("Request Context").xy(6, 16).add(getRequestContext).xy(8, 16)
+                .addLabel("Reason for Failure").xy(2, 14).add(new JideScrollPane(getReasonForFailure)).xyw(4, 14, 5)
+                .addLabel("Justification").xy(2, 16).add(new JideScrollPane(getJustification)).xy(4, 16).addLabel("Request Context").xy(6, 16).add(new JideScrollPane(getRequestContext)).xy(8, 16)
                 .add(requestDetailsTabbedPane).xyw(2, 18, 7)
                 .build();
         JideTabbedPane tabbedPane = new JideTabbedPane();
