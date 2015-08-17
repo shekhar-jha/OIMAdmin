@@ -1,7 +1,7 @@
 OIMAdmin
 ========
 
-A java swing application to play with Oracle Identity Manager. The code has been tested with OIM11g R2 PS2 at this time.
+A java swing application to play with Oracle Identity Manager. The code has been tested with OIM11g R2 PS2 and PS3 at this time.
 
 Getting started
 ---------------
