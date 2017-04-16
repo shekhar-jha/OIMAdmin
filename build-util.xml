@@ -66,7 +66,7 @@
         <pathelement location="${basedir}/lib/oim/eclipselink.jar"/>
         <pathelement location="${basedir}/lib/oim/jrf-api.jar"/>
         <pathelement location="${basedir}/lib/oim/spring.jar"/>
-        <pathelement location="${basedir}/lib/oim/wlfullclient.jar"/>
+        <pathelement location="${basedir}/lib/oim/wlthint3client.jar"/>
         <pathelement location="${basedir}/lib/oim/oimclient11gR2PS3.jar"/>
     </path>
 
@@ -76,6 +76,10 @@
 
     <path id="library.slf4j-log4j12-1.5.11.classpath">
         <pathelement location="${basedir}/lib/slf4j/slf4j-log4j12-1.5.11.jar"/>
+    </path>
+
+    <path id="library.jsch.classpath">
+        <pathelement location="${basedir}/lib/jsch/jsch-0.1.53.jar"/>
     </path>
 
     <!-- Modules -->
@@ -110,6 +114,7 @@
         <pathelement location="${basedir}/lib/mds/mdslcm-client.jar"/>
         <pathelement location="${basedir}/lib/jgoodies/smart-client-showcase-1.3.1.jar"/>
         <pathelement location="${basedir}/lib/apache-commons/commons-io-2.4.jar"/>
+        <pathelement location="${basedir}/lib/jsch/jsch-0.1.53.jar"/>
     </path>
 
     <path id="oimadmin.runtime.production.module.classpath">
@@ -133,10 +138,11 @@
         <pathelement location="${basedir}/lib/oim/eclipselink.jar"/>
         <pathelement location="${basedir}/lib/oim/jrf-api.jar"/>
         <pathelement location="${basedir}/lib/oim/spring.jar"/>
-        <pathelement location="${basedir}/lib/oim/wlfullclient.jar"/>
+        <pathelement location="${basedir}/lib/oim/wlthint3client.jar"/>
         <pathelement location="${basedir}/lib/oracle-db/ojdbc6.jar"/>
         <pathelement location="${basedir}/lib/slf4j/slf4j-log4j12-1.5.11.jar"/>
         <pathelement location="${basedir}/lib/weblogic/wljmxclient.jar"/>
+        <pathelement location="${basedir}/lib/jsch/jsch-0.1.53.jar"/>
         <path refid="library.oimruntimelibrary.classpath"/>
         <path refid="library.ojdbc6.classpath"/>
         <path refid="library.slf4j-log4j12-1.5.11.classpath"/>
@@ -164,10 +170,11 @@
         <pathelement location="${basedir}/lib/oim/eclipselink.jar"/>
         <pathelement location="${basedir}/lib/oim/jrf-api.jar"/>
         <pathelement location="${basedir}/lib/oim/spring.jar"/>
-        <pathelement location="${basedir}/lib/oim/wlfullclient.jar"/>
+        <pathelement location="${basedir}/lib/oim/wlthint3client.jar"/>
         <pathelement location="${basedir}/lib/oracle-db/ojdbc6.jar"/>
         <pathelement location="${basedir}/lib/slf4j/slf4j-log4j12-1.5.11.jar"/>
         <pathelement location="${basedir}/lib/weblogic/wljmxclient.jar"/>
+        <pathelement location="${basedir}/lib/jsch/jsch-0.1.53.jar"/>
         <path refid="library.oimruntimelibrary.classpath"/>
         <path refid="library.ojdbc6.classpath"/>
         <path refid="library.slf4j-log4j12-1.5.11.classpath"/>
@@ -196,10 +203,11 @@
         <pathelement location="${basedir}/lib/oim/eclipselink.jar"/>
         <pathelement location="${basedir}/lib/oim/jrf-api.jar"/>
         <pathelement location="${basedir}/lib/oim/spring.jar"/>
-        <pathelement location="${basedir}/lib/oim/wlfullclient.jar"/>
+        <pathelement location="${basedir}/lib/oim/wlthint3client.jar"/>
         <pathelement location="${basedir}/lib/oracle-db/ojdbc6.jar"/>
         <pathelement location="${basedir}/lib/slf4j/slf4j-log4j12-1.5.11.jar"/>
         <pathelement location="${basedir}/lib/weblogic/wljmxclient.jar"/>
+        <pathelement location="${basedir}/lib/jsch/jsch-0.1.53.jar"/>
         <path refid="library.oimruntimelibrary.classpath"/>
         <path refid="library.ojdbc6.classpath"/>
         <path refid="library.slf4j-log4j12-1.5.11.classpath"/>
@@ -325,7 +333,7 @@
         <copy file="${basedir}/lib/oracle-db/ojdbc6.jar" tofile="${artifact.output.oimadmin:jar}/ojdbc6.jar"/>
         <copy file="${basedir}/lib/slf4j/slf4j-log4j12-1.5.11.jar"
               tofile="${artifact.output.oimadmin:jar}/slf4j-log4j12-1.5.11.jar"/>
-        <copy file="${basedir}/lib/oim/wlfullclient.jar" tofile="${artifact.output.oimadmin:jar}/wlfullclient.jar"/>
+        <copy file="${basedir}/lib/oim/wlthint3client.jar" tofile="${artifact.output.oimadmin:jar}/wlfullclient.jar"/>
         <copy file="${basedir}/lib/oim/spring.jar" tofile="${artifact.output.oimadmin:jar}/spring.jar"/>
         <copy file="${basedir}/lib/oim/jrf-api.jar" tofile="${artifact.output.oimadmin:jar}/jrf-api.jar"/>
         <copy file="${basedir}/lib/oim/eclipselink.jar" tofile="${artifact.output.oimadmin:jar}/eclipselink.jar"/>
@@ -352,9 +360,11 @@
         <copy file="${basedir}/lib/oim/eclipselink.jar" tofile="${artifact.output.oimadmin:jar}/eclipselink.jar"/>
         <copy file="${basedir}/lib/oim/spring.jar" tofile="${artifact.output.oimadmin:jar}/spring.jar"/>
         <copy file="${basedir}/lib/oim/jrf-api.jar" tofile="${artifact.output.oimadmin:jar}/jrf-api.jar"/>
-        <copy file="${basedir}/lib/oim/wlfullclient.jar" tofile="${artifact.output.oimadmin:jar}/wlfullclient.jar"/>
+        <copy file="${basedir}/lib/oim/wlthint3client.jar" tofile="${artifact.output.oimadmin:jar}/wlfullclient.jar"/>
         <copy file="${basedir}/lib/slf4j/slf4j-api-1.5.11.jar"
               tofile="${artifact.output.oimadmin:jar}/slf4j-api-1.5.11.jar"/>
+        <copy file="${basedir}/lib/jsch/jsch-0.1.53.jar"
+              tofile="${artifact.output.oimadmin:jar}/jsch-0.1.53.jar"/>
     </target>
 
     <target name="build.all.artifacts" depends="artifact.oimadmin:jar" description="Build all artifacts">
