@@ -372,8 +372,12 @@ public class OIMJMXWrapper extends AbstractConnection {
                 case CLUSTERED: {
                     switch (getVersion()) {
                         case OIM11GR2PS2:
-                            returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isClustered", new Object[]{}, new String[]{});
-                            break;
+                            try {
+                                returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isClustered", new Object[]{}, new String[]{});
+                                break;
+                            } catch (Exception exception) {
+                                logger.debug("Catching an exception while trying to read isClustered attribute.", exception);
+                            }
                         default:
                             returnValue = getValue(OIM_JMX_BEANS.CACHE_MBEAN_NAME, "Clustered");
                             break;
@@ -383,8 +387,12 @@ public class OIMJMXWrapper extends AbstractConnection {
                 case ENABLED: {
                     switch (getVersion()) {
                         case OIM11GR2PS2:
-                            returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isEnabled", new Object[]{}, new String[]{});
-                            break;
+                            try {
+                                returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isEnabled", new Object[]{}, new String[]{});
+                                break;
+                            } catch (Exception exception) {
+                                logger.debug("Catching an exception while trying to read isClustered attribute.", exception);
+                            }
                         default:
                             returnValue = getValue(OIM_JMX_BEANS.CACHE_MBEAN_NAME, "Enabled");
                             break;
@@ -394,8 +402,12 @@ public class OIMJMXWrapper extends AbstractConnection {
                 case ThreadLocalCacheEnabled: {
                     switch (getVersion()) {
                         case OIM11GR2PS2:
-                            returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isThreadLocalCacheEnabled", new Object[]{}, new String[]{});
-                            break;
+                            try {
+                                returnValue = jmxConnection.getConnection().invoke(getBean(OIM_JMX_BEANS.CACHE_MBEAN_NAME).getObjectName(), "isThreadLocalCacheEnabled", new Object[]{}, new String[]{});
+                                break;
+                            } catch (Exception exception) {
+                                logger.debug("Catching an exception while trying to read isClustered attribute.", exception);
+                            }
                         default:
                             returnValue = getValue(OIM_JMX_BEANS.CACHE_MBEAN_NAME, "ThreadLocalCacheEnabled");
                             break;

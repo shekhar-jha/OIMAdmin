@@ -449,7 +449,7 @@ public class OIMConnection extends AbstractConnection {
         }
 
         public String getType() {
-            return templateAttribute.getType().toString();
+            return templateAttribute.getType()==null?"null":templateAttribute.getType().toString();
         }
 
         public Object getValue() {
@@ -555,7 +555,7 @@ public class OIMConnection extends AbstractConnection {
         }
 
         public String getType() {
-            return requestEntityAttribute.getType().toString();
+            return requestEntityAttribute.getType() == null ? "null" : requestEntityAttribute.getType().toString();
         }
 
         public String getTypeHolder() {
@@ -582,7 +582,7 @@ public class OIMConnection extends AbstractConnection {
         }
 
         public String getAction() {
-            return requestEntityAttribute.getAction().toString();
+            return requestEntityAttribute.getAction() == null ? "null" : requestEntityAttribute.getAction().toString();
         }
 
         public String getActionHolder() {
@@ -747,7 +747,7 @@ public class OIMConnection extends AbstractConnection {
         }
 
         public String getAction() {
-            return requestBeneficiaryEntityAttribute.getAction().toString();
+            return requestBeneficiaryEntityAttribute.getAction() == null ? "" : requestBeneficiaryEntityAttribute.getAction().toString();
         }
 
         public String getRowKey() {
@@ -777,7 +777,7 @@ public class OIMConnection extends AbstractConnection {
         }
 
         public String getType() {
-            return requestBeneficiaryEntityAttribute.getType().toString();
+            return requestBeneficiaryEntityAttribute.getType() == null ? "null" : requestBeneficiaryEntityAttribute.getType().toString();
         }
 
         public Serializable getValue() {
@@ -801,6 +801,11 @@ public class OIMConnection extends AbstractConnection {
 
         public boolean hasChild() {
             return requestBeneficiaryEntityAttribute.hasChild();
+        }
+
+        public String toString() {
+            String value = "{ [" + getAction() + "]" + getName() + " : " + getValue() + " (" + getType() + ") [" + (hasChild() ? getChildAttributes() : "") + "]" + "}";
+            return value;
         }
     }
 
