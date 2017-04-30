@@ -110,7 +110,9 @@ public class Config {
                         Properties oimProperty = null;
                         int configurationIndex = -1;
                         try {
-                            configurationIndex = Integer.parseUnsignedInt(keyValues[2]);
+                            configurationIndex = Integer.parseInt(keyValues[2]);
+                            if (configurationIndex < 0)
+                                throw new NumberFormatException("Negative index is not allowed.");
                         } catch (NumberFormatException exception) {
                             logger.warn("Ignoring attribute name " + oimPropertyName + " in configuration (" + configurationLocation + ") since it is not in <>.<number>.<> format", exception);
                             continue;
@@ -433,7 +435,7 @@ public class Config {
         public String getProperty(String propertyName, String defaultValue) {
             String returnValue = configuration.getProperty(propertyName);
             if (returnValue == null)
-                returnValue = config.commonProperties.getOrDefault(propertyName, defaultValue);
+                returnValue = Utils.getOrDefault(config.commonProperties, propertyName, defaultValue);
             return returnValue;
         }
 

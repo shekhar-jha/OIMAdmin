@@ -232,7 +232,7 @@ public class OIMJMXWrapper extends AbstractConnection {
                 Set<String> columnNames = data.getCompositeType().keySet();
                 columns.addAll(columnNames);
                 for (String columnName : columnNames) {
-                    dataMap.put(nameToColumnNameMapping.getOrDefault(columnName, columnName), data.get(columnName));
+                    dataMap.put(Utils.getOrDefault(nameToColumnNameMapping, columnName, columnName), data.get(columnName));
                 }
                 result.add(dataMap);
             }

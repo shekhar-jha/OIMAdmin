@@ -26,7 +26,6 @@ public interface UIComponent<T> {
 
     void destroy();
 
-    @FunctionalInterface
     interface ExecuteCommand<T> {
         T run();
     }

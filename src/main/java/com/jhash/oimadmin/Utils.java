@@ -342,6 +342,13 @@ public class Utils {
         }
     }
 
+    public static <V> V getOrDefault(Map<?, V> map, Object key, V defaultValue) {
+        if (map == null)
+            return defaultValue;
+        V v;
+        return (((v = map.get(key)) != null) || map.containsKey(key)) ? v : defaultValue;
+    }
+
     public interface JarFileProcessor {
 
         void process(JarFile jarFile, JarEntry file);
