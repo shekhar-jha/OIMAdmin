@@ -41,9 +41,11 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
     private static final Logger logger = LoggerFactory.getLogger(ConnectionDetails.class);
 
     private final Config.EditableConfiguration connectionDetails;
+    private final String initialConnectionName;
     private JTextField nameLabel = JGComponentFactory.getCurrent().createTextField();
     private JComboBox<String> platform = new JComboBox<>(Config.PLATFORM.valuesAsString().toArray(new String[0]));
     private JTextField oimHome = JGComponentFactory.getCurrent().createTextField();
+    private JComboBox<String> oimVersion = new JComboBox<>(Config.OIM_VERSION.valuesAsString().toArray(new String[0]));
     private JTextField oimURL = JGComponentFactory.getCurrent().createTextField();
     private JTextField oimUser = JGComponentFactory.getCurrent().createTextField();
     private JTextField oimUserPassword = JGComponentFactory.getCurrent().createPasswordField();
@@ -59,16 +61,20 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
     private JCheckBox dbAutoCommit = JGComponentFactory.getCurrent().createCheckBox("Autocommit?");
     private JPanel displayComponent = null;
     private boolean isNewConnection = false;
+    private ConnectionTreeNode connectionTreeNode = null;
 
     public ConnectionDetails(String name, Config configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration.getConnectionDetails(""), selectionTree, displayArea);
         connectionDetails = new Config.EditableConfiguration(this.configuration);
+        initialConnectionName = connectionDetails != null ? connectionDetails.getProperty(Connection.ATTR_CONN_NAME) : null;
         isNewConnection = true;
     }
 
-    public ConnectionDetails(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public ConnectionDetails(String name, Config.Configuration configuration, ConnectionTreeNode connectionTreeNode, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
+        this.connectionTreeNode = connectionTreeNode;
         connectionDetails = new Config.EditableConfiguration(configuration);
+        initialConnectionName = connectionDetails != null ? connectionDetails.getProperty(Connection.ATTR_CONN_NAME) : null;
     }
 
     public boolean destroyComponentOnClose() {
@@ -111,6 +117,17 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
         int selectedItemIndex = Config.PLATFORM.valuesAsString().indexOf(connectionDetails.getProperty(OIMConnection.ATTR_CONN_PLATFORM, "weblogic"));
         logger.debug("Selected Item index {}", selectedItemIndex);
         platform.setSelectedIndex(selectedItemIndex);
+        oimVersion.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Object selectedItem = oimVersion.getSelectedItem();
+                if (selectedItem != null)
+                    connectionDetails.setProperty(OIMConnection.ATTR_OIM_VERSION, selectedItem.toString());
+            }
+        });
+        int versionSelectedItemIndex = Config.OIM_VERSION.valuesAsString().indexOf(connectionDetails.getProperty(OIMConnection.ATTR_OIM_VERSION, "latest"));
+        logger.debug("Selected Item index {}", versionSelectedItemIndex);
+        oimVersion.setSelectedIndex(versionSelectedItemIndex);
         dbJDBCDriverClass.getDocument().addDocumentListener(new StandardDocumentListener(dbJDBCDriverClass, connectionDetails, DBConnection.ATTR_DB_JDBC));
         dbJDBCDriverClass.setText(connectionDetails.getProperty(DBConnection.ATTR_DB_JDBC, "oracle.jdbc.driver.OracleDriver"));
         dbJDBCURL.setColumns(20);
@@ -143,7 +160,7 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
     private JPanel buildComponent() {
         FormLayout eventHandlerFormLayout = new FormLayout(
                 "3dlu, right:pref, 3dlu, pref:grow, 5dlu, right:pref, 3dlu, pref:grow, 5dlu",
-                "5dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu,p, 3dlu, p, 3dlu, p, 3dlu, p,3dlu, p, 3dlu, p ");
+                "5dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 3dlu,p, 3dlu, p, 3dlu, p, 3dlu, p,3dlu, p, 3dlu, p, 3dlu, p ");
         eventHandlerFormLayout.setColumnGroups(new int[][]{{2, 6}});
         CellConstraints cellConstraint = new CellConstraints();
         PanelBuilder builder = new PanelBuilder(eventHandlerFormLayout);
@@ -174,32 +191,35 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
         });
         builder.add(oimHome, cellConstraint.xy(8, 2));
 
-        builder.addSeparator("OIM Connection", cellConstraint.xyw(2, 4, 7));
-        builder.addLabel("Server Platform", cellConstraint.xy(2, 6));
-        builder.add(platform, cellConstraint.xy(4, 6));
-        builder.addLabel("OIM Server URL", cellConstraint.xy(6, 6));
-        builder.add(oimURL, cellConstraint.xy(8, 6));
+        builder.addLabel("Version", cellConstraint.xy(2, 4));
+        builder.add(oimVersion, cellConstraint.xy(4, 4));
 
-        builder.addLabel("User", cellConstraint.xy(2, 8));
-        builder.add(oimUser, cellConstraint.xy(4, 8));
-        builder.addLabel("Password", cellConstraint.xy(6, 8));
-        builder.add(oimUserPassword, cellConstraint.xy(8, 8));
+        builder.addSeparator("OIM Connection", cellConstraint.xyw(2, 6, 7));
+        builder.addLabel("Server Platform", cellConstraint.xy(2, 8));
+        builder.add(platform, cellConstraint.xy(4, 8));
+        builder.addLabel("OIM Server URL", cellConstraint.xy(6, 8));
+        builder.add(oimURL, cellConstraint.xy(8, 8));
 
-        builder.addSeparator("Weblogic Admin Server (JMX)", cellConstraint.xyw(2, 10, 7));
-        builder.addLabel("Protocol", cellConstraint.xy(2, 12));
-        builder.add(jmxProtocol, cellConstraint.xy(4, 12));
+        builder.addLabel("User", cellConstraint.xy(2, 10));
+        builder.add(oimUser, cellConstraint.xy(4, 10));
+        builder.addLabel("Password", cellConstraint.xy(6, 10));
+        builder.add(oimUserPassword, cellConstraint.xy(8, 10));
 
-        builder.addLabel("Host name", cellConstraint.xy(2, 14));
-        builder.add(jmxHostname, cellConstraint.xy(4, 14));
-        builder.addLabel("Port", cellConstraint.xy(6, 14));
-        builder.add(jmxPort, cellConstraint.xy(8, 14));
+        builder.addSeparator("Weblogic Admin Server (JMX)", cellConstraint.xyw(2, 12, 7));
+        builder.addLabel("Protocol", cellConstraint.xy(2, 14));
+        builder.add(jmxProtocol, cellConstraint.xy(4, 14));
 
-        builder.addLabel("User", cellConstraint.xy(2, 16));
-        builder.add(jmxUser, cellConstraint.xy(4, 16));
-        builder.addLabel("Password", cellConstraint.xy(6, 16));
-        builder.add(jmxUserPassword, cellConstraint.xy(8, 16));
+        builder.addLabel("Host name", cellConstraint.xy(2, 16));
+        builder.add(jmxHostname, cellConstraint.xy(4, 16));
+        builder.addLabel("Port", cellConstraint.xy(6, 16));
+        builder.add(jmxPort, cellConstraint.xy(8, 16));
 
-        builder.addSeparator("Database", cellConstraint.xyw(2, 18, 5));
+        builder.addLabel("User", cellConstraint.xy(2, 18));
+        builder.add(jmxUser, cellConstraint.xy(4, 18));
+        builder.addLabel("Password", cellConstraint.xy(6, 18));
+        builder.add(jmxUserPassword, cellConstraint.xy(8, 18));
+
+        builder.addSeparator("Database", cellConstraint.xyw(2, 20, 5));
         JButton testDBButton = JGComponentFactory.getCurrent().createButton("Test");
         testDBButton.addActionListener(new ActionListener() {
             @Override
@@ -224,19 +244,19 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
                 });
             }
         });
-        builder.add(testDBButton, cellConstraint.xy(8, 18));
+        builder.add(testDBButton, cellConstraint.xy(8, 20));
 
-        builder.addLabel("Driver Class", cellConstraint.xy(2, 20));
-        builder.add(dbJDBCDriverClass, cellConstraint.xy(4, 20));
-        builder.addLabel("JDBC URL", cellConstraint.xy(6, 20));
-        builder.add(dbJDBCURL, cellConstraint.xy(8, 20));
+        builder.addLabel("Driver Class", cellConstraint.xy(2, 22));
+        builder.add(dbJDBCDriverClass, cellConstraint.xy(4, 22));
+        builder.addLabel("JDBC URL", cellConstraint.xy(6, 22));
+        builder.add(dbJDBCURL, cellConstraint.xy(8, 22));
 
-        builder.addLabel("User", cellConstraint.xy(2, 22));
-        builder.add(dbUser, cellConstraint.xy(4, 22));
-        builder.addLabel("Password", cellConstraint.xy(6, 22));
-        builder.add(dbPassword, cellConstraint.xy(8, 22));
+        builder.addLabel("User", cellConstraint.xy(2, 24));
+        builder.add(dbUser, cellConstraint.xy(4, 24));
+        builder.addLabel("Password", cellConstraint.xy(6, 24));
+        builder.add(dbPassword, cellConstraint.xy(8, 24));
 
-        builder.add(dbAutoCommit, cellConstraint.xy(4, 24));
+        builder.add(dbAutoCommit, cellConstraint.xy(4, 26));
 
 
         JButton saveButton = JGComponentFactory.getCurrent().createButton("&Save");
@@ -246,8 +266,12 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
                 logger.debug("Trying to save configuration {}", connectionDetails);
                 connectionDetails.getConfig().saveConfiguration(connectionDetails, false);
                 String connectionName = connectionDetails.getProperty(Connection.ATTR_CONN_NAME);
-                if (isNewConnection)
+                if (isNewConnection || (initialConnectionName != null && !initialConnectionName.equalsIgnoreCase(connectionName))) {
                     ConnectionTreeNode.ConnectionsRegisterUI.addNewNode(connectionName, connectionDetails.getConfig(), selectionTree, displayArea);
+                }
+                if (connectionTreeNode != null) {
+                    ConnectionDetails.this.connectionTreeNode.refreshUI();
+                }
                 destroy();
                 logger.debug("Saved configuration");
             }
@@ -259,8 +283,8 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
                 destroy();
             }
         });
-        builder.add(saveButton, cellConstraint.xy(4, 26));
-        builder.add(cancelButton, cellConstraint.xy(6, 26));
+        builder.add(saveButton, cellConstraint.xy(4, 28));
+        builder.add(cancelButton, cellConstraint.xy(6, 28));
         return builder.build();
     }
 

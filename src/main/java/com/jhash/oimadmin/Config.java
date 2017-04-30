@@ -49,10 +49,12 @@ public class Config {
     }
 
     public Configuration getConnectionDetails(String oimConnectionName) {
+        Properties copyOfProperties = new Properties();
         Properties properties = oimConnectionConfiguration.get(oimConnectionName);
-        if (properties == null)
-            properties = new Properties();
-        Configuration configuration = new Configuration(properties, this);
+        if (properties != null) {
+            copyOfProperties.putAll(properties);
+        }
+        Configuration configuration = new Configuration(copyOfProperties, this);
         return configuration;
     }
 
@@ -304,6 +306,9 @@ public class Config {
                 } else {
                     logger.trace("Selecting new configuration and tracking that given configuration has been added");
                     configurationDetail = configuration.editableConfiguration;
+                    Properties copyOfEditableConfiguration = new Properties();
+                    copyOfEditableConfiguration.putAll(configurationDetail);
+                    this.oimConnectionConfiguration.put(configurationBeingSaved, copyOfEditableConfiguration);
                     newConfigurationSaved = true;
                 }
             } else {
@@ -326,7 +331,9 @@ public class Config {
                 configurationFile.setProperty(ATTR_CONN_NAME_PREFIX + counter + "." + attributeName, configurationDetail.getProperty(attributeName));
             }
             this.oimConnectionNames.add(counter, configurationBeingSaved);
-            this.oimConnectionConfiguration.put(configurationBeingSaved, configurationDetail);
+            Properties copyOfEditableConfiguration = new Properties();
+            copyOfEditableConfiguration.putAll(configurationDetail);
+            this.oimConnectionConfiguration.put(configurationBeingSaved, copyOfEditableConfiguration);
         }
         logger.trace("Trying to add the common configuration to updated configuration");
         configurationFile.putAll(commonProperties);
@@ -375,6 +382,36 @@ public class Config {
         }
     }
 
+    public enum OIM_VERSION {
+        OIM11GR2PS2("11.1.2.2"), OIM11GR2PS3("11.1.2.3"), LATEST("latest"), NOT_AVAILABLE("not available"), UNKNOWN("unknown");
+
+        private final String name;
+
+        OIM_VERSION(String name) {
+            this.name = name;
+        }
+
+        public static OIM_VERSION fromString(String versionName) {
+            if (versionName == null || versionName.isEmpty())
+                return OIM_VERSION.LATEST;
+            for (OIM_VERSION version : OIM_VERSION.values()) {
+                if (versionName.equalsIgnoreCase(version.name))
+                    return version;
+            }
+            return OIM_VERSION.LATEST;
+        }
+
+        public static List<String> valuesAsString() {
+            ArrayList<String> valuesAsString = new ArrayList<>();
+            for (OIM_VERSION version : OIM_VERSION.values()) {
+                valuesAsString.add(version.name);
+            }
+            return valuesAsString;
+        }
+
+
+    }
+
     public static class Configuration {
 
         private final Properties configuration;
@@ -412,7 +449,8 @@ public class Config {
 
         public EditableConfiguration(Configuration configuration) {
             super(configuration.configuration, configuration.config);
-            editableConfiguration = new Properties(configuration.configuration);
+            editableConfiguration = new Properties();
+            editableConfiguration.putAll(configuration.configuration);
         }
 
         @Override

@@ -15,6 +15,7 @@
  */
 package com.jhash.oimadmin.oim;
 
+import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.Config.Configuration;
 import com.jhash.oimadmin.OIMAdminException;
 import com.jhash.oimadmin.Utils;
@@ -37,7 +38,7 @@ public class OIMJMXWrapper extends AbstractConnection {
     private JMXConnection jmxConnection = null;
     private Map<OIM_JMX_BEANS, ObjectInstance> beanCache = new HashMap<OIM_JMX_BEANS, ObjectInstance>();
     private Map<OIM_JMX_BEANS, List<ObjectInstance>> beanTypeCache = new HashMap<>();
-    private OIM_VERSION connectionOIMVersion = OIM_VERSION.NOT_AVAILABLE;
+    private Config.OIM_VERSION connectionOIMVersion = Config.OIM_VERSION.NOT_AVAILABLE;
 
     @Override
     protected void initializeConnection(Configuration config) {
@@ -306,15 +307,15 @@ public class OIMJMXWrapper extends AbstractConnection {
         }
     }
 
-    public OIM_VERSION getVersion() {
-        if (connectionOIMVersion == OIM_VERSION.NOT_AVAILABLE) {
+    public Config.OIM_VERSION getVersion() {
+        if (connectionOIMVersion == Config.OIM_VERSION.NOT_AVAILABLE) {
             String versionValue = getValue(OIM_JMX_BEANS.OIM_VERSION_INFO_MBEAN_NAME, "Version");
             if (versionValue.startsWith("11.1.2.3"))
-                connectionOIMVersion = OIM_VERSION.OIM11GR2PS3;
+                connectionOIMVersion = Config.OIM_VERSION.OIM11GR2PS3;
             else if (versionValue.startsWith("11.1.2.2"))
-                connectionOIMVersion = OIM_VERSION.OIM11GR2PS2;
+                connectionOIMVersion = Config.OIM_VERSION.OIM11GR2PS2;
             else
-                connectionOIMVersion = OIM_VERSION.UNKNOWN;
+                connectionOIMVersion = Config.OIM_VERSION.UNKNOWN;
         }
         return connectionOIMVersion;
     }
@@ -488,12 +489,6 @@ public class OIMJMXWrapper extends AbstractConnection {
             jmxConnection = null;
         }
         logger.debug("Destroyed OIM JMX Connection");
-    }
-
-    public static enum OIM_VERSION {
-        OIM11GR2PS2, OIM11GR2PS3, LATEST, NOT_AVAILABLE, UNKNOWN
-
-
     }
 
     public enum EVENT_HANDLER_DETAILS {

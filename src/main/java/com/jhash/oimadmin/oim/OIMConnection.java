@@ -50,6 +50,7 @@ public class OIMConnection extends AbstractConnection {
     public static final String ATTR_OIM_APP_SERVER_TYPE_WLS = "wls";
     public static final String ATTR_EXPORT_DIR = "oim.export.dir";
     public static final String VAL_DEFAULT_OIM_HOME = System.getProperty("user.home") + "/.oimadm/";
+    public static final String ATTR_OIM_VERSION = "oim_version";
 
     private static final Logger logger = LoggerFactory.getLogger(OIMConnection.class);
     // TODO: Not thread safe

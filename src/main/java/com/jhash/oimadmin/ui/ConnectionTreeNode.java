@@ -37,7 +37,7 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
 
     public ConnectionTreeNode(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
-        connectionDetailsUI = new ConnectionDetails(name, configuration, selectionTree, displayArea);
+        connectionDetailsUI = new ConnectionDetails(name, configuration, this, selectionTree, displayArea);
         refreshMenu = new JMenuItem("Reconnect");
         refreshMenu.addActionListener(new ActionListener() {
             @Override
@@ -73,7 +73,7 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
     public void initializeComponent() {
         logger.debug("Initializing {} ...", this);
         connection = new OIMConnection();
-        connection.initialize(configuration);
+        connection.initialize(configuration.getConfig().getConnectionDetails(name));
         connection.login();
         selectionTree.addChildNode(this, new MDSTreeNode("MDS Repository", configuration, selectionTree, displayArea));
         selectionTree.addChildNode(this, new EventHandlersTreeNode("Event Handlers", connection, configuration, selectionTree, displayArea));
@@ -116,6 +116,12 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
         return popupMenu;
     }
 
+    public void refreshUI() {
+        logger.debug("Refreshing Connection Details UI {}", this);
+        connectionDetailsUI = new ConnectionDetails(name, configuration.getConfig().getConnectionDetails(name), this, selectionTree, displayArea);
+        logger.debug("Refreshed Connection Details UI");
+    }
+
     @Override
     public void destroyComponent() {
         logger.debug("Destroying {} ...", this);
@@ -131,7 +137,8 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
         }
         if (connectionDetailsUI != null) {
             connectionDetailsUI.destroy();
-            connectionDetailsUI = new ConnectionDetails(name, configuration, selectionTree, displayArea);
+            logger.debug("Initializing a new Connection Detail UI");
+            connectionDetailsUI = new ConnectionDetails(name, configuration.getConfig().getConnectionDetails(name), this, selectionTree, displayArea);
         }
         logger.debug("Destroyed {}", this);
     }
