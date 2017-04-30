@@ -145,7 +145,7 @@ public class OIMAdmin extends JFrame {
 
     private UIComponentTreeImpl initializeSelectionTree() {
         AbstractUIComponentTreeNode.ROOTAdminTreeNode root = new AbstractUIComponentTreeNode.ROOTAdminTreeNode("ConnectionTreeNode");
-        JTree localConnectionTree = new JTree(root);
+        final JTree localConnectionTree = new JTree(root);
         localConnectionTree.addTreeExpansionListener(new TreeExpansionListener() {
             @Override
             public void treeExpanded(TreeExpansionEvent event) {

@@ -64,7 +64,7 @@ public class MDSPartitionTreeNode extends AbstractUIComponentTreeNode<MDSConnect
 
     private OIMAdminTreeNode generateTreeFromExportedJarFile(String fileName) {
         logger.debug("Trying to open JarFile {} and process entries", fileName);
-        OIMAdminTreeNode root = new ROOTAdminTreeNode("root");
+        final OIMAdminTreeNode root = new ROOTAdminTreeNode("root");
         //TODO: Create Util method for generating tree from Jar file
         Utils.processJarFile(fileName, new Utils.JarFileProcessor() {
 

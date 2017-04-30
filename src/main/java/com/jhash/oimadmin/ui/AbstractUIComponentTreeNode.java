@@ -44,7 +44,7 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
             add(new LoadingNode(this, selectionTree));
     }
 
-    public void executeOperationService(UIComponent component) {
+    public void executeOperationService(final UIComponent component) {
         if (component != null) {
             Utils.executeAsyncOperation("Component " + component.getName() + " [Initialization]", new Runnable() {
                 @Override

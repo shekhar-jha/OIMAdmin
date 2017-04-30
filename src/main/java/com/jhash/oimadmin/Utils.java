@@ -259,7 +259,7 @@ public class Utils {
         return readFileData.toString();
     }
 
-    public static void executeAsyncOperation(String operationName, Runnable operation) {
+    public static void executeAsyncOperation(final String operationName, final Runnable operation) {
         logger.debug("Setting up execution of {} in separate thread", operationName);
         Thread oimConnectionThread = threadFactory.newThread(new Runnable() {
 
@@ -314,7 +314,7 @@ public class Utils {
         logger.debug("Creating new Input Stream with input stream {}, URLS {}", inputStream, jars);
         if (jars != null) {
             try {
-                ClassLoader urlClassLoader = new URLClassLoader(jars, null);
+                final ClassLoader urlClassLoader = new URLClassLoader(jars, null);
                 return new ObjectInputStream(inputStream) {
 
                     protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
@@ -342,7 +342,6 @@ public class Utils {
         }
     }
 
-    @FunctionalInterface
     public interface JarFileProcessor {
 
         void process(JarFile jarFile, JarEntry file);

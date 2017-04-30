@@ -212,24 +212,33 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
         beneficiaryTargetEntityAdditionalValuesTable = new DetailsTable(new String[]{"Row Key", "Action", "Name", "Type", "Value",
                 "Parent", "Child", "Default", "MLS Map"}, this);
         beneficiaryTable.removeColumn(beneficiaryTable.getColumn("Target Entities"));
-        beneficiaryTable.addActionListener(3, targetEntitiesOfBeneficiaryTable, OIMConnection.RequestBeneficiaryEntity.class, (entity) -> {
-            return new Object[]{entity.getEntityKey(), entity.getRequestEntityType(),
-                    entity.getEntitySubType(), entity.getOperation(),
-                    entity.getEntityData(), entity.getAdditionalEntityData()};
+        beneficiaryTable.addActionListener(3, targetEntitiesOfBeneficiaryTable, OIMConnection.RequestBeneficiaryEntity.class, new RowExtractor<OIMConnection.RequestBeneficiaryEntity>() {
+            @Override
+            public Object[] getRowDetails(OIMConnection.RequestBeneficiaryEntity entity) {
+                return new Object[]{entity.getEntityKey(), entity.getRequestEntityType(),
+                        entity.getEntitySubType(), entity.getOperation(),
+                        entity.getEntityData(), entity.getAdditionalEntityData()};
+            }
         });
-        targetEntitiesOfBeneficiaryTable.addActionListener(4, beneficiaryTargetEntityValuesTable, OIMConnection.RequestBeneficiaryEntityAttribute.class, (entity) -> {
-            return new Object[]{
-                    entity.getRowKey(), entity.getActionHolder(),
-                    entity.getName(), entity.getTypeHolder(), entity.getValue(),
-                    entity.getParentAttribute(), entity.getChildAttributes(), entity.getDefaultMLSValue(), entity.getMlsMap()
-            };
+        targetEntitiesOfBeneficiaryTable.addActionListener(4, beneficiaryTargetEntityValuesTable, OIMConnection.RequestBeneficiaryEntityAttribute.class, new RowExtractor<OIMConnection.RequestBeneficiaryEntityAttribute>() {
+            @Override
+            public Object[] getRowDetails(OIMConnection.RequestBeneficiaryEntityAttribute entity) {
+                return new Object[]{
+                        entity.getRowKey(), entity.getActionHolder(),
+                        entity.getName(), entity.getTypeHolder(), entity.getValue(),
+                        entity.getParentAttribute(), entity.getChildAttributes(), entity.getDefaultMLSValue(), entity.getMlsMap()
+                };
+            }
         });
-        targetEntitiesOfBeneficiaryTable.addActionListener(5, beneficiaryTargetEntityAdditionalValuesTable, OIMConnection.RequestBeneficiaryEntityAttribute.class, (entity) -> {
-            return new Object[]{
-                    entity.getRowKey(), entity.getActionHolder(),
-                    entity.getName(), entity.getTypeHolder(), entity.getValue(),
-                    entity.getParentAttribute(), entity.getChildAttributes(), entity.getDefaultMLSValue(), entity.getMlsMap()
-            };
+        targetEntitiesOfBeneficiaryTable.addActionListener(5, beneficiaryTargetEntityAdditionalValuesTable, OIMConnection.RequestBeneficiaryEntityAttribute.class, new RowExtractor<OIMConnection.RequestBeneficiaryEntityAttribute>() {
+            @Override
+            public Object[] getRowDetails(OIMConnection.RequestBeneficiaryEntityAttribute entity) {
+                return new Object[]{
+                        entity.getRowKey(), entity.getActionHolder(),
+                        entity.getName(), entity.getTypeHolder(), entity.getValue(),
+                        entity.getParentAttribute(), entity.getChildAttributes(), entity.getDefaultMLSValue(), entity.getMlsMap()
+                };
+            }
         });
 
         targetEntitiesTable = new DetailsTable(new String[]{"Key", "Type", "Sub-type", "Operation", "Attributes", "Additional Attributes"}, this);
@@ -237,23 +246,29 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                 "Parent", "Child", "Default", "MLS Map"}, this);
         targetEntityAdditionalValuesTable = new DetailsTable(new String[]{"Row Key", "Action", "Name", "Type", "Value",
                 "Parent", "Child", "Default", "MLS Map"}, this);
-        targetEntitiesTable.addActionListener(4, targetEntityValuesTable, OIMConnection.RequestEntityAttribute.class, (targetEntityValue) -> {
-            return new Object[]{
-                    targetEntityValue.getRowKey(), targetEntityValue.getActionHolder(),
-                    targetEntityValue.getName(), targetEntityValue.getTypeHolder(),
-                    targetEntityValue.getValueHolder(), targetEntityValue.getParentAttribute(),
-                    targetEntityValue.getChildAttributes(), targetEntityValue.getDefaultMLSValue(),
-                    targetEntityValue.getMlsMap()
-            };
+        targetEntitiesTable.addActionListener(4, targetEntityValuesTable, OIMConnection.RequestEntityAttribute.class, new RowExtractor<OIMConnection.RequestEntityAttribute>() {
+            @Override
+            public Object[] getRowDetails(OIMConnection.RequestEntityAttribute targetEntityValue) {
+                return new Object[]{
+                        targetEntityValue.getRowKey(), targetEntityValue.getActionHolder(),
+                        targetEntityValue.getName(), targetEntityValue.getTypeHolder(),
+                        targetEntityValue.getValueHolder(), targetEntityValue.getParentAttribute(),
+                        targetEntityValue.getChildAttributes(), targetEntityValue.getDefaultMLSValue(),
+                        targetEntityValue.getMlsMap()
+                };
+            }
         });
-        targetEntitiesTable.addActionListener(5, targetEntityAdditionalValuesTable, OIMConnection.RequestEntityAttribute.class, (targetEntityValue) -> {
-            return new Object[]{
-                    targetEntityValue.getRowKey(), targetEntityValue.getActionHolder(),
-                    targetEntityValue.getName(), targetEntityValue.getTypeHolder(),
-                    targetEntityValue.getValueHolder(), targetEntityValue.getParentAttribute(),
-                    targetEntityValue.getChildAttributes(), targetEntityValue.getDefaultMLSValue(),
-                    targetEntityValue.getMlsMap()
-            };
+        targetEntitiesTable.addActionListener(5, targetEntityAdditionalValuesTable, OIMConnection.RequestEntityAttribute.class, new RowExtractor<OIMConnection.RequestEntityAttribute>() {
+            @Override
+            public Object[] getRowDetails(OIMConnection.RequestEntityAttribute targetEntityValue) {
+                return new Object[]{
+                        targetEntityValue.getRowKey(), targetEntityValue.getActionHolder(),
+                        targetEntityValue.getName(), targetEntityValue.getTypeHolder(),
+                        targetEntityValue.getValueHolder(), targetEntityValue.getParentAttribute(),
+                        targetEntityValue.getChildAttributes(), targetEntityValue.getDefaultMLSValue(),
+                        targetEntityValue.getMlsMap()
+                };
+            }
         });
 
         templateAttributesTable = new DetailsTable(new String[]{"Name", "Type", "Value", "Target"}, this);
@@ -263,7 +278,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
-                    String requestIDValue = requestID.getText();
+                    final String requestIDValue = requestID.getText();
                     if (!Utils.isEmpty(requestIDValue)) {
                         Utils.executeAsyncOperation("Loading Request Details " + requestIDValue, new Runnable() {
                             @Override
@@ -317,7 +332,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                         logger.trace("Nothing to do since no item is selected");
                         return;
                     }
-                    String requestId = (String) childRequestTable.tableModel.getValueAt(selectedRow, 0);
+                    final String requestId = (String) childRequestTable.tableModel.getValueAt(selectedRow, 0);
                     Utils.executeAsyncOperation("Loading Child Request [" + requestId + "]", new Runnable() {
                         @Override
                         public void run() {
@@ -390,7 +405,6 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
         logger.debug("Destroyed component {}", this);
     }
 
-    @FunctionalInterface
     public interface RowExtractor<T> {
 
         Object[] getRowDetails(T dataObject);
@@ -416,7 +430,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
             this.parent = parent;
         }
 
-        public <T> void addActionListener(int columnIndex, DetailsTable childTable, Class<T> rowType, RowExtractor<T> extractor) {
+        public <T> void addActionListener(final int columnIndex, final DetailsTable childTable, final Class<T> rowType, final RowExtractor<T> extractor) {
             getSelectionModel().addListSelectionListener(new ListSelectionListener() {
                 @Override
                 public void valueChanged(ListSelectionEvent e) {

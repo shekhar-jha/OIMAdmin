@@ -73,7 +73,7 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
                 String orchestrationIDValueDuplicate = "N/A";
                 try {
                     orchestrationIDValueDuplicate = orchestrationID.getText();
-                    String orchestrationIDValue = orchestrationID.getText();
+                    final String orchestrationIDValue = orchestrationID.getText();
                     if (!Utils.isEmpty(orchestrationIDValue)) {
                         Utils.executeAsyncOperation("Loading Orchestration Details " + orchestrationIDValue, new Runnable() {
                             @Override

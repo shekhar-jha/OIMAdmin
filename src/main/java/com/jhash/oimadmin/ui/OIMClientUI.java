@@ -163,9 +163,9 @@ public class OIMClientUI extends AbstractUIComponent<JPanel> {
     public static class OIMClientRegisterUI implements RegisterUI {
 
         @Override
-        public void registerMenu(Config configuration, JMenuBar menu, Map<OIMAdmin.STANDARD_MENUS, JMenu> commonMenus, UIComponentTree selectionTree, DisplayArea displayArea) {
+        public void registerMenu(final Config configuration, JMenuBar menu, Map<OIMAdmin.STANDARD_MENUS, JMenu> commonMenus, final UIComponentTree selectionTree, final DisplayArea displayArea) {
             if (commonMenus != null && commonMenus.containsKey(OIMAdmin.STANDARD_MENUS.NEW)) {
-                JMenuItem newOIMClientMenuItem = new JMenuItem("OIM Client");
+                final JMenuItem newOIMClientMenuItem = new JMenuItem("OIM Client");
                 newOIMClientMenuItem.addActionListener(new AbstractAction() {
                     @Override
                     public void actionPerformed(ActionEvent e) {

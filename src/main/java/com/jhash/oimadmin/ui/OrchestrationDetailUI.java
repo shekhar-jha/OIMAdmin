@@ -128,8 +128,8 @@ public class OrchestrationDetailUI<T extends JComponent> {
                 .rows("2dlu, fill:p:grow")
                 .add(new JideScrollPane(orcProcessContextValue)).xyw(2, 2, 7)
                 .build();
-        JCheckBox compensateCancelled = JGComponentFactory.getCurrent().createCheckBox("Compensate");
-        JCheckBox cascadeCancelled = JGComponentFactory.getCurrent().createCheckBox("Cascade");
+        final JCheckBox compensateCancelled = JGComponentFactory.getCurrent().createCheckBox("Compensate");
+        final JCheckBox cascadeCancelled = JGComponentFactory.getCurrent().createCheckBox("Cascade");
 
         JButton cancelButton = JGComponentFactory.getCurrent().createButton("Execute");
         cancelButton.addActionListener(new ActionListener() {
@@ -175,7 +175,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
                 });
             }
         });
-        JComboBox<FailedEventResult.Response> responseResult = new JComboBox<>(FailedEventResult.Response.values());
+        final JComboBox<FailedEventResult.Response> responseResult = new JComboBox<>(FailedEventResult.Response.values());
         JButton handleFailedButton = JGComponentFactory.getCurrent().createButton("Execute");
         handleFailedButton.addActionListener(new ActionListener() {
             @Override

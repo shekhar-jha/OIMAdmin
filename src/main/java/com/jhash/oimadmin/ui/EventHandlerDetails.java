@@ -65,7 +65,7 @@ public class EventHandlerDetails extends AbstractUIComponent<JPanel> {
 
     @Override
     public void initializeComponent() {
-        OIMJMXWrapper.Details details = connection.getEventHandlers(eventHandlerDetails);
+        final OIMJMXWrapper.Details details = connection.getEventHandlers(eventHandlerDetails);
         DefaultTableModel tableModel = new DefaultTableModel(details.getData(), details.getColumns()) {
             @Override
             public boolean isCellEditable(int row, int column) {

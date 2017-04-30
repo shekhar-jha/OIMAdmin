@@ -87,7 +87,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel> {
         logger.debug("Initializing {}", this);
         this.outputDirectory = configuration.getWorkArea() + Config.VAL_WORK_AREA_CLASSES + File.separator + System.currentTimeMillis();
         logger.debug("Compile output directory {}", outputDirectory);
-        File templateDirectory = new File(configuration.getWorkArea() + File.separator + Config.VAL_WORK_AREA_CONF + File.separator + "templates");
+        final File templateDirectory = new File(configuration.getWorkArea() + File.separator + Config.VAL_WORK_AREA_CONF + File.separator + "templates");
         logger.debug("Trying to validate template directory {} exists and is directory", templateDirectory);
         if (templateDirectory.exists() && templateDirectory.isDirectory()) {
             logger.debug("Trying to list files in directory");

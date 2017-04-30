@@ -167,7 +167,7 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel> {
         builder.addLabel("Name", cellConstraint.xy(2, 2));
         builder.add(nameLabel, cellConstraint.xy(4, 2));
         builder.addLabel("OIM Home Directory", cellConstraint.xy(6, 2));
-        JFileChooser fileChooser = new JFileChooser();
+        final JFileChooser fileChooser = new JFileChooser();
         fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         oimHome.addFocusListener(new FocusListener() {
             boolean focusAfterShowFileChooser = false;

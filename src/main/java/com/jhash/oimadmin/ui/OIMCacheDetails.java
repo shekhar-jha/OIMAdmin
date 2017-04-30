@@ -184,7 +184,7 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
                 changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.Size, cacheSize.getText());
             }
         });
-        OIMJMXWrapper.Details cacheCategory = connection.getCacheCategories();
+        final OIMJMXWrapper.Details cacheCategory = connection.getCacheCategories();
         DefaultTableModel tableModel = new DefaultTableModel(cacheCategory.getData(), cacheCategory.getColumns()) {
             @Override
             public boolean isCellEditable(int row, int column) {

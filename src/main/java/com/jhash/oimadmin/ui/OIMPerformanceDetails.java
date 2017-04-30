@@ -71,7 +71,7 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent> {
         for (int rowCounter = 0; rowCounter < performanceDetails.size(); rowCounter++) {
             rows[rowCounter] = (String) performanceDetails.get(rowCounter).get(ATTR_NAME);
         }
-        DefaultTableModel tableModel = new DefaultTableModel() {
+        final DefaultTableModel tableModel = new DefaultTableModel() {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
@@ -180,7 +180,7 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JComponent> {
                 totalTime.setText(endTotal_timeValue + ((!endTotal_timeValue.equals(startTotal_timeValue)) ? (" (" + startTotal_timeValue + ")") : ""));
             }
         });
-        JFileChooser fileChooser = new JFileChooser();
+        final JFileChooser fileChooser = new JFileChooser();
         fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
         exportData.addActionListener(new ActionListener() {
             @Override

@@ -41,7 +41,7 @@ public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<OIMJMXWra
     private OIMJMXWrapper connection;
     private Set<OIMJMXWrapper.OperationDetail> operations;
 
-    public EventHandlersTreeNode(String name, OIMConnection oimConnection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public EventHandlersTreeNode(String name, final OIMConnection oimConnection, final Config.Configuration configuration, final UIComponentTree selectionTree, final DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
         this.oimConnection = oimConnection;
         eventHandlerMenu = new JPopupMenu();

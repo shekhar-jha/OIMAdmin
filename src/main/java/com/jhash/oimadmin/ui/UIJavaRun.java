@@ -109,7 +109,7 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
             vmLocation.setText(javaBinaryFile.getAbsolutePath());
         }
         workingDirectory.setText(configuration.getWorkArea());
-        JFileChooser workingDirectoryChooser = new JFileChooser(configuration.getWorkArea());
+        final JFileChooser workingDirectoryChooser = new JFileChooser(configuration.getWorkArea());
         workingDirectoryChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         workingDirectoryChooser.setDialogTitle("Working Directory...");
         selectWorkingDirectory.addActionListener(new ActionListener() {
@@ -124,7 +124,7 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
                 }
             }
         });
-        JFileChooser javaChooser = new JFileChooser();
+        final JFileChooser javaChooser = new JFileChooser();
         javaChooser.setFileFilter(new FileFilter() {
             @Override
             public boolean accept(File f) {
@@ -218,7 +218,7 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
             }
         }
         logger.debug("Trying to create a new process builder with commands {}", commandArray);
-        ProcessBuilder processBuilder = new ProcessBuilder(commandArray);
+        final ProcessBuilder processBuilder = new ProcessBuilder(commandArray);
         String workingDirectoryString = workingDirectory.getText();
         if (!Utils.isEmpty(workingDirectoryString)) {
             logger.debug("Trying to create file for working directory {}", workingDirectoryString);

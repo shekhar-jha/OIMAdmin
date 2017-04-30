@@ -35,7 +35,7 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
     private JMenuItem refreshMenu;
     private JMenuItem deleteConnectionMenuItem;
 
-    public ConnectionTreeNode(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public ConnectionTreeNode(String name, final Config.Configuration configuration, final UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
         connectionDetailsUI = new ConnectionDetails(name, configuration, this, selectionTree, displayArea);
         refreshMenu = new JMenuItem("Reconnect");
@@ -151,9 +151,9 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<OIMConnectio
         }
 
         @Override
-        public void registerMenu(Config configuration, JMenuBar menu, Map<OIMAdmin.STANDARD_MENUS, JMenu> commonMenus, UIComponentTree selectionTree, DisplayArea displayArea) {
+        public void registerMenu(final Config configuration, JMenuBar menu, Map<OIMAdmin.STANDARD_MENUS, JMenu> commonMenus, final UIComponentTree selectionTree, final DisplayArea displayArea) {
             if (commonMenus != null && commonMenus.containsKey(OIMAdmin.STANDARD_MENUS.NEW)) {
-                JMenuItem newConnectionMenuItem = new JMenuItem("Connection");
+                final JMenuItem newConnectionMenuItem = new JMenuItem("Connection");
                 newConnectionMenuItem.addActionListener(new AbstractAction() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
