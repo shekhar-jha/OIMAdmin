@@ -29,6 +29,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
@@ -40,10 +42,10 @@ public abstract class AbstractUIComponent<T extends JComponent> extends JPanel i
     protected final UIComponentTree selectionTree;
     protected final DisplayArea displayArea;
     protected final boolean publish;
-    private COMPONENT_STATE status = COMPONENT_STATE.NOT_INITIALIZED;
     protected JPanel displayComponent;
     protected JPanel messageDisplayComponent;
     protected JPanel messagePanel;
+    private COMPONENT_STATE status = COMPONENT_STATE.NOT_INITIALIZED;
 
     public AbstractUIComponent(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         this(name, true, configuration, selectionTree, displayArea);
@@ -142,7 +144,7 @@ public abstract class AbstractUIComponent<T extends JComponent> extends JPanel i
             synchronized (messageDisplayComponent) {
                 messageDisplayComponent.add(new JideLabel("<html><b>" + title + "</b></html>"));
                 messageDisplayComponent.add(new JSeparator(SwingConstants.HORIZONTAL));
-                JideLabel messageLabel = new JideLabel(message);
+                final JideLabel messageLabel = new JideLabel(message);
                 if (exception != null) {
                     messageLabel.setText(messageLabel.getText() + " Cause : " + exception.getCause());
                     StringWriter exceptionAsStringWriter = new StringWriter();
@@ -152,6 +154,13 @@ public abstract class AbstractUIComponent<T extends JComponent> extends JPanel i
                     messageLabel.setToolTipText(exceptionStackTrace);
                 }
                 messageDisplayComponent.add(messageLabel);
+                messageDisplayComponent.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        super.mouseClicked(e);
+                        JOptionPane.showMessageDialog(AbstractUIComponent.this, messageLabel.getToolTipText(), messageLabel.getText(), JOptionPane.ERROR_MESSAGE);
+                    }
+                });
                 displayComponent.add(messagePanel, BorderLayout.NORTH);
                 displayComponent.revalidate();
             }
