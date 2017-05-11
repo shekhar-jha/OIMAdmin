@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.tools.*;
 import java.io.*;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -347,6 +348,46 @@ public class Utils {
             return defaultValue;
         V v;
         return (((v = map.get(key)) != null) || map.containsKey(key)) ? v : defaultValue;
+    }
+
+    public static Object invoke(Object object, String methodName) {
+        return invoke(object, methodName, null);
+    }
+
+    public static <T> T invoke(Object object, String methodName, T defaultValue) {
+        if (object == null || Utils.isEmpty(methodName))
+            return defaultValue;
+        Class applicableClass = object.getClass();
+        try {
+            return (T) applicableClass.getMethod(methodName).invoke(object);
+        } catch (NoSuchMethodException exception) {
+
+        } catch (Exception exception) {
+            logger.warn("Failed to invoke " + methodName + " on object of type " + object.getClass(), exception);
+        }
+        while (applicableClass != null) {
+            try {
+                Method method = applicableClass.getDeclaredMethod(methodName);
+                if (method != null) {
+                    method.setAccessible(true);
+                    return (T) method.invoke(object);
+                }
+            } catch (NoSuchMethodException exception) {
+
+            } catch (Exception exception) {
+                logger.warn("Failed to invoke " + methodName + " on object of type " + object.getClass(), exception);
+                return defaultValue;
+            }
+            applicableClass = applicableClass.getSuperclass();
+        }
+        logger.warn("Method " + methodName + " could not be located on object (or it's class hierarchy) of type " + object.getClass());
+        return defaultValue;
+    }
+
+    public static String generateStringRepresentation(Throwable throwable) {
+        StringWriter output = new StringWriter();
+        throwable.printStackTrace(new PrintWriter(output));
+        return output.toString();
     }
 
     public interface JarFileProcessor {
