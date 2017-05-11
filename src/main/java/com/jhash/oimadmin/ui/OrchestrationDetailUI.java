@@ -22,14 +22,11 @@ import com.jhash.oimadmin.Utils;
 import com.jhash.oimadmin.oim.DBConnection;
 import com.jhash.oimadmin.oim.OIMConnection;
 import com.jhash.oimadmin.oim.OIMJMXWrapper;
+import com.jhash.oimadmin.oim.model.orch.Event;
+import com.jhash.oimadmin.oim.model.orch.Orchestration;
+import com.jhash.oimadmin.oim.model.orch.PublicProcessImpl;
 import com.jidesoft.swing.JideScrollPane;
 import com.jidesoft.swing.JideTabbedPane;
-import oracle.iam.platform.context.ContextAware;
-import oracle.iam.platform.kernel.Event;
-import oracle.iam.platform.kernel.impl.PublicProcessImpl;
-import oracle.iam.platform.kernel.vo.FailedEventResult;
-import oracle.iam.platform.kernel.vo.Orchestration;
-import oracle.iam.platform.kernel.vo.OrchestrationTarget;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,8 +36,6 @@ import javax.swing.event.ListSelectionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.SQLException;
@@ -175,7 +170,9 @@ public class OrchestrationDetailUI<T extends JComponent> {
                 });
             }
         });
-        final JComboBox<FailedEventResult.Response> responseResult = new JComboBox<>(FailedEventResult.Response.values());
+        final Class<?> failedResponseClass = connection.getClass("oracle.iam.platform.kernel.vo.FailedEventResult$Response");
+        Object[] failedResponses = failedResponseClass.getEnumConstants();
+        final JComboBox<Object> responseResult = new JComboBox<>(failedResponses);
         JButton handleFailedButton = JGComponentFactory.getCurrent().createButton("Execute");
         handleFailedButton.addActionListener(new ActionListener() {
             @Override
@@ -183,15 +180,16 @@ public class OrchestrationDetailUI<T extends JComponent> {
                 Utils.executeAsyncOperation("Executing Handle Failed Orchestration", new Runnable() {
                     @Override
                     public void run() {
-                        FailedEventResult.Response response = FailedEventResult.Response.NULL;
+                        Object response = null;
                         String orcProcessIDValue = "N/A";
                         try {
                             orcProcessIDValue = orcProcessID.getText();
                             long processId = Long.parseLong(orcProcessIDValue);
-                            response = (FailedEventResult.Response) responseResult.getSelectedItem();
-                            FailedEventResult result = new FailedEventResult(response);
+                            response = responseResult.getSelectedItem();
+                            Class<?> failedEventResultClass = connection.getClass("oracle.iam.platform.kernel.vo.FailedEventResult");
+                            Object result = failedEventResultClass.getDeclaredConstructor(failedResponseClass).newInstance(response);
                             logger.trace("Trying to invoke handleFailed method with parameters process id={}, result=", new Object[]{processId, response});
-                            connection.executeOrchestrationOperation("handleFailed", new Class[]{long.class, FailedEventResult.class},
+                            connection.executeOrchestrationOperation("handleFailed", new Class[]{long.class, failedEventResultClass},
                                     new Object[]{processId, result});
                         } catch (Exception exception) {
                             parent.displayMessage("Failed to handle failed orchestration", "Failed to set response " + response + " on event " + orcProcessIDValue, exception);
@@ -217,25 +215,10 @@ public class OrchestrationDetailUI<T extends JComponent> {
                             }
                             String errorCode = (String) eventDetails.getValueAt(selectedRow, 7);
                             String errorMessage = (String) eventDetails.getValueAt(selectedRow, 8);
-                            Object result = eventDetails.getValueAt(selectedRow, 9);
+                            String result = (String) eventDetails.getValueAt(selectedRow, 9);
                             eventErrorCode.setText(errorCode);
                             eventErrorMessage.setText(errorMessage);
-                            if (result != null) {
-                                if (result instanceof Exception) {
-                                    StringWriter output = new StringWriter();
-                                    ((Exception) result).printStackTrace(new PrintWriter(output));
-                                    eventResult.setText(output.toString());
-                                } else if (result instanceof ContextAware) {
-                                    ContextAware contextAwareResult = ((ContextAware) result);
-                                    eventResult.setText("Type: " + contextAwareResult.getType());
-                                    eventResult.append(System.lineSeparator());
-                                    eventResult.append("Value: " + contextAwareResult.getObjectValue());
-                                } else {
-                                    eventResult.setText(result.toString());
-                                }
-                            } else {
-                                eventResult.setText("");
-                            }
+                            eventResult.setText(result);
                         } catch (Exception exception) {
                             parent.displayMessage("Event Result display failed", "Failed to display the Orchestration result for selected event", exception);
                         }
@@ -257,25 +240,10 @@ public class OrchestrationDetailUI<T extends JComponent> {
                                 logger.warn("Incorrect selection has been made or selection made has become invalid. Selected Row={}", selectedRow);
                                 return;
                             }
-                            Object result = eventDetails.getValueAt(selectedRow, 8);
+                            String result = (String) eventDetails.getValueAt(selectedRow, 8);
                             eventErrorCode.setText("");
                             eventErrorMessage.setText("");
-                            if (result != null) {
-                                if (result instanceof Exception) {
-                                    StringWriter output = new StringWriter();
-                                    ((Exception) result).printStackTrace(new PrintWriter(output));
-                                    eventResult.setText(output.toString());
-                                } else if (result instanceof ContextAware) {
-                                    ContextAware contextAwareResult = ((ContextAware) result);
-                                    eventResult.setText("Type: " + contextAwareResult.getType());
-                                    eventResult.append(System.lineSeparator());
-                                    eventResult.append("Value: " + contextAwareResult.getObjectValue());
-                                } else {
-                                    eventResult.setText(result.toString());
-                                }
-                            } else {
-                                eventResult.setText("");
-                            }
+                            eventResult.setText(result);
                         } catch (Exception exception) {
                             parent.displayMessage("Event Result display failed", "Failed to display the Orchestration result for selected event", exception);
                         }
@@ -293,11 +261,11 @@ public class OrchestrationDetailUI<T extends JComponent> {
                 .addLabel("Start Stage").xy(2, 10).add(processObjStartStage).xy(4, 10).addLabel("Stop Stage").xy(6, 10).add(processObjStopStage).xy(8, 10)
                 .addLabel("Created On").xy(2, 12).add(processObjCreatedOn).xy(4, 12).addLabel("Modified On").xy(6, 12).add(processObjModifiedOn).xy(8, 12)
                 .addLabel("Target Type").xy(2, 14).add(processObjTargetType).xy(4, 14).addLabel("Retry Count").xy(6, 14).add(processObjRetryCount).xy(8, 14)
-                .addLabel("Has Children from Bulk?").xy(2,16).add(processObjHasChildrenFromBulk).xy(4, 16).addLabel("Has deffered changes").xy(6,16).add(processObjHasDifferedChanges).xy(8, 16)
-                .addLabel("Saved?").xy(2,18).add(processObjObjectSaved).xy(4, 18).addLabel("Running?").xy(6,18).add(processObjObjectRunning).xy(8, 18)
-                .addLabel("Stoppable?").xy(2,20).add(processObjObjectStoppable).xy(4, 20)
-                .addLabel("Log Statement").xy(2, 22).add(processObjLogStatementMethod).xy(4, 22).add(processObjLogStatement).xyw(6, 22,3)
-                .addLabel("Current Handler").xy(2, 24).add(processObjCurrentHandler).xyw(4, 24,5)
+                .addLabel("Has Children from Bulk?").xy(2, 16).add(processObjHasChildrenFromBulk).xy(4, 16).addLabel("Has deffered changes").xy(6, 16).add(processObjHasDifferedChanges).xy(8, 16)
+                .addLabel("Saved?").xy(2, 18).add(processObjObjectSaved).xy(4, 18).addLabel("Running?").xy(6, 18).add(processObjObjectRunning).xy(8, 18)
+                .addLabel("Stoppable?").xy(2, 20).add(processObjObjectStoppable).xy(4, 20)
+                .addLabel("Log Statement").xy(2, 22).add(processObjLogStatementMethod).xy(4, 22).add(processObjLogStatement).xyw(6, 22, 3)
+                .addLabel("Current Handler").xy(2, 24).add(processObjCurrentHandler).xyw(4, 24, 5)
                 .addLabel("Out of band Events").xy(2, 26).add(processObjOutOfBandEvents).xyw(4, 26, 5)
                 .addLabel("Result").xy(2, 28).add(processObjResult).xyw(4, 28, 5)
                 .build();
@@ -429,7 +397,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
                             eventDetails.tableModel.setRowCount(0);
                             for (Event record : process.getEvents()) {
                                 eventDetails.tableModel.addRow(new Object[]{record.getOrder(), record.getEventId().getId(), record.getEventId().getName(),
-                                        record.getOperation(), record.getStatus(), record.getStage(), record.isSync(), record.getResult()});
+                                        record.getOperation(), record.getStatus(), record.getStage(), record.isSync(), record.getHandlerClass(), record.getResult()});
                             }
                         } catch (Exception exception) {
                             parent.displayMessage("Failed to extract event details", "Failed to extract Orchestration Events for process ID " + orchestrationProcessID, exception);
@@ -533,7 +501,8 @@ public class OrchestrationDetailUI<T extends JComponent> {
             processObjStopStage.setText("" + process.getStopStage());
             processObjRetryCount.setText("" + process.getRetryCount());
             processObjTargetType.setText("" + process.getTargetType());
-            processObjCurrentHandler.setText("" + process.getCurrentHandler().getEventId());
+            Event currentHandler = process.getCurrentHandler();
+            processObjCurrentHandler.setText("" + (currentHandler != null ? currentHandler.getEventId() : "N/A"));
             processObjHasChildrenFromBulk.setSelected(process.hasChildrenFromBulk());
             processObjHasDifferedChanges.setSelected(process.hasDeferredChanges());
             processObjObjectSaved.setSelected(process.isObjectSaved());
@@ -649,29 +618,14 @@ public class OrchestrationDetailUI<T extends JComponent> {
             logger.debug("Retrieved orchestration details as {}", orchestrationObject);
             orcProcessObjContextVal.setText(orchestrationObject.getContextVal());
             orcProcessObjInterEventData.setText(Utils.toString(orchestrationObject.getInterEventData()));
-            logger.debug("Trying to locate isNonSequential method on the object received");
-            try {
-                if (orchestrationObject.getClass().getMethod("isNonSequential") != null) {
-                    Object isNonSequentialResultObject = orchestrationObject.getClass().getMethod("isNonSequential").invoke(orchestrationObject);
-                    if (isNonSequentialResultObject != null && isNonSequentialResultObject instanceof Boolean) {
-                        orcProcessObjNonSequential.setText("" + isNonSequentialResultObject);
-                    } else {
-                        logger.debug("The result of isNonSequential invocation on {} was {}", new Object[]{orchestrationObject, isNonSequentialResultObject});
-                    }
-                } else {
-                    logger.debug("Failed to locate isNonSequential method on object {}", orchestrationObject);
-                    orcProcessObjNonSequential.setText("N/A for this version");
-                }
-            } catch (NoSuchMethodException exception) {
-                orcProcessObjNonSequential.setText("N/A for this version");
-            }
+            orcProcessObjNonSequential.setText("" + orchestrationObject.isNonSequential());
             orcProcessObjOperation.setText(orchestrationObject.getOperation());
             orcProcessObjParameters.setText(Utils.toString(orchestrationObject.getParameters()));
             //orcProcessObjSaveCount.setText(orchestrationObject.()==null?"null":orchestrationObject.getParameters().toString());
             orcProcessObjSync.setText("" + orchestrationObject.isSync());
             orcProcessObjTargetUserIds.setText(Arrays.toString(orchestrationObject.getTargetUserIds()));
-            if (orchestrationObject.getTarget() != null) {
-                OrchestrationTarget target = orchestrationObject.getTarget();
+            Orchestration.Target target = orchestrationObject.getTarget();
+            if (target != null) {
                 StringBuilder orcTargetDetails = new StringBuilder();
                 orcTargetDetails.append("Type         : " + target.getType());
                 orcTargetDetails.append(System.lineSeparator());
