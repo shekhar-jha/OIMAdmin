@@ -90,7 +90,7 @@
     <dirname property="module.oimadmin.basedir" file="${ant.file}"/>
 
 
-    <property name="compiler.args.oimadmin" value="-encoding UTF-8 -source 8 ${compiler.args}"/>
+    <property name="compiler.args.oimadmin" value="-encoding UTF-8 -source 7 ${compiler.args}"/>
 
     <property name="oimadmin.output.dir" value="${module.oimadmin.basedir}/target/classes"/>
     <property name="oimadmin.testoutput.dir" value="${module.oimadmin.basedir}/target/test-classes"/>
@@ -109,6 +109,7 @@
         <pathelement location="${basedir}/lib/jide/jide-oss-3.6.1.jar"/>
         <pathelement location="${basedir}/lib/oim/oimclient11gR2PS3.jar"/>
         <pathelement location="${basedir}/lib/oim/oimclient.jar"/>
+        <pathelement location="${basedir}/lib/oim/jrf-api.jar"/>
         <pathelement location="${basedir}/lib/slf4j/slf4j-api-1.5.11.jar"/>
         <pathelement location="${basedir}/lib/mds/mdsrt.jar"/>
         <pathelement location="${basedir}/lib/mds/mdslcm-client.jar"/>
@@ -128,6 +129,7 @@
         <pathelement location="${basedir}/lib/jide/jide-oss-3.6.1.jar"/>
         <pathelement location="${basedir}/lib/oim/oimclient11gR2PS3.jar"/>
         <pathelement location="${basedir}/lib/oim/oimclient.jar"/>
+        <pathelement location="${basedir}/lib/oim/jrf-api.jar"/>
         <pathelement location="${basedir}/lib/slf4j/slf4j-api-1.5.11.jar"/>
         <pathelement location="${basedir}/lib/mds/mdsrt.jar"/>
         <pathelement location="${basedir}/lib/mds/mdslcm-client.jar"/>
@@ -160,6 +162,7 @@
         <pathelement location="${basedir}/lib/jide/jide-oss-3.6.1.jar"/>
         <pathelement location="${basedir}/lib/oim/oimclient11gR2PS3.jar"/>
         <pathelement location="${basedir}/lib/oim/oimclient.jar"/>
+        <pathelement location="${basedir}/lib/oim/jrf-api.jar"/>
         <pathelement location="${basedir}/lib/slf4j/slf4j-api-1.5.11.jar"/>
         <pathelement location="${basedir}/lib/mds/mdsrt.jar"/>
         <pathelement location="${basedir}/lib/mds/mdslcm-client.jar"/>
@@ -193,6 +196,7 @@
         <pathelement location="${basedir}/lib/jide/jide-oss-3.6.1.jar"/>
         <pathelement location="${basedir}/lib/oim/oimclient11gR2PS3.jar"/>
         <pathelement location="${basedir}/lib/oim/oimclient.jar"/>
+        <pathelement location="${basedir}/lib/oim/jrf-api.jar"/>
         <pathelement location="${basedir}/lib/slf4j/slf4j-api-1.5.11.jar"/>
         <pathelement location="${basedir}/lib/mds/mdsrt.jar"/>
         <pathelement location="${basedir}/lib/mds/mdslcm-client.jar"/>
@@ -315,7 +319,7 @@
             <zipfileset dir="${oimadmin.output.dir}"/>
             <zipfileset dir="${basedir}/src/main/resources/conf"/>
         </jar>
-        <copy file="${temp.jar.path.OIMAdmin.jar}" tofile="${artifact.output.oimadmin:jar}/OIMAdmin.jar"/>
+        <!--copy file="${temp.jar.path.OIMAdmin.jar}" tofile="${artifact.output.oimadmin:jar}/OIMAdmin.jar"/-->
         <copy file="${basedir}/lib/mds/mdsrt.jar" tofile="${artifact.output.oimadmin:jar}/mdsrt.jar"/>
         <copy file="${basedir}/lib/jgoodies/jgoodies-binding-2.10.0.jar"
               tofile="${artifact.output.oimadmin:jar}/jgoodies-binding-2.10.0.jar"/>
@@ -333,7 +337,7 @@
         <copy file="${basedir}/lib/oracle-db/ojdbc6.jar" tofile="${artifact.output.oimadmin:jar}/ojdbc6.jar"/>
         <copy file="${basedir}/lib/slf4j/slf4j-log4j12-1.5.11.jar"
               tofile="${artifact.output.oimadmin:jar}/slf4j-log4j12-1.5.11.jar"/>
-        <copy file="${basedir}/lib/oim/wlthint3client.jar" tofile="${artifact.output.oimadmin:jar}/wlfullclient.jar"/>
+        <copy file="${basedir}/lib/oim/wlthint3client.jar" tofile="${artifact.output.oimadmin:jar}/wlthint3client.jar"/>
         <copy file="${basedir}/lib/oim/spring.jar" tofile="${artifact.output.oimadmin:jar}/spring.jar"/>
         <copy file="${basedir}/lib/oim/jrf-api.jar" tofile="${artifact.output.oimadmin:jar}/jrf-api.jar"/>
         <copy file="${basedir}/lib/oim/eclipselink.jar" tofile="${artifact.output.oimadmin:jar}/eclipselink.jar"/>
@@ -351,8 +355,10 @@
         <copy file="${basedir}/lib/oim/oimclient.jar" tofile="${artifact.output.oimadmin:jar}/oimclient.jar"/>
         <copy file="${basedir}/lib/oim/oimclient11gR2PS3.jar"
               tofile="${artifact.output.oimadmin:jar}/oimclient11gR2PS3.jar"/>
-        <copy file="${basedir}/lib/oim/iam-platform-kernel.jar"
-              tofile="${artifact.output.oimadmin:jar}/iam-platform-kernel.jar"/>
+        <copy file="${basedir}/lib/oim/iam-platform-kernel11gR2PS2.jar"
+              tofile="${artifact.output.oimadmin:jar}/iam-platform-kernel11gR2PS2.jar"/>
+        <copy file="${basedir}/lib/oim/iam-platform-kernel11gR2PS3.jar"
+              tofile="${artifact.output.oimadmin:jar}/iam-platform-kernel11gR2PS3.jar"/>
         <copy file="${basedir}/lib/jgoodies/jgoodies-forms-1.8.0.jar"
               tofile="${artifact.output.oimadmin:jar}/jgoodies-forms-1.8.0.jar"/>
         <copy file="${basedir}/lib/oim/commons-logging.jar"
@@ -360,7 +366,7 @@
         <copy file="${basedir}/lib/oim/eclipselink.jar" tofile="${artifact.output.oimadmin:jar}/eclipselink.jar"/>
         <copy file="${basedir}/lib/oim/spring.jar" tofile="${artifact.output.oimadmin:jar}/spring.jar"/>
         <copy file="${basedir}/lib/oim/jrf-api.jar" tofile="${artifact.output.oimadmin:jar}/jrf-api.jar"/>
-        <copy file="${basedir}/lib/oim/wlthint3client.jar" tofile="${artifact.output.oimadmin:jar}/wlfullclient.jar"/>
+        <copy file="${basedir}/lib/oim/wlthint3client.jar" tofile="${artifact.output.oimadmin:jar}/wlthint3client.jar"/>
         <copy file="${basedir}/lib/slf4j/slf4j-api-1.5.11.jar"
               tofile="${artifact.output.oimadmin:jar}/slf4j-api-1.5.11.jar"/>
         <copy file="${basedir}/lib/jsch/jsch-0.1.53.jar"
@@ -368,9 +374,6 @@
     </target>
 
     <target name="build.all.artifacts" depends="artifact.oimadmin:jar" description="Build all artifacts">
-
-        <!-- Delete temporary files -->
-        <delete dir="${artifacts.temp.dir}"/>
     </target>
 
     <target name="all" depends="build.modules, build.all.artifacts" description="build all"/>
