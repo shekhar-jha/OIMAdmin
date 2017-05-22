@@ -68,7 +68,7 @@ public class MDSConnectionJMX extends AbstractConnection {
                 + (export ? "Export" : "Import") + System.currentTimeMillis() + ".jar";
     }
 
-    protected Set<MDSPartition> getMDSPartitions() {
+    public Set<MDSPartition> getMDSPartitions() {
         logger.debug("Trying to get all MDS Partitions...");
         Set<MDSPartition> partitions = new HashSet<MDSPartition>();
         logger.debug("Trying to get MBeanServerConnection");
