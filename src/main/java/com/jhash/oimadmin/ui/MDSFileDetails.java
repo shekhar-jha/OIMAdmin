@@ -19,7 +19,7 @@ package com.jhash.oimadmin.ui;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
-import com.jhash.oimadmin.oim.MDSConnectionJMX;
+import com.jhash.oimadmin.oim.mds.MDSFile;
 import com.jidesoft.swing.JideButton;
 import com.jidesoft.swing.JideScrollPane;
 import org.slf4j.Logger;
@@ -34,14 +34,14 @@ public class MDSFileDetails extends AbstractUIComponent<JPanel> {
 
     private static final Logger logger = LoggerFactory.getLogger(MDSFileDetails.class);
 
-    private final MDSConnectionJMX.MDSFile mdsFile;
+    private final MDSFile mdsFile;
     private final MDSPartitionTreeNode associatedPartition;
 
     private JPanel mdsPartitionFilePanel = new JPanel(new BorderLayout());
     private JTextArea mdsFileTextArea = new JTextArea();
     private JideButton saveButton = new JideButton("Save");
 
-    public MDSFileDetails(String name, MDSPartitionTreeNode associatedPartition, MDSConnectionJMX.MDSFile mdsFile, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public MDSFileDetails(String name, MDSPartitionTreeNode associatedPartition, MDSFile mdsFile, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
         this.mdsFile = mdsFile;
         this.associatedPartition = associatedPartition;

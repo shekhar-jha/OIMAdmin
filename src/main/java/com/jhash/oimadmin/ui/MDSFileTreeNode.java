@@ -17,19 +17,19 @@ package com.jhash.oimadmin.ui;
 
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
-import com.jhash.oimadmin.oim.MDSConnectionJMX;
+import com.jhash.oimadmin.oim.mds.MDSFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class MDSFileTreeNode extends AbstractUIComponentTreeNode<MDSConnectionJMX.MDSFile> implements DisplayableNode<MDSFileDetails> {
+public class MDSFileTreeNode extends AbstractUIComponentTreeNode<MDSFile> implements DisplayableNode<MDSFileDetails> {
 
     private static final Logger logger = LoggerFactory.getLogger(MDSFileTreeNode.class);
-    private final MDSConnectionJMX.MDSFile mdsFile;
+    private final MDSFile mdsFile;
     private final MDSPartitionTreeNode associatedPartition;
 
     private MDSFileDetails mdsFileDetails;
 
-    public MDSFileTreeNode(String name, MDSPartitionTreeNode associatedPartition, MDSConnectionJMX.MDSFile mdsFile, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public MDSFileTreeNode(String name, MDSPartitionTreeNode associatedPartition, MDSFile mdsFile, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
         this.mdsFile = mdsFile;
         this.associatedPartition = associatedPartition;
@@ -48,7 +48,7 @@ public class MDSFileTreeNode extends AbstractUIComponentTreeNode<MDSConnectionJM
     }
 
     @Override
-    public MDSConnectionJMX.MDSFile getComponent() {
+    public MDSFile getComponent() {
         return this.mdsFile;
     }
 

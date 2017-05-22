@@ -19,7 +19,9 @@ import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.OIMAdminTreeNode;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
-import com.jhash.oimadmin.oim.MDSConnectionJMX;
+import com.jhash.oimadmin.oim.mds.MDSConnectionJMX;
+import com.jhash.oimadmin.oim.mds.MDSFile;
+import com.jhash.oimadmin.oim.mds.MDSPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,15 +30,17 @@ import java.util.Enumeration;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-public class MDSPartitionTreeNode extends AbstractUIComponentTreeNode<MDSConnectionJMX.MDSPartition> {
+public class MDSPartitionTreeNode extends AbstractUIComponentTreeNode<MDSPartition> {
 
     private static final Logger logger = LoggerFactory.getLogger(MDSPartitionTreeNode.class);
-    private final MDSConnectionJMX.MDSPartition partition;
+    private final MDSPartition partition;
+    private final MDSConnectionJMX mdsConnectionJMX;
     private String partitionExportFileName;
 
-    public MDSPartitionTreeNode(String name, MDSConnectionJMX.MDSPartition partition, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public MDSPartitionTreeNode(MDSPartition partition, MDSConnectionJMX mdsConnectionJMX, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
         this.partition = partition;
+        this.mdsConnectionJMX = mdsConnectionJMX;
     }
 
     @Override
@@ -58,7 +62,7 @@ public class MDSPartitionTreeNode extends AbstractUIComponentTreeNode<MDSConnect
     }
 
     @Override
-    public MDSConnectionJMX.MDSPartition getComponent() {
+    public MDSPartition getComponent() {
         return partition;
     }
 
@@ -95,12 +99,12 @@ public class MDSPartitionTreeNode extends AbstractUIComponentTreeNode<MDSConnect
                         logger.debug("Trying to check if file is a directory or directory in name of file.");
                         if (jarEntry.isDirectory() || depthCounter < (filePathComponents.length - 1)) {
                             logger.debug("Creating as directory node with {} status", OIMAdminTreeNode.NODE_STATE.INITIALIZED_NO_OP);
-                            identifiedChildNode = new MDSFileTreeNode(filePathElement, MDSPartitionTreeNode.this, new MDSConnectionJMX.MDSFile(partition, jarFile, jarEntry), configuration, selectionTree, displayArea);
+                            identifiedChildNode = new MDSFileTreeNode(filePathElement, MDSPartitionTreeNode.this, new MDSFile(mdsConnectionJMX, partition, jarFile, jarEntry), configuration, selectionTree, displayArea);
                             identifiedChildNode.initialize();
                             identifiedChildNode.setStatus(NODE_STATE.INITIALIZED_NO_OP);
                         } else {
                             logger.debug("Creating as file node with {} status", NODE_STATE.INITIALIZED);
-                            identifiedChildNode = new MDSFileTreeNode(filePathElement, MDSPartitionTreeNode.this, new MDSConnectionJMX.MDSFile(partition, jarFile, jarEntry), configuration, selectionTree, displayArea);
+                            identifiedChildNode = new MDSFileTreeNode(filePathElement, MDSPartitionTreeNode.this, new MDSFile(mdsConnectionJMX, partition, jarFile, jarEntry), configuration, selectionTree, displayArea);
                             identifiedChildNode.initialize();
                         }
                         logger.debug("Adding the child node {} to parent {}", identifiedChildNode, parentNode);

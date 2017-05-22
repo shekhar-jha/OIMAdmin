@@ -17,7 +17,9 @@ package com.jhash.oimadmin.ui;
 
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
-import com.jhash.oimadmin.oim.MDSConnectionJMX;
+import com.jhash.oimadmin.oim.JMXConnection;
+import com.jhash.oimadmin.oim.mds.MDSConnectionJMX;
+import com.jhash.oimadmin.oim.mds.MDSPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,21 +28,26 @@ import java.util.Set;
 public class MDSTreeNode extends AbstractUIComponentTreeNode<MDSConnectionJMX> {
 
     private static final Logger logger = LoggerFactory.getLogger(MDSTreeNode.class);
+    private final ConnectionTreeNode.Connections connections;
     private MDSConnectionJMX mdsConnection;
-    private Set<MDSConnectionJMX.MDSPartition> partitions;
+    private Set<MDSPartition> partitions;
 
-    public MDSTreeNode(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public MDSTreeNode(ConnectionTreeNode.Connections connections, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
+        this.connections = connections;
     }
 
     @Override
     public void initializeComponent() {
         logger.debug("Initializing {} ...", this);
-        mdsConnection = new MDSConnectionJMX();
+        JMXConnection jmxConnection = connections.<JMXConnection>getConnection(ConnectionTreeNode.CONNECTION_TYPES.JMX);
+        if (jmxConnection == null)
+            throw new NullPointerException("No JMX Connection is available.");
+        mdsConnection = new MDSConnectionJMX(jmxConnection);
         mdsConnection.initialize(configuration);
         partitions = mdsConnection.getMDSPartitions();
-        for (MDSConnectionJMX.MDSPartition partition : partitions) {
-            MDSPartitionTreeNode createdNode = new MDSPartitionTreeNode(partition.toString(), partition, configuration, selectionTree, displayArea);
+        for (MDSPartition partition : partitions) {
+            MDSPartitionTreeNode createdNode = new MDSPartitionTreeNode(partition, mdsConnection, partition.toString(), configuration, selectionTree, displayArea);
             selectionTree.addChildNode(this, createdNode);
         }
         logger.debug("Initialized {} ...", this);
@@ -55,7 +62,7 @@ public class MDSTreeNode extends AbstractUIComponentTreeNode<MDSConnectionJMX> {
     public void destroyComponent() {
         logger.debug("Destroying {} ...", this);
         if (partitions != null) {
-            for (MDSConnectionJMX.MDSPartition partition : partitions) {
+            for (MDSPartition partition : partitions) {
                 try {
                     partition.destroy();
                 } catch (Exception exception) {
