@@ -26,7 +26,6 @@ import com.jhash.oimadmin.Utils;
 import com.jhash.oimadmin.oim.DBConnection;
 import com.jhash.oimadmin.oim.OIMConnection;
 import com.jhash.oimadmin.oim.OIMJMXWrapper;
-import com.jhash.oimadmin.oim.model.request.*;
 import com.jhash.oimadmin.oim.request.*;
 import com.jidesoft.swing.JideScrollPane;
 import com.jidesoft.swing.JideTabbedPane;
