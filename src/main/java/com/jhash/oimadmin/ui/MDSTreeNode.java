@@ -40,7 +40,7 @@ public class MDSTreeNode extends AbstractUIComponentTreeNode<MDSConnectionJMX> {
     @Override
     public void initializeComponent() {
         logger.debug("Initializing {} ...", this);
-        JMXConnection jmxConnection = connections.<JMXConnection>getConnection(ConnectionTreeNode.CONNECTION_TYPES.JMX);
+        JMXConnection jmxConnection = connections.getConnection(ConnectionTreeNode.CONNECTION_TYPES.JMX);
         if (jmxConnection == null)
             throw new NullPointerException("No JMX Connection is available.");
         mdsConnection = new MDSConnectionJMX(jmxConnection);

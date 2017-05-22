@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.HashMap;
 import java.util.Map;
 
 public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTreeNode.Connections> implements DisplayableNode<ConnectionDetails>, ContextMenuEnabledNode {
@@ -76,16 +77,16 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
         logger.debug("Initializing {} ...", this);
         initializeConnections();
         selectionTree.addChildNode(this, new MDSTreeNode(connections, "MDS Repository", configuration, selectionTree, displayArea));
-        selectionTree.addChildNode(this, new EventHandlersTreeNode("Event Handlers", connections.<OIMConnection>getConnection(CONNECTION_TYPES.OIM), configuration, selectionTree, displayArea));
+        selectionTree.addChildNode(this, new EventHandlersTreeNode("Event Handlers", connections.getConnection(CONNECTION_TYPES.OIM), configuration, selectionTree, displayArea));
         selectionTree.addChildNode(this, new OIMAdminTreeNode.OIMAdminTreeNodeNoAction("Scheduled Tasks", this, selectionTree));
         DummyAdminTreeNode cacheNode = new DummyAdminTreeNode("Cache", configuration, selectionTree, displayArea);
         selectionTree.addChildNode(this, cacheNode);
-        selectionTree.addChildNode(cacheNode, new OIMCacheNode("OIM Cache", connections.<OIMConnection>getConnection(CONNECTION_TYPES.OIM), configuration, selectionTree, displayArea).initialize());
+        selectionTree.addChildNode(cacheNode, new OIMCacheNode("OIM Cache", connections.getConnection(CONNECTION_TYPES.OIM), configuration, selectionTree, displayArea).initialize());
         selectionTree.addChildNode(this, new OIMPerformanceTreeNode("Performance", configuration, selectionTree, displayArea));
         DummyAdminTreeNode trackerNode = new DummyAdminTreeNode("Track", configuration, selectionTree, displayArea);
-        selectionTree.addChildNode(trackerNode, new DisplayComponentNode<>("Request", new TraceRequestDetails("Request", connections.<OIMConnection>getConnection(CONNECTION_TYPES.OIM), configuration, selectionTree, displayArea
+        selectionTree.addChildNode(trackerNode, new DisplayComponentNode<>("Request", new TraceRequestDetails("Request", connections.getConnection(CONNECTION_TYPES.OIM), configuration, selectionTree, displayArea
         ), null, configuration, selectionTree, displayArea).initialize());
-        selectionTree.addChildNode(trackerNode, new DisplayComponentNode<>("Orchestration", new TraceOrchestrationDetails("Orchestration", connections.<OIMConnection>getConnection(CONNECTION_TYPES.OIM), configuration, selectionTree, displayArea
+        selectionTree.addChildNode(trackerNode, new DisplayComponentNode<>("Orchestration", new TraceOrchestrationDetails("Orchestration", connections.getConnection(CONNECTION_TYPES.OIM), configuration, selectionTree, displayArea
         ), null, configuration, selectionTree, displayArea).initialize());
         selectionTree.addChildNode(this, trackerNode);
         logger.debug("Initialized {}", this);
@@ -224,9 +225,9 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
 
     public static class CONNECTION_TYPES<T extends Connection> {
 
-        public static final CONNECTION_TYPES OIM = new CONNECTION_TYPES(OIMConnection.class);
-        public static final CONNECTION_TYPES JMX = new CONNECTION_TYPES(JMXConnection.class);
-        public static final CONNECTION_TYPES DB = new CONNECTION_TYPES(DBConnection.class);
+        public static final CONNECTION_TYPES<OIMConnection> OIM = new CONNECTION_TYPES(OIMConnection.class);
+        public static final CONNECTION_TYPES<JMXConnection> JMX = new CONNECTION_TYPES(JMXConnection.class);
+        public static final CONNECTION_TYPES<DBConnection> DB = new CONNECTION_TYPES(DBConnection.class);
 
         private final Class<T> connectionClass;
 
@@ -245,7 +246,7 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
 
     public static class Connections {
 
-        private Map<CONNECTION_TYPES, Connection> connections;
+        private Map<CONNECTION_TYPES, Connection> connections = new HashMap<>();
 
         public <T extends Connection> T getConnection(CONNECTION_TYPES<T> connectionType) {
             if (connectionType == null)
