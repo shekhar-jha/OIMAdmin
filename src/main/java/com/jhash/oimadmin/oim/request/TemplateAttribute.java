@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.jhash.oimadmin.oim.model.request;
+package com.jhash.oimadmin.oim.request;
 
 import com.jhash.oimadmin.Utils;
 

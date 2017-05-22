@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.jhash.oimadmin.oim.model.orch;
+package com.jhash.oimadmin.oim.orch;
 
 import com.jhash.oimadmin.Utils;
 import org.slf4j.Logger;
