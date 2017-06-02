@@ -316,23 +316,7 @@ public class Utils {
         if (jars != null) {
             try {
                 final ClassLoader urlClassLoader = new URLClassLoader(jars, null);
-                return new ObjectInputStream(inputStream) {
-
-                    protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
-                        logger.debug("Trying to resolve class using description {}", desc);
-                        String name = null;
-                        try {
-                            name = desc.getName();
-                            logger.debug("Trying to load class {} using URL Class Loader {}", name, urlClassLoader);
-                            Class<?> classValue = Class.forName(name, false, urlClassLoader);
-                            logger.debug("Located class as {}", classValue);
-                            return classValue;
-                        } catch (ClassNotFoundException ex) {
-                            logger.debug("Failed to locate Class " + name + ". Invoking parent method.", ex);
-                            return super.resolveClass(desc);
-                        }
-                    }
-                };
+                return getObjectInputStream(inputStream, urlClassLoader);
             } catch (Exception exception) {
                 logger.warn("Failed to create Class Loader with URL " + jars + ". Returning standard object input stream with input stream " + inputStream, exception);
                 return new ObjectInputStream(inputStream);
@@ -341,6 +325,26 @@ public class Utils {
             logger.debug("Returning standard object input stream since no additional urls were provided.");
             return new ObjectInputStream(inputStream);
         }
+    }
+
+    public static ObjectInputStream getObjectInputStream(InputStream inputStream, final ClassLoader classLoader) throws IOException {
+        return new ObjectInputStream(inputStream) {
+
+            protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
+                logger.debug("Trying to resolve class using description {}", desc);
+                String name = null;
+                try {
+                    name = desc.getName();
+                    logger.debug("Trying to load class {} using URL Class Loader {}", name, classLoader);
+                    Class<?> classValue = classLoader.loadClass(name);
+                    logger.debug("Located class as {}", classValue);
+                    return classValue;
+                } catch (ClassNotFoundException ex) {
+                    logger.debug("Failed to locate Class " + name + ". Invoking parent method.", ex);
+                    return super.resolveClass(desc);
+                }
+            }
+        };
     }
 
     public static <V> V getOrDefault(Map<?, V> map, Object key, V defaultValue) {
@@ -388,6 +392,37 @@ public class Utils {
         StringWriter output = new StringWriter();
         throwable.printStackTrace(new PrintWriter(output));
         return output.toString();
+    }
+
+    public static String extractExceptionDetails(Exception exception) {
+        return extractExceptionDetails(exception, null).toString();
+    }
+
+    public static StringBuilder extractExceptionDetails(Exception exception, StringBuilder messageBuilder) {
+        StringBuilder messageDetails = messageBuilder == null ? new StringBuilder() : messageBuilder;
+        if (exception != null) {
+            Throwable applicableException = exception;
+            while (applicableException != null) {
+                if (applicableException != exception) {
+                    messageDetails.append(System.lineSeparator());
+                    messageDetails.append("Caused By: ");
+                }
+                messageDetails.append(applicableException);
+                messageDetails.append(System.lineSeparator());
+                messageDetails.append(applicableException.getStackTrace()[0].toString());
+                for (int stackTraceDepth = 1; stackTraceDepth < applicableException.getStackTrace().length; stackTraceDepth++) {
+                    if (applicableException.getStackTrace()[stackTraceDepth].getClassName().startsWith("com.jhash.oimadmin")) {
+                        messageDetails.append(System.lineSeparator());
+                        messageDetails.append("...");
+                        messageDetails.append(System.lineSeparator());
+                        messageDetails.append(applicableException.getStackTrace()[stackTraceDepth].toString());
+                        break;
+                    }
+                }
+                applicableException = applicableException.getCause();
+            }
+        }
+        return messageDetails;
     }
 
     public interface JarFileProcessor {
