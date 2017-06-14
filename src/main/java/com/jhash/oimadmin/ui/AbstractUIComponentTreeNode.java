@@ -159,28 +159,8 @@ public abstract class AbstractUIComponentTreeNode<T> extends OIMAdminTreeNode im
             messageDetails.append(exception.getMessage());
         }
         messageDetails.append(System.lineSeparator());
-        if (exception != null) {
-            Throwable applicableException = exception;
-            while (applicableException != null) {
-                if (applicableException != exception) {
-                    messageDetails.append(System.lineSeparator());
-                    messageDetails.append("Caused By: ");
-                }
-                messageDetails.append(applicableException);
-                messageDetails.append(System.lineSeparator());
-                messageDetails.append(applicableException.getStackTrace()[0].toString());
-                for (int stackTraceDepth = 1; stackTraceDepth < applicableException.getStackTrace().length; stackTraceDepth++) {
-                    if (applicableException.getStackTrace()[stackTraceDepth].getClassName().startsWith("com.jhash.oimadmin")) {
-                        messageDetails.append(System.lineSeparator());
-                        messageDetails.append("...");
-                        messageDetails.append(System.lineSeparator());
-                        messageDetails.append(applicableException.getStackTrace()[stackTraceDepth].toString());
-                        break;
-                    }
-                }
-                applicableException = applicableException.getCause();
-            }
-        }
+        if (exception != null)
+            messageDetails.append(Utils.extractExceptionDetails(exception));
         JOptionPane.showMessageDialog(null, messageDetails.toString(), title, JOptionPane.ERROR_MESSAGE);
     }
 

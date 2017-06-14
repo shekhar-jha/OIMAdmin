@@ -19,6 +19,7 @@ package com.jhash.oimadmin.ui;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.oim.OIMConnection;
+import com.jhash.oimadmin.oim.cache.CacheManager;
 import com.jidesoft.swing.JidePopupMenu;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,11 +33,13 @@ public class OIMCacheNode extends AbstractUIComponentTreeNode<Object> implements
     private static final Logger logger = LoggerFactory.getLogger(OIMCacheNode.class);
 
     final private OIMConnection connection;
+    final private CacheManager cacheManager;
     private JPopupMenu popupMenu;
     private OIMCacheDetails cacheUI;
 
-    public OIMCacheNode(String name, OIMConnection connection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public OIMCacheNode(CacheManager cacheManager, OIMConnection connection, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
+        this.cacheManager = cacheManager;
         this.connection = connection;
     }
 
@@ -44,20 +47,30 @@ public class OIMCacheNode extends AbstractUIComponentTreeNode<Object> implements
     @Override
     public void initializeComponent() {
         JMenuItem purgeAll = new JMenuItem("Purge All");
-        purgeAll.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                connection.purgeCache(null);
-            }
-        });
+        if (connection != null) {
+            purgeAll.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    connection.purgeCache(null);
+                }
+            });
+        } else {
+            purgeAll.setEnabled(false);
+            purgeAll.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    displayMessage("Failed to purge cache", "Failed to invoke purge due to missing OIM Connection", null);
+                }
+            });
+        }
         popupMenu = new JidePopupMenu();
         popupMenu.add(purgeAll);
-        cacheUI = new OIMCacheDetails(name, configuration, selectionTree, displayArea);
+        cacheUI = new OIMCacheDetails(cacheManager, name, configuration, selectionTree, displayArea);
     }
 
 
     public boolean hasContextMenu() {
-        return popupMenu != null ? true : false;
+        return popupMenu != null;
     }
 
     public JPopupMenu getContextMenu() {

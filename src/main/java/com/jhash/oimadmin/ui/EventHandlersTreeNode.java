@@ -20,7 +20,8 @@ import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
 import com.jhash.oimadmin.oim.OIMConnection;
-import com.jhash.oimadmin.oim.OIMJMXWrapper;
+import com.jhash.oimadmin.oim.eventHandlers.Manager;
+import com.jhash.oimadmin.oim.eventHandlers.OperationDetail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,28 +30,27 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.*;
 
-public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<OIMJMXWrapper> implements ContextMenuEnabledNode {
+public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<Manager> implements ContextMenuEnabledNode {
 
     private static final Logger logger = LoggerFactory.getLogger(EventHandlersTreeNode.class);
 
-    private final OIMConnection oimConnection;
     private final JPopupMenu eventHandlerMenu;
     private final JMenuItem newEventHandlerMenu;
     private final JMenuItem refreshMenu;
     private final List<EventHandlerUI> openedNewEventHandlers = new ArrayList<>();
-    private OIMJMXWrapper connection;
-    private Set<OIMJMXWrapper.OperationDetail> operations;
+    private final Manager eventManager;
+    private Set<OperationDetail> operations;
 
-    public EventHandlersTreeNode(String name, final OIMConnection oimConnection, final Config.Configuration configuration, final UIComponentTree selectionTree, final DisplayArea displayArea) {
+    public EventHandlersTreeNode(final Manager eventManager, final OIMConnection oimConnection, String name, final Config.Configuration configuration, final UIComponentTree selectionTree, final DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
-        this.oimConnection = oimConnection;
+        this.eventManager = eventManager;
         eventHandlerMenu = new JPopupMenu();
         newEventHandlerMenu = new JMenuItem("New EventHandler...");
         newEventHandlerMenu.setEnabled(false);
         newEventHandlerMenu.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                EventHandlerUI eventHandlerUI = new EventHandlerUI("New EventHandler..", connection, oimConnection, configuration, selectionTree, displayArea);
+                EventHandlerUI eventHandlerUI = new EventHandlerUI(eventManager, oimConnection, "New EventHandler..", configuration, selectionTree, displayArea);
                 eventHandlerUI.initialize();
                 openedNewEventHandlers.add(eventHandlerUI);
                 displayArea.add(eventHandlerUI);
@@ -80,22 +80,20 @@ public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<OIMJMXWra
     @Override
     public void initializeComponent() {
         logger.debug("Initializing {}", this);
-        connection = new OIMJMXWrapper();
-        connection.initialize(configuration);
         newEventHandlerMenu.setEnabled(true);
-        operations = connection.getOperations();
-        OIMJMXWrapper.OperationDetail[] sortedOperationDetail = operations.toArray(new OIMJMXWrapper.OperationDetail[]{});
+        operations = eventManager.getOperations();
+        OperationDetail[] sortedOperationDetail = operations.toArray(new OperationDetail[]{});
         logger.debug("Trying to sort the Event Handlers {} based on their names...", sortedOperationDetail);
-        Arrays.sort(sortedOperationDetail, new Comparator<OIMJMXWrapper.OperationDetail>() {
+        Arrays.sort(sortedOperationDetail, new Comparator<OperationDetail>() {
 
             @Override
-            public int compare(OIMJMXWrapper.OperationDetail o1, OIMJMXWrapper.OperationDetail o2) {
+            public int compare(OperationDetail o1, OperationDetail o2) {
                 return o1.name.compareToIgnoreCase(o2.name);
             }
         });
         logger.debug("Sorted the Event Handlers. Creating nodes for the operations {}", sortedOperationDetail);
-        for (OIMJMXWrapper.OperationDetail operation : sortedOperationDetail) {
-            EventHandlerTreeNode treeNode = new EventHandlerTreeNode(operation.description + "(" + operation.name + ")", operation, connection,
+        for (OperationDetail operation : sortedOperationDetail) {
+            EventHandlerTreeNode treeNode = new EventHandlerTreeNode(eventManager, operation, operation.description + "(" + operation.name + ")",
                     configuration, selectionTree, displayArea);
             treeNode.initialize();
             selectionTree.addChildNode(this, treeNode);
@@ -103,8 +101,8 @@ public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<OIMJMXWra
     }
 
     @Override
-    public OIMJMXWrapper getComponent() {
-        return connection;
+    public Manager getComponent() {
+        return eventManager;
     }
 
     @Override
@@ -119,15 +117,6 @@ public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<OIMJMXWra
 
     @Override
     public void destroyComponent() {
-        if (connection != null) {
-            try {
-                connection.destroy();
-                newEventHandlerMenu.setEnabled(false);
-            } catch (Exception exception) {
-                logger.warn("Failed to destroy JMX Connection " + connection + ". Ignoring error.", exception);
-            }
-            connection = null;
-        }
         if (operations != null) {
             operations.clear();
             operations = null;

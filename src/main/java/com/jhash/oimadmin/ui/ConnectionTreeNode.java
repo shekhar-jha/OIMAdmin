@@ -20,6 +20,11 @@ import com.jhash.oimadmin.*;
 import com.jhash.oimadmin.oim.DBConnection;
 import com.jhash.oimadmin.oim.JMXConnection;
 import com.jhash.oimadmin.oim.OIMConnection;
+import com.jhash.oimadmin.oim.cache.CacheManager;
+import com.jhash.oimadmin.oim.eventHandlers.Manager;
+import com.jhash.oimadmin.oim.orch.OrchManager;
+import com.jhash.oimadmin.oim.perf.PerfManager;
+import com.jhash.oimadmin.oim.request.RequestManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,13 +40,11 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
     private Connections connections;
     private ConnectionDetails connectionDetailsUI;
     private JPopupMenu popupMenu;
-    private JMenuItem refreshMenu;
-    private JMenuItem deleteConnectionMenuItem;
 
     public ConnectionTreeNode(String name, final Config.Configuration configuration, final UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
         connectionDetailsUI = new ConnectionDetails(name, configuration, this, selectionTree, displayArea);
-        refreshMenu = new JMenuItem("Reconnect");
+        JMenuItem refreshMenu = new JMenuItem("Reconnect");
         refreshMenu.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -56,7 +59,7 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
                 logger.debug("Completed Reconnect Trigger");
             }
         });
-        deleteConnectionMenuItem = new JMenuItem("Delete");
+        JMenuItem deleteConnectionMenuItem = new JMenuItem("Delete");
         deleteConnectionMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -75,24 +78,46 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
     @Override
     public void initializeComponent() {
         logger.debug("Initializing {} ...", this);
-        initializeConnections();
+        this.connections = initializeConnections(name, configuration);
         selectionTree.addChildNode(this, new MDSTreeNode(connections, "MDS Repository", configuration, selectionTree, displayArea));
-        selectionTree.addChildNode(this, new EventHandlersTreeNode("Event Handlers", connections.getConnection(CONNECTION_TYPES.OIM), configuration, selectionTree, displayArea));
+        Manager eventManager = null;
+        if (connections.contains(CONNECTION_TYPES.JMX)) {
+            eventManager = new Manager(connections.getConnection(CONNECTION_TYPES.JMX));
+            selectionTree.addChildNode(this, new EventHandlersTreeNode(eventManager, connections.getConnection(CONNECTION_TYPES.OIM), "Event Handlers", configuration, selectionTree, displayArea));
+        }
         selectionTree.addChildNode(this, new OIMAdminTreeNode.OIMAdminTreeNodeNoAction("Scheduled Tasks", this, selectionTree));
         DummyAdminTreeNode cacheNode = new DummyAdminTreeNode("Cache", configuration, selectionTree, displayArea);
         selectionTree.addChildNode(this, cacheNode);
-        selectionTree.addChildNode(cacheNode, new OIMCacheNode("OIM Cache", connections.getConnection(CONNECTION_TYPES.OIM), configuration, selectionTree, displayArea).initialize());
-        selectionTree.addChildNode(this, new OIMPerformanceTreeNode("Performance", configuration, selectionTree, displayArea));
+        if (connections.contains(CONNECTION_TYPES.JMX)) {
+            CacheManager cacheManager = new CacheManager(connections.getConnection(CONNECTION_TYPES.JMX));
+            selectionTree.addChildNode(cacheNode, new OIMCacheNode(cacheManager, connections.getConnection(CONNECTION_TYPES.OIM), "OIM Cache", configuration, selectionTree, displayArea).initialize());
+        }
+        if (eventManager != null && connections.contains(CONNECTION_TYPES.JMX)) {
+            PerfManager perfManager = new PerfManager(eventManager, connections.getConnection(CONNECTION_TYPES.JMX));
+            selectionTree.addChildNode(this, new OIMPerformanceTreeNode(perfManager, "Performance", configuration, selectionTree, displayArea));
+        }
         DummyAdminTreeNode trackerNode = new DummyAdminTreeNode("Track", configuration, selectionTree, displayArea);
-        selectionTree.addChildNode(trackerNode, new DisplayComponentNode<>("Request", new TraceRequestDetails("Request", connections.getConnection(CONNECTION_TYPES.OIM), configuration, selectionTree, displayArea
-        ), null, configuration, selectionTree, displayArea).initialize());
-        selectionTree.addChildNode(trackerNode, new DisplayComponentNode<>("Orchestration", new TraceOrchestrationDetails("Orchestration", connections.getConnection(CONNECTION_TYPES.OIM), configuration, selectionTree, displayArea
-        ), null, configuration, selectionTree, displayArea).initialize());
+        OrchManager orchManager = null;
+        if (connections.contains(CONNECTION_TYPES.OIM, CONNECTION_TYPES.JMX, CONNECTION_TYPES.DB)) {
+            orchManager = new OrchManager(connections.getConnection(CONNECTION_TYPES.OIM), connections.getConnection(CONNECTION_TYPES.JMX), connections.getConnection(CONNECTION_TYPES.DB));
+        }
+        if (connections.contains(CONNECTION_TYPES.OIM)) {
+            RequestManager requestManager = new RequestManager(connections.getConnection(CONNECTION_TYPES.OIM));
+            selectionTree.addChildNode(trackerNode, new DisplayComponentNode<>("Request",
+                    new TraceRequestDetails(requestManager, orchManager, "Request", configuration, selectionTree, displayArea),
+                    null, configuration, selectionTree, displayArea).initialize());
+
+        }
+        if (orchManager != null) {
+            selectionTree.addChildNode(trackerNode, new DisplayComponentNode<>("Orchestration",
+                    new TraceOrchestrationDetails(orchManager, "Orchestration", configuration, selectionTree, displayArea),
+                    null, configuration, selectionTree, displayArea).initialize());
+        }
         selectionTree.addChildNode(this, trackerNode);
         logger.debug("Initialized {}", this);
     }
 
-    private Connections initializeConnections() {
+    private Connections initializeConnections(String name, Config.Configuration configuration) {
         Connections connections = new Connections();
         Exception failedConnection = null;
         Config.Configuration connectionConfiguration = configuration.getConfig().getConnectionDetails(name);
@@ -122,7 +147,6 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
         } catch (Exception exception) {
             failedConnection = exception;
         }
-        this.connections = connections;
         if (failedConnection != null)
             throw new OIMAdminException("Failed to initialize connections", failedConnection);
         return connections;
@@ -225,9 +249,9 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
 
     public static class CONNECTION_TYPES<T extends Connection> {
 
-        public static final CONNECTION_TYPES<OIMConnection> OIM = new CONNECTION_TYPES(OIMConnection.class);
-        public static final CONNECTION_TYPES<JMXConnection> JMX = new CONNECTION_TYPES(JMXConnection.class);
-        public static final CONNECTION_TYPES<DBConnection> DB = new CONNECTION_TYPES(DBConnection.class);
+        public static final CONNECTION_TYPES<OIMConnection> OIM = new CONNECTION_TYPES<>(OIMConnection.class);
+        public static final CONNECTION_TYPES<JMXConnection> JMX = new CONNECTION_TYPES<>(JMXConnection.class);
+        public static final CONNECTION_TYPES<DBConnection> DB = new CONNECTION_TYPES<>(DBConnection.class);
 
         private final Class<T> connectionClass;
 
@@ -252,6 +276,16 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
             if (connectionType == null)
                 return null;
             return connectionType.connectionClass.cast(connections.get(connectionType));
+        }
+
+        public boolean contains(CONNECTION_TYPES... connectionTypes) {
+            if (connectionTypes == null)
+                return false;
+            for (CONNECTION_TYPES connectionType : connectionTypes) {
+                if (!connections.containsKey(connectionType))
+                    return false;
+            }
+            return true;
         }
 
     }

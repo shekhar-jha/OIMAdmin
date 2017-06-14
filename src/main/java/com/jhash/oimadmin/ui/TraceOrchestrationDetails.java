@@ -21,9 +21,7 @@ import com.jgoodies.jsdl.component.JGComponentFactory;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
-import com.jhash.oimadmin.oim.DBConnection;
-import com.jhash.oimadmin.oim.OIMConnection;
-import com.jhash.oimadmin.oim.OIMJMXWrapper;
+import com.jhash.oimadmin.oim.orch.OrchManager;
 import com.jidesoft.swing.JideTabbedPane;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,23 +34,20 @@ import java.awt.event.ActionListener;
 public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
 
     private static final Logger logger = LoggerFactory.getLogger(TraceRequestDetails.class);
-    private final OIMConnection connection;
     private final boolean destroyOnClose;
-    private DBConnection dbConnection;
-    private OIMJMXWrapper oimjmxWrapper;
-    private JButton retrieve;
+    private final OrchManager orchestrationManager;
     private JTextField orchestrationID = JGComponentFactory.getCurrent().createTextField();
     private OrchestrationDetailUI orchestrationDetailPanel;
     private JPanel traceOrchestrationUI;
 
-    public TraceOrchestrationDetails(String name, OIMConnection connection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
-        this(name, false, connection, configuration, selectionTree, displayArea);
+    public TraceOrchestrationDetails(OrchManager orchManager, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+        this(orchManager, false, name, configuration, selectionTree, displayArea);
     }
 
-    public TraceOrchestrationDetails(String name, boolean destroyOnClose, OIMConnection connection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public TraceOrchestrationDetails(OrchManager orchManager, boolean destroyOnClose, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
-        this.connection = connection;
         this.destroyOnClose = destroyOnClose;
+        this.orchestrationManager = orchManager;
     }
 
     @Override
@@ -62,11 +57,7 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
 
     @Override
     public void initializeComponent() {
-        dbConnection = new DBConnection();
-        dbConnection.initialize(configuration);
-        oimjmxWrapper = new OIMJMXWrapper();
-        oimjmxWrapper.initialize(configuration);
-        retrieve = JGComponentFactory.getCurrent().createButton("Retrieve..");
+        JButton retrieve = JGComponentFactory.getCurrent().createButton("Retrieve..");
         retrieve.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -91,7 +82,7 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
                 .rows("2dlu, p")
                 .addLabel("Orchestration ID").xy(2, 2).add(orchestrationID).xy(4, 2).add(retrieve).xy(8, 2)
                 .build();
-        orchestrationDetailPanel = new OrchestrationDetailUI(dbConnection, oimjmxWrapper, connection, this).initialize();
+        orchestrationDetailPanel = new OrchestrationDetailUI<>(orchestrationManager, this).initialize();
         JideTabbedPane tabbedPane = new JideTabbedPane();
         tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getUIComponent());
         traceOrchestrationUI = new JPanel(new BorderLayout());
@@ -116,22 +107,6 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
     @Override
     public void destroyComponent() {
         logger.debug("Destroying component {}", this);
-        if (dbConnection != null) {
-            try {
-                dbConnection.destroy();
-            } catch (Exception exception) {
-                logger.debug("Failed to destroy DB Connection", exception);
-            }
-            dbConnection = null;
-        }
-        if (oimjmxWrapper != null) {
-            try {
-                oimjmxWrapper.destroy();
-            } catch (Exception exception) {
-                logger.debug("Failed to destroy JMX Connection", exception);
-            }
-            oimjmxWrapper = null;
-        }
         logger.debug("Destroyed component {}", this);
     }
 

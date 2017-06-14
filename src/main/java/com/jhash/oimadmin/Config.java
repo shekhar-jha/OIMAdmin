@@ -54,8 +54,7 @@ public class Config {
         if (properties != null) {
             copyOfProperties.putAll(properties);
         }
-        Configuration configuration = new Configuration(copyOfProperties, this);
-        return configuration;
+        return new Configuration(copyOfProperties, this);
     }
 
     public void load() {

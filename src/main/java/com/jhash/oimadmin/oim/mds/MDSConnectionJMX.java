@@ -20,6 +20,7 @@ import com.jhash.oimadmin.Config.Configuration;
 import com.jhash.oimadmin.OIMAdminException;
 import com.jhash.oimadmin.oim.AbstractConnection;
 import com.jhash.oimadmin.oim.JMXConnection;
+import com.jhash.oimadmin.oim.WLUtils;
 import oracle.mds.lcm.client.*;
 import oracle.mds.lcm.client.MetadataTransferManager.ASPlatform;
 import org.slf4j.Logger;
@@ -74,7 +75,7 @@ public class MDSConnectionJMX extends AbstractConnection {
         logger.debug("Trying to get MBeanServerConnection");
         MBeanServerConnection connection = jmxConnection.getConnection();
         logger.debug("Trying to get all the servers running at the moment from {}", jmxConnection);
-        Set<String> runtimeServers = jmxConnection.getRuntimeServers();
+        Set<String> runtimeServers = WLUtils.getRuntimeServers(connection);
         logger.debug("Trying to process runtimeServers {}", runtimeServers);
         for (String runtimeServer : runtimeServers) {
             logger.debug("Trying to create new MetadataTransferManager with MBeanServerConnection {} and platform {}",

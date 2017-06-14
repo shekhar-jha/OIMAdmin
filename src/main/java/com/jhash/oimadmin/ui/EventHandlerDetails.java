@@ -23,7 +23,10 @@ import com.jgoodies.jsdl.component.JGComponentFactory;
 import com.jgoodies.jsdl.component.JGStripedTable;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
-import com.jhash.oimadmin.oim.OIMJMXWrapper;
+import com.jhash.oimadmin.oim.Details;
+import com.jhash.oimadmin.oim.eventHandlers.Manager;
+import com.jhash.oimadmin.oim.eventHandlers.Manager.EVENT_HANDLER_DETAILS;
+import com.jhash.oimadmin.oim.eventHandlers.OperationDetail;
 import com.jidesoft.swing.JideScrollPane;
 import com.jidesoft.swing.JideSplitPane;
 import org.slf4j.Logger;
@@ -40,8 +43,8 @@ public class EventHandlerDetails extends AbstractUIComponent<JPanel> {
 
     private static final Logger logger = LoggerFactory.getLogger(EventHandlerDetails.class);
 
-    private final OIMJMXWrapper.OperationDetail eventHandlerDetails;
-    private final OIMJMXWrapper connection;
+    private final OperationDetail eventHandlerDetails;
+    private final Manager connection;
 
     private JPanel eventHandlerUI;
     private JGStripedTable table;
@@ -57,15 +60,16 @@ public class EventHandlerDetails extends AbstractUIComponent<JPanel> {
     private JTextField sync = UIUtils.createTextField();
     private JTextField transactional = UIUtils.createTextField();
 
-    public EventHandlerDetails(String name, OIMJMXWrapper.OperationDetail eventHandlerDetails, OIMJMXWrapper connection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public EventHandlerDetails(Manager eventManager, OperationDetail eventHandlerDetails, String name,
+                               Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
-        this.connection = connection;
+        this.connection = eventManager;
         this.eventHandlerDetails = eventHandlerDetails;
     }
 
     @Override
     public void initializeComponent() {
-        final OIMJMXWrapper.Details details = connection.getEventHandlers(eventHandlerDetails);
+        final Details details = connection.getEventHandlers(eventHandlerDetails);
         DefaultTableModel tableModel = new DefaultTableModel(details.getData(), details.getColumns()) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -84,21 +88,21 @@ public class EventHandlerDetails extends AbstractUIComponent<JPanel> {
                 try {
                     selectedIndex = table.getSelectedRow();
                     Map<String, Object> detail = details.getItemAt(selectedIndex);
-                    nameLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.NAME.columnName).toString());
-                    stageLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.STAGE.columnName).toString());
-                    orderLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.ORDER.columnName).toString());
-                    conditionalLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.CONDITIONAL.columnName).toString());
-                    classNameLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.CLASS.name).toString());
+                    nameLabel.setText(detail.get(EVENT_HANDLER_DETAILS.NAME.columnName).toString());
+                    stageLabel.setText(detail.get(EVENT_HANDLER_DETAILS.STAGE.columnName).toString());
+                    orderLabel.setText(detail.get(EVENT_HANDLER_DETAILS.ORDER.columnName).toString());
+                    conditionalLabel.setText(detail.get(EVENT_HANDLER_DETAILS.CONDITIONAL.columnName).toString());
+                    classNameLabel.setText(detail.get(EVENT_HANDLER_DETAILS.CLASS.name).toString());
                     switch (connection.getVersion()) {
                         case OIM11GR2PS2:
-                            customLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.CUSTOM.name).toString());
-                            offBandLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.OFFBAND.name).toString());
-                            locationLabel.setText(detail.get(OIMJMXWrapper.EVENT_HANDLER_DETAILS.LOCATION.name).toString());
+                            customLabel.setText(detail.get(EVENT_HANDLER_DETAILS.CUSTOM.name).toString());
+                            offBandLabel.setText(detail.get(EVENT_HANDLER_DETAILS.OFFBAND.name).toString());
+                            locationLabel.setText(detail.get(EVENT_HANDLER_DETAILS.LOCATION.name).toString());
                             break;
                         default:
-                            sync.setText(details.getItemAt(selectedIndex, OIMJMXWrapper.EVENT_HANDLER_DETAILS.SYNC.name, "").toString());
-                            exception.setText(details.getItemAt(selectedIndex, OIMJMXWrapper.EVENT_HANDLER_DETAILS.EXCEPTION.name, "").toString());
-                            transactional.setText(details.getItemAt(selectedIndex, OIMJMXWrapper.EVENT_HANDLER_DETAILS.TRANSACTIONAL.name, "").toString());
+                            sync.setText(details.getItemAt(selectedIndex, EVENT_HANDLER_DETAILS.SYNC.name, "").toString());
+                            exception.setText(details.getItemAt(selectedIndex, EVENT_HANDLER_DETAILS.EXCEPTION.name, "").toString());
+                            transactional.setText(details.getItemAt(selectedIndex, EVENT_HANDLER_DETAILS.TRANSACTIONAL.name, "").toString());
                     }
                 } catch (Exception exception) {
                     displayMessage("Failed to load data", "Could not display data for row " + selectedIndex, exception);

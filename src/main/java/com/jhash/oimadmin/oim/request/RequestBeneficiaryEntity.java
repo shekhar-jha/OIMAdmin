@@ -191,8 +191,7 @@ public class RequestBeneficiaryEntity {
         }
 
         public String toString() {
-            String value = "{ [" + getAction() + "]" + getName() + " : " + getValue() + " (" + getType() + ") [" + (hasChild() ? getChildAttributes() : "") + "]" + "}";
-            return value;
+            return "{ [" + getAction() + "]" + getName() + " : " + getValue() + " (" + getType() + ") [" + (hasChild() ? getChildAttributes() : "") + "]" + "}";
         }
     }
 }

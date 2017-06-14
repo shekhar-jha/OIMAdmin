@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.ObjectStreamClass;
 import java.lang.reflect.Constructor;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -316,8 +315,7 @@ public class OIMConnection extends AbstractConnection {
             try {
                 Thread.currentThread().setContextClassLoader(getOIMClass(version));
                 getClass("oracle.iam.request.vo.Request");
-                Request request = new Request(requestService.getClass().getMethod("getBasicRequestData", String.class).invoke(requestService, requestId), getOIMClass(version));
-                return request;
+                return new Request(requestService.getClass().getMethod("getBasicRequestData", String.class).invoke(requestService, requestId), getOIMClass(version));
             } finally {
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
             }
@@ -349,26 +347,7 @@ public class OIMConnection extends AbstractConnection {
     public PublicProcessImpl getOrchestration(Blob orchestrationObject) {
         ObjectInputStream ins = null;
         try {
-            ins = new ObjectInputStream(new GZIPInputStream(orchestrationObject.getBinaryStream())) {
-
-                @Override
-                protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
-                    Class<?> classObject = null;
-                    try {
-                        classObject = OIMConnection.this.getClass(desc.getName());
-                        logger.debug("Located class {} in OIM ClassLoader.", desc.getName());
-                    } catch (Exception exception) {
-
-                    }
-                    if (classObject == null) {
-                        logger.debug("Failed to locate class {} in OIM ClassLoader. Trying parent classloader.", desc.getName());
-                        return super.resolveClass(desc);
-                    }
-                    return classObject;
-                }
-            };
-
-            Object readObject = ins.readObject();
+            Object readObject = Utils.getObjectInputStream(new GZIPInputStream(orchestrationObject.getBinaryStream()), getClassLoader()).readObject();
             return new PublicProcessImpl(readObject, getOIMClass(version));
         } catch (Exception e) {
             throw new OIMAdminException("Failed to read process object from Blob " + orchestrationObject, e);

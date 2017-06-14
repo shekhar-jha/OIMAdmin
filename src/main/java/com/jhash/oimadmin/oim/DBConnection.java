@@ -35,8 +35,6 @@ public class DBConnection extends AbstractConnection {
     public static final String ATTR_DB_USER = "db_user";
     public static final String ATTR_DB_PWD = "db_pwd";
     public static final String ATTR_DB_AUTOCOMMIT = "db_auto_commit";
-    public static final String GET_ORCHESTRATION_PROCESS_DETAILS = "select * from ORCHPROCESS where ID = ?";
-    public static final String GET_ORCHESTRATION_PROCESS_EVENT_HANDLER_DETAILS = "select * from ORCHEVENTS where PROCESSID = ? order by orchorder";
     private static final Logger logger = LoggerFactory.getLogger(DBConnection.class);
     private Connection dbConnection;
 
@@ -81,7 +79,7 @@ public class DBConnection extends AbstractConnection {
         logger.debug("Initialized Database.");
     }
 
-    public OIMJMXWrapper.Details invokeSQL(String sqlID, Object... parameterValues) {
+    public Details invokeSQL(String sqlID, Object... parameterValues) {
         logger.trace("Trying to invoke SQL {} with parameters {}", sqlID, parameterValues);
         try (PreparedStatement preparedStatement = dbConnection.prepareStatement(sqlID)) {
             ParameterMetaData parameterMetaData = preparedStatement.getParameterMetaData();
@@ -113,7 +111,7 @@ public class DBConnection extends AbstractConnection {
                     }
                     resultData.add(record);
                 }
-                return new OIMJMXWrapper.Details(resultData, columnNames.toArray(new String[0]));
+                return new Details(resultData, columnNames.toArray(new String[0]));
             } catch (Exception exception) {
                 throw new OIMAdminException("Failed to read result", exception);
             }

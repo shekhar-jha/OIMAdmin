@@ -18,32 +18,33 @@ package com.jhash.oimadmin.ui;
 
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
-import com.jhash.oimadmin.oim.OIMJMXWrapper;
+import com.jhash.oimadmin.oim.eventHandlers.Manager;
+import com.jhash.oimadmin.oim.eventHandlers.OperationDetail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class EventHandlerTreeNode extends AbstractUIComponentTreeNode<OIMJMXWrapper.OperationDetail> implements DisplayableNode<EventHandlerDetails> {
+public class EventHandlerTreeNode extends AbstractUIComponentTreeNode<OperationDetail> implements DisplayableNode<EventHandlerDetails> {
 
     private static final Logger logger = LoggerFactory.getLogger(EventHandlerTreeNode.class);
-    private final OIMJMXWrapper.OperationDetail eventHandlerDetails;
-    private final OIMJMXWrapper connection;
+    private final OperationDetail eventHandlerDetails;
+    private final Manager eventHandlerManager;
     private EventHandlerDetails eventHandlerDetailsUI;
 
-    public EventHandlerTreeNode(String name, OIMJMXWrapper.OperationDetail eventHandlerDetails, OIMJMXWrapper connection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public EventHandlerTreeNode(Manager manager, OperationDetail eventHandlerDetails, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
         this.eventHandlerDetails = eventHandlerDetails;
-        this.connection = connection;
+        this.eventHandlerManager = manager;
     }
 
     @Override
     public void initializeComponent() {
         logger.debug("Initializing {}", this);
-        eventHandlerDetailsUI = new EventHandlerDetails(name, eventHandlerDetails, connection, configuration, selectionTree, displayArea);
+        eventHandlerDetailsUI = new EventHandlerDetails(eventHandlerManager, eventHandlerDetails, name, configuration, selectionTree, displayArea);
         logger.debug("Initialized {}", this);
     }
 
     @Override
-    public OIMJMXWrapper.OperationDetail getComponent() {
+    public OperationDetail getComponent() {
         return eventHandlerDetails;
     }
 

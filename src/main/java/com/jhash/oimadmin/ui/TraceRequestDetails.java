@@ -23,9 +23,7 @@ import com.jgoodies.jsdl.component.renderer.JGBooleanTableCellRenderer;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
-import com.jhash.oimadmin.oim.DBConnection;
-import com.jhash.oimadmin.oim.OIMConnection;
-import com.jhash.oimadmin.oim.OIMJMXWrapper;
+import com.jhash.oimadmin.oim.orch.OrchManager;
 import com.jhash.oimadmin.oim.request.*;
 import com.jidesoft.swing.JideScrollPane;
 import com.jidesoft.swing.JideTabbedPane;
@@ -45,11 +43,9 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
 
     private static final Logger logger = LoggerFactory.getLogger(TraceRequestDetails.class);
 
-    private final OIMConnection connection;
     private final boolean destroyOnClose;
-    private OIMJMXWrapper oimjmxWrapper;
-    private DBConnection dbConnection;
-    private JButton retrieve;
+    private final RequestManager requestManager;
+    private final OrchManager orchestrationManager;
     private JTextField beneficiaryType = UIUtils.createTextField();
     private JFormattedTextField creationDate = UIUtils.createDateField();
     private JTextField getDependsOnRequestId = UIUtils.createTextField();
@@ -81,13 +77,14 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
     private JPanel traceRequestUI;
 
 
-    public TraceRequestDetails(String name, OIMConnection connection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
-        this(name, false, connection, configuration, selectionTree, displayArea);
+    public TraceRequestDetails(RequestManager requestManager, OrchManager orchestrationManager, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+        this(requestManager, orchestrationManager, false, name, configuration, selectionTree, displayArea);
     }
 
-    public TraceRequestDetails(String name, boolean destroyOnClose, OIMConnection connection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public TraceRequestDetails(RequestManager requestManager, OrchManager orchManager, boolean destroyOnClose, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
-        this.connection = connection;
+        this.requestManager = requestManager;
+        this.orchestrationManager = orchManager;
         this.destroyOnClose = destroyOnClose;
     }
 
@@ -99,7 +96,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
 
     private void retrieveRequestDetails(String requestIDValue) {
         try {
-            Request request = connection.getRequestDetails(requestIDValue);
+            Request request = requestManager.getRequestDetails(requestIDValue);
 
             getRequestID.setText(request.getRequestID());
             getRequestKey.setValue(request.getRequestKey());
@@ -157,7 +154,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
             for (Request childRequest : request.getChildRequests()) {
                 childRequestTable.tableModel.addRow(new Object[]{childRequest.getRequestID(), childRequest.getRequestModelName(), childRequest.getRequestStatus()});
             }
-            orchestrationDetailPanel.loadDetail(request.getOrchID());
+            if (orchestrationDetailPanel != null) orchestrationDetailPanel.loadDetail(request.getOrchID());
             //request.getEventID();
         } catch (Exception exception) {
             displayMessage("Failed to load request details", "Failed to process request detail retrieval for " + requestIDValue, exception);
@@ -194,15 +191,11 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
         targetEntityValuesTable.tableModel.setRowCount(0);
         targetEntityAdditionalValuesTable.tableModel.setRowCount(0);
         childRequestTable.tableModel.setRowCount(0);
-        orchestrationDetailPanel.reset();
+        if (orchestrationDetailPanel != null) orchestrationDetailPanel.reset();
     }
 
     @Override
     public void initializeComponent() {
-        dbConnection = new DBConnection();
-        dbConnection.initialize(configuration);
-        oimjmxWrapper = new OIMJMXWrapper();
-        oimjmxWrapper.initialize(configuration);
         additionalAttributesTable = new DetailsTable(new String[]{"Name", "Type", "Value"}, this);
         approvalDataTable = new DetailsTable(new String[]{"Instance ID", "Key", "Stage", "Status"}, this);
         beneficiaryTable = new DetailsTable(new String[]{"Key", "Type", "Attributes", "Target Entities"}, this);
@@ -274,7 +267,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
 
         templateAttributesTable = new DetailsTable(new String[]{"Name", "Type", "Value", "Target"}, this);
         childRequestTable = new DetailsTable(new String[]{"ID", "Model Name", "Status"}, this);
-        retrieve = JGComponentFactory.getCurrent().createButton("Retrieve..");
+        JButton retrieve = JGComponentFactory.getCurrent().createButton("Retrieve..");
         retrieve.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -293,7 +286,6 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                 }
             }
         });
-        orchestrationDetailPanel = new OrchestrationDetailUI(dbConnection, oimjmxWrapper, connection, this).initialize();
         JPanel searchCriteria = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
                 .rows("2dlu, p")
                 .addLabel("Request ID").xy(2, 2).add(requestID).xy(4, 2).add(retrieve).xy(8, 2)
@@ -338,7 +330,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                         @Override
                         public void run() {
                             try {
-                                TraceRequestDetails childRequestDetails = new TraceRequestDetails("Request (" + requestId + ")", true, connection, configuration, selectionTree, displayArea);
+                                TraceRequestDetails childRequestDetails = new TraceRequestDetails(requestManager, orchestrationManager, true, "Request (" + requestId + ")", configuration, selectionTree, displayArea);
                                 childRequestDetails.initialize();
                                 childRequestDetails.retrieveRequestDetails(requestId);
                             } catch (Exception exception) {
@@ -380,7 +372,10 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                 .build();
         JideTabbedPane tabbedPane = new JideTabbedPane();
         tabbedPane.addTab("Request Detail", requestDetailPanel);
-        tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getUIComponent());
+        if (orchestrationManager != null) {
+            orchestrationDetailPanel = new OrchestrationDetailUI<>(orchestrationManager, this).initialize();
+            tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getUIComponent());
+        }
         tabbedPane.addTab("Approval Detail", approvalDetailPanel);
         traceRequestUI = new JPanel(new BorderLayout());
         traceRequestUI.add(searchCriteria, BorderLayout.NORTH);
@@ -395,14 +390,6 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
     @Override
     public void destroyComponent() {
         logger.debug("Destroying component {}", this);
-        if (dbConnection != null) {
-            dbConnection.destroy();
-            dbConnection = null;
-        }
-        if (oimjmxWrapper != null) {
-            oimjmxWrapper.destroy();
-            oimjmxWrapper = null;
-        }
         logger.debug("Destroyed component {}", this);
     }
 
@@ -449,7 +436,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                             List<?> targetEntities = (List) targetEntitiesObject;
                             for (Object targetEntity : targetEntities) {
                                 if (rowType.isAssignableFrom(targetEntity.getClass())) {
-                                    T entity = (T) targetEntity;
+                                    T entity = rowType.cast(targetEntity);
                                     Object[] rowDetails = extractor.getRowDetails(entity);
                                     childTable.tableModel.addRow(rowDetails);
                                 } else {

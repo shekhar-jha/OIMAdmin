@@ -19,12 +19,8 @@ package com.jhash.oimadmin.ui;
 import com.jgoodies.jsdl.common.builder.FormBuilder;
 import com.jgoodies.jsdl.component.JGComponentFactory;
 import com.jhash.oimadmin.Utils;
-import com.jhash.oimadmin.oim.DBConnection;
-import com.jhash.oimadmin.oim.OIMConnection;
-import com.jhash.oimadmin.oim.OIMJMXWrapper;
-import com.jhash.oimadmin.oim.orch.Event;
-import com.jhash.oimadmin.oim.orch.Orchestration;
-import com.jhash.oimadmin.oim.orch.PublicProcessImpl;
+import com.jhash.oimadmin.oim.Details;
+import com.jhash.oimadmin.oim.orch.*;
 import com.jidesoft.swing.JideScrollPane;
 import com.jidesoft.swing.JideTabbedPane;
 import org.slf4j.Logger;
@@ -35,21 +31,13 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
-import java.sql.Blob;
-import java.sql.Clob;
-import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class OrchestrationDetailUI<T extends JComponent> {
     private static final Logger logger = LoggerFactory.getLogger(OrchestrationDetailUI.class);
-    private final DBConnection dbConnection;
-    private final OIMJMXWrapper oimjmxWrapper;
-    private final OIMConnection connection;
     private final AbstractUIComponent<T> parent;
+    private final OrchManager orchestrationManager;
+
     private JTextField orcProcessID = UIUtils.createTextField();
     private JTextField orcProcessName = UIUtils.createTextField();
     private JTextField orcProcessECID = UIUtils.createTextField();
@@ -111,11 +99,9 @@ public class OrchestrationDetailUI<T extends JComponent> {
 
     private JPanel orchestrationDetailsUIPanel;
 
-    public OrchestrationDetailUI(DBConnection dbConnection, OIMJMXWrapper oimjmxWrapper, OIMConnection connection, AbstractUIComponent<T> parent) {
-        this.dbConnection = dbConnection;
-        this.oimjmxWrapper = oimjmxWrapper;
-        this.connection = connection;
+    public OrchestrationDetailUI(OrchManager orchestrationManager, AbstractUIComponent<T> parent) {
         this.parent = parent;
+        this.orchestrationManager = orchestrationManager;
     }
 
     public OrchestrationDetailUI initialize() {
@@ -140,8 +126,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
                             boolean compensate = compensateCancelled.isSelected();
                             boolean cascade = cascadeCancelled.isSelected();
                             logger.trace("Trying to invoke cancel method with parameters process id={}, compensate={}, cascade={}", new Object[]{processId, compensate, cascade});
-                            connection.executeOrchestrationOperation("cancel", new Class[]{long.class, boolean.class, boolean.class},
-                                    new Object[]{processId, compensate, cascade});
+                            orchestrationManager.cancel(processId, compensate, cascade);
                         } catch (Exception exception) {
                             parent.displayMessage("Orchestration Cancellation failed", "Failed to cancel orchestration process " + orcProcessIDValue, exception);
                         }
@@ -161,8 +146,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
                             orcProcessIDValue = orcProcessID.getText();
                             long processId = Long.parseLong(orcProcessIDValue);
                             logger.trace("Trying to invoke cancel method with parameters process id={}", new Object[]{processId});
-                            connection.executeOrchestrationOperation("cancelPendingFailedEvent", new Class[]{long.class},
-                                    new Object[]{processId});
+                            orchestrationManager.cancelPendingFailedEvent(processId);
                         } catch (Exception exception) {
                             parent.displayMessage("Orchestration cancellation failed", "Failed to cancel failed orchestration process " + orcProcessIDValue, exception);
                         }
@@ -170,9 +154,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
                 });
             }
         });
-        final Class<?> failedResponseClass = connection.getClass("oracle.iam.platform.kernel.vo.FailedEventResult$Response");
-        Object[] failedResponses = failedResponseClass.getEnumConstants();
-        final JComboBox<Object> responseResult = new JComboBox<>(failedResponses);
+        final JComboBox<Object> responseResult = new JComboBox<>(orchestrationManager.getAllowedResponsesForFailedEvent());
         JButton handleFailedButton = JGComponentFactory.getCurrent().createButton("Execute");
         handleFailedButton.addActionListener(new ActionListener() {
             @Override
@@ -186,11 +168,8 @@ public class OrchestrationDetailUI<T extends JComponent> {
                             orcProcessIDValue = orcProcessID.getText();
                             long processId = Long.parseLong(orcProcessIDValue);
                             response = responseResult.getSelectedItem();
-                            Class<?> failedEventResultClass = connection.getClass("oracle.iam.platform.kernel.vo.FailedEventResult");
-                            Object result = failedEventResultClass.getDeclaredConstructor(failedResponseClass).newInstance(response);
                             logger.trace("Trying to invoke handleFailed method with parameters process id={}, result=", new Object[]{processId, response});
-                            connection.executeOrchestrationOperation("handleFailed", new Class[]{long.class, failedEventResultClass},
-                                    new Object[]{processId, result});
+                            orchestrationManager.handleFailedEvent(processId, response);
                         } catch (Exception exception) {
                             parent.displayMessage("Failed to handle failed orchestration", "Failed to set response " + response + " on event " + orcProcessIDValue, exception);
                         }
@@ -198,7 +177,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
                 });
             }
         });
-        switch (oimjmxWrapper.getVersion()) {
+        switch (orchestrationManager.getVersion()) {
             case OIM11GR2PS2:
                 eventDetails = new TraceRequestDetails.DetailsTable(new String[]{"ID", "Name", "Status", "Stage",
                         "Retry", "Start Time", "End Time", "Error Code", "Error Message", "Result"}, parent);
@@ -295,7 +274,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
                 .build();
 
         JideTabbedPane orchestrationDetailTabbedPanel = new JideTabbedPane();
-        switch (oimjmxWrapper.getVersion()) {
+        switch (orchestrationManager.getVersion()) {
             case OIM11GR2PS2:
                 orchestrationDetailTabbedPanel.addTab("Orchestration Details", orchestrationDetailPanel);
                 orchestrationDetailTabbedPanel.addTab("Context", contextPanel);
@@ -343,7 +322,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
     }
 
     public void loadDetail(long orchestrationProcessID) {
-        switch (oimjmxWrapper.getVersion()) {
+        switch (orchestrationManager.getVersion()) {
             case OIM11GR2PS2:
                 loadDetailOIM11gR2PS2(orchestrationProcessID);
                 break;
@@ -357,7 +336,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
     public void loadDetailOIM11gR2PS3(long orchestrationProcessID) {
         Map<String, Object> values = new HashMap<>();
         try {
-            OIMJMXWrapper.Details result = dbConnection.invokeSQL(DBConnection.GET_ORCHESTRATION_PROCESS_DETAILS, orchestrationProcessID);
+            Details result = orchestrationManager.getOrchestrationProcessDetails(orchestrationProcessID);
             if (result.size() == 1) {
                 values = result.getItemAt(0);
             } else {
@@ -382,20 +361,22 @@ public class OrchestrationDetailUI<T extends JComponent> {
             orcProcessSeqEntity.setText("N/A for this version");
             orcProcessSequence.setText("N/A for this version");
             orcProcessECID.setText("N/A for this version");
-
-            orcProcessObjContextVal.setText((String) values.get("CONTEXTVAL"));
-            Object orchestrationObject = values.get("ORCHESTRATION");
-            if (orchestrationObject != null) {
-                if (orchestrationObject instanceof Blob) {
-                    Blob orchestrationBlob = (Blob) orchestrationObject;
-                    try {
-                        PublicProcessImpl process = connection.getOrchestration(orchestrationBlob);
-                        updateProcessDetails(process);
-                        Orchestration orchestration = (Orchestration) process.getTarget();
-                        updateOrchestrationDetails(orchestrationProcessID, orchestration);
+            orcProcessObjContextVal.setText((String) values.get(OrchManager.CONTEXT_VAL));
+            try {
+                PublicProcessImpl orchestrationObject = (PublicProcessImpl) values.get(OrchManager.ORCHESTRATION);
+                if (orchestrationObject != null) {
+                    updateProcessDetails(orchestrationObject);
+                    Object orchestrationData = orchestrationObject.getTarget();
+                    if (orchestrationData instanceof Orchestration) {
+                        updateOrchestrationDetails(orchestrationProcessID, (Orchestration) orchestrationData);
+                    } else {
+                        resetOrchestrationDetails();
+                    }
+                    List<Event> events = orchestrationObject.getEvents();
+                    if (events != null && events.size() > 0) {
                         try {
                             eventDetails.tableModel.setRowCount(0);
-                            for (Event record : process.getEvents()) {
+                            for (Event record : events) {
                                 eventDetails.tableModel.addRow(new Object[]{record.getOrder(), record.getEventId().getId(), record.getEventId().getName(),
                                         record.getOperation(), record.getStatus(), record.getStage(), record.isSync(), record.getHandlerClass(), record.getResult()});
                             }
@@ -403,16 +384,21 @@ public class OrchestrationDetailUI<T extends JComponent> {
                             parent.displayMessage("Failed to extract event details", "Failed to extract Orchestration Events for process ID " + orchestrationProcessID, exception);
                             resetEventDetails();
                         }
-                    } catch (Exception exception) {
-                        parent.displayMessage("Failed to extract process details", "Failed to extract process details for process ID " + orchestrationProcessID, exception);
-                        resetOrchestrationDetails();
-                        resetProcessDetails();
+                    } else {
                         resetEventDetails();
                     }
+                } else {
+                    if (values.containsKey(OrchManager.ORCHESTRATION_ERROR)) {
+                        parent.displayMessage("Orchestration extraction failed.", (String) values.get(OrchManager.ORCHESTRATION_ERROR), null);
+                    }
+                    resetProcessDetails();
+                    resetOrchestrationDetails();
+                    resetEventDetails();
                 }
-            } else {
-                resetProcessDetails();
+            } catch (Exception exception) {
+                parent.displayMessage("Failed to extract process details", "Failed to extract process details for process ID " + orchestrationProcessID, exception);
                 resetOrchestrationDetails();
+                resetProcessDetails();
                 resetEventDetails();
             }
         } catch (Exception exception) {
@@ -439,7 +425,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
         orcProcessOperation.setText("");
         orcProcessParentProcessID.setText("");
         orcProcessID.setText("");
-        switch (oimjmxWrapper.getVersion()) {
+        switch (orchestrationManager.getVersion()) {
             case OIM11GR2PS2:
                 orcProcessSeqEntity.setText("");
                 orcProcessSequence.setText("");
@@ -523,7 +509,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
     public void loadDetailOIM11gR2PS2(long orchestrationProcessID) {
         Map<String, Object> values = new HashMap<>();
         try {
-            OIMJMXWrapper.Details result = dbConnection.invokeSQL(DBConnection.GET_ORCHESTRATION_PROCESS_DETAILS, orchestrationProcessID);
+            Details result = orchestrationManager.getOrchestrationProcessDetails(orchestrationProcessID);
             if (result.size() == 1) {
                 values = result.getItemAt(0);
             } else {
@@ -540,7 +526,7 @@ public class OrchestrationDetailUI<T extends JComponent> {
         orcProcessEntityID.setText((String) values.get("ENTITYID"));
         orcProcessDeProcessID.setText(Utils.toString(values.get("DEPPROCESSID")));
         orcProcessCreatedOn.setText(Utils.toString(values.get("CREATEDON")));
-        orcProcessStatus.setText((String) values.get("STAGE"));
+        orcProcessStage.setText((String) values.get("STAGE"));
         orcProcessSeqEntity.setText((String) values.get("SEQENTITY"));
         orcProcessChangeType.setText((String) values.get("CHANGETYPE"));
         orcProcessRetry.setText(Utils.toString(values.get("RETRY")));
@@ -555,48 +541,19 @@ public class OrchestrationDetailUI<T extends JComponent> {
         orcProcessParentProcessID.setText(Utils.toString(values.get("PARENTPROCESSID")));
         orcProcessID.setText(Utils.toString(values.get("ID")));
         orcProcessName.setText("N/A for this version");
-        Object contextValObject = values.get("CONTEXTVAL");
-        if (contextValObject instanceof Clob) {
-            Clob contextVal = (Clob) contextValObject;
-            if (contextVal != null) {
-                try {
-                    orcProcessContextValue.setText(contextVal.getSubString(1, (int) contextVal.length()));
-                } catch (SQLException exception) {
-                    logger.warn("Failed to extract context value while processing result of orchestration process " + orchestrationProcessID, exception);
-                    orcProcessContextValue.setText("");
-                }
-            } else {
-                orcProcessContextValue.setText("");
+        orcProcessContextValue.setText((String) values.get(OrchManager.CONTEXT_VAL));
+        updateOrchestrationDetails(orchestrationProcessID, (Orchestration) values.get(OrchManager.ORCHESTRATION));
+        List<Event11gR2PS2> eventDetailsList = (List<Event11gR2PS2>) values.get(OrchManager.ORCH_EVENTS);
+        eventDetails.tableModel.setRowCount(0);
+        if (eventDetailsList != null && eventDetailsList.size() > 0) {
+            for (Event11gR2PS2 event11gR2PS2 : eventDetailsList) {
+                eventDetails.tableModel.addRow(new Object[]{event11gR2PS2.getID(), event11gR2PS2.getName(),
+                        event11gR2PS2.getStatus(), event11gR2PS2.getStage(), event11gR2PS2.getRetry(), event11gR2PS2.getStartTime(),
+                        event11gR2PS2.getEndTime(), event11gR2PS2.getErrorCode(), event11gR2PS2.getErrorMessage(), event11gR2PS2.getResult()});
             }
-        } else if (contextValObject != null) {
-            orcProcessContextValue.setText(contextValObject.toString());
         }
-        logger.debug("Trying to looking orchestration details for {}", orchestrationProcessID);
-        Orchestration orchestrationObject = null;
-        try {
-            orchestrationObject = connection.executeOrchestrationOperation("getOrchestration", new Class[]{long.class}, new Object[]{orchestrationProcessID});
-            updateOrchestrationDetails(orchestrationProcessID, orchestrationObject);
-        } catch (Exception exception) {
-            parent.displayMessage("Orchestration extraction failed", "Failed to extract Orchestration for process ID " + orchestrationProcessID, exception);
-            resetOrchestrationDetails();
-        }
-        try {
-            OIMJMXWrapper.Details resultValues = dbConnection.invokeSQL(DBConnection.GET_ORCHESTRATION_PROCESS_EVENT_HANDLER_DETAILS, orchestrationProcessID);
-            eventDetails.tableModel.setRowCount(0);
-            for (Object[] record : resultValues.getData()) {
-                Object data = null;
-                if (record[9] instanceof Blob) {
-                    File jarParentDirectory = Utils.getDirectoryContainingJarForClass("oracle.iam.platform.OIMClient");
-                    data = Utils.getObjectInputStream(((Blob) record[9]).getBinaryStream(),
-                            new File(jarParentDirectory, "oimclient.jar").toURI().toURL(),
-                            new File(jarParentDirectory, "iam-platform-kernel.jar").toURI().toURL()
-                    ).readObject();
-                }
-                eventDetails.tableModel.addRow(new Object[]{record[0], record[1], record[2], record[4], record[6], record[10], record[11], record[7], record[8], data});
-            }
-        } catch (Exception exception) {
-            parent.displayMessage("Failed to extract Orchestration", "Failed to extract Orchestration Events for process ID " + orchestrationProcessID, exception);
-            resetEventDetails();
+        if (values.containsKey(OrchManager.ORCHESTRATION_ERROR)) {
+            parent.displayMessage("Orchestration detail extraction failed.", (String) values.get(OrchManager.ORCHESTRATION_ERROR), null);
         }
     }
 
@@ -613,6 +570,8 @@ public class OrchestrationDetailUI<T extends JComponent> {
     }
 
     private void updateOrchestrationDetails(long orchestrationProcessID, Orchestration orchestrationObject) {
+        if (orchestrationObject == null)
+            resetOrchestrationDetails();
         try {
             logger.debug("Trying to looking orchestration details for {}", orchestrationProcessID);
             logger.debug("Retrieved orchestration details as {}", orchestrationObject);

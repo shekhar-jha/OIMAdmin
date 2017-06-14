@@ -26,7 +26,7 @@ import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
 import com.jhash.oimadmin.oim.OIMConnection;
-import com.jhash.oimadmin.oim.OIMJMXWrapper;
+import com.jhash.oimadmin.oim.eventHandlers.Manager;
 import com.jidesoft.swing.JideScrollPane;
 import com.jidesoft.swing.JideSplitPane;
 import com.jidesoft.swing.JideTabbedPane;
@@ -58,9 +58,9 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
             "Identifies the event handlers that will be executed in the compensation flow of the orchestration."
     };
     private static final Logger logger = LoggerFactory.getLogger(EventHandlerUI.class);
-    private final OIMJMXWrapper connection;
-    private final OIMConnection oimConnection;
 
+    private final Manager eventHandlerManager;
+    private final OIMConnection oimConnection;
     private JGTextField nameField = new JGTextField(20);
     private JLabel orcTargetLabel = new JLabel("oracle.iam.platform.kernel.vo.EntityOrchestration");
     private JCheckBox syncCheckBox = new JCheckBox();
@@ -76,9 +76,9 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
     private EventHandlerConfigurationPanel configurationPanel;
     private EventHandlerPackagePanel packagePanel;
 
-    public EventHandlerUI(String name, OIMJMXWrapper connection, OIMConnection oimConnection, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public EventHandlerUI(Manager manager, OIMConnection oimConnection, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
-        this.connection = connection;
+        this.eventHandlerManager = manager;
         this.oimConnection = oimConnection;
     }
 
@@ -106,8 +106,9 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
         orderField
                 .setToolTipText("Identifies the order (or sequence) in which the event handler is executed.\n Order value is in the scope of entity, operation, and stage. Order value for each event handler in this scope must be unique. If there is a conflict, then the order in which these conflicted event handlers are executed is arbitrary."
                         + "\nSupported values are FIRST (same as Integer.MIN_VALUE), LAST (same as Integer.MAX_VALUE), or a numeral.");
+        final Map<String, Set<String>> operationDetails = eventHandlerManager.getAvailableEventHandlers();
         final Set<String> entityNames = new HashSet<String>();
-        entityNames.addAll(OIMJMXWrapper.OperationDetail.getOperationDetails(connection).keySet());
+        entityNames.addAll(operationDetails.keySet());
         entityNames.add("ANY");
         String[] entityNamesArray = entityNames.toArray(new String[0]);
         entityType.setModel(new DefaultComboBoxModel<String>(entityNamesArray));
@@ -123,7 +124,6 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                 if (entityTypeSelected != null && entityNames.contains(entityTypeSelected)) {
                     try {
                         Set<String> operations = null;
-                        Map<String, Set<String>> operationDetails = OIMJMXWrapper.OperationDetail.getOperationDetails(connection);
                         if (operationDetails.containsKey(entityTypeSelected)) {
                             operations = operationDetails.get(entityTypeSelected);
                         } else {
@@ -451,29 +451,50 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
                     }
                 }
             });
-            registerPlugin.addActionListener(new ActionListener() {
+            if (oimConnection != null) {
+                registerPlugin.addActionListener(new ActionListener() {
 
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    try {
-                        oimConnection.registerPlugin(FileUtils.readFileToByteArray(new File(pluginFileLocationLabel.getText())));
-                    } catch (Exception exception) {
-                        displayMessage("Plugin registeration failed", "Failed to register plugin " + pluginFileLocationLabel.getText(), exception);
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        try {
+                            oimConnection.registerPlugin(FileUtils.readFileToByteArray(new File(pluginFileLocationLabel.getText())));
+                        } catch (Exception exception) {
+                            displayMessage("Plugin registration failed", "Failed to register plugin " + pluginFileLocationLabel.getText(), exception);
+                        }
                     }
-                }
-            });
-            unregisterPlugin.addActionListener(new ActionListener() {
+                });
+            } else {
+                registerPlugin.setEnabled(false);
+                registerPlugin.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        displayMessage("Plugin registration failed", "No OIM Connection is available to register plugin.", null);
+                    }
+                });
+            }
+            if (oimConnection != null) {
+                unregisterPlugin.addActionListener(new ActionListener() {
 
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    String pluginName = classNameText.getText();
-                    try {
-                        oimConnection.unregisterPlugin(pluginName);
-                    } catch (Exception exception) {
-                        displayMessage("Unregister plugin failed", "Failed to unregister plugin " + pluginName, exception);
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        String pluginName = classNameText.getText();
+                        try {
+                            oimConnection.unregisterPlugin(pluginName);
+                        } catch (Exception exception) {
+                            displayMessage("Unregister plugin failed", "Failed to unregister plugin " + pluginName, exception);
+                        }
                     }
-                }
-            });
+                });
+            } else {
+                unregisterPlugin.setEnabled(false);
+                unregisterPlugin.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        displayMessage("Unregister plugin failed", "No OIM Connection is available to unregister plugin " + classNameText.getText(), null);
+                    }
+                });
+
+            }
 
             packagePanel = FormBuilder.create().columns("right:pref, 3dlu, pref:grow")
                     .rows("p, 5dlu, p, 5dlu, p, 5dlu, p, 5dlu, p, 5dlu, p, 5dlu, p").border(Borders.DIALOG)

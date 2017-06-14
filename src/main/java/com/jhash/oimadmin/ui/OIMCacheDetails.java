@@ -21,7 +21,9 @@ import com.jgoodies.jsdl.component.JGComponentFactory;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
-import com.jhash.oimadmin.oim.OIMJMXWrapper;
+import com.jhash.oimadmin.oim.Details;
+import com.jhash.oimadmin.oim.cache.CacheManager;
+import com.jhash.oimadmin.oim.cache.CacheManager.OIM_CACHE_ATTRS;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +45,9 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
     private static final Logger logger = LoggerFactory.getLogger(OIMCacheDetails.class);
     private static final String DEFAULT_CACHE_CONFIG = "Default Cache Configuration";
 
-    private OIMJMXWrapper connection;
+    private final CacheManager cacheManager;
+    private final Map<OIM_CACHE_ATTRS, String> changedDefaultValues = new HashMap<>();
+    private final Map<OIM_CACHE_ATTRS, String> changedCategoryValues = new HashMap<>();
     private JCheckBox clustered = JGComponentFactory.getCurrent().createCheckBox("Is Cache clustered?");
     private JCheckBox enabled = JGComponentFactory.getCurrent().createCheckBox("Is Cache Enabled?");
     private JTextField expirationTime = JGComponentFactory.getCurrent().createTextField();
@@ -59,28 +63,25 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
     private JButton saveDefaultValues = JGComponentFactory.getCurrent().createButton("Save\u2026");
     private JButton saveCategoryValues = JGComponentFactory.getCurrent().createButton("Save\u2026");
     private JButton resetDefaultValues = JGComponentFactory.getCurrent().createButton("Reset");
-    private Map<OIMJMXWrapper.OIM_CACHE_ATTRS, String> changedDefaultValues = new HashMap<>();
-    private Map<OIMJMXWrapper.OIM_CACHE_ATTRS, String> changedCategoryValues = new HashMap<>();
 
     private JComponent cacheDetailUI;
 
-    public OIMCacheDetails(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public OIMCacheDetails(CacheManager cacheManager, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
+        this.cacheManager = cacheManager;
     }
 
     @Override
     public void initializeComponent() {
         logger.debug("Initializing {}", this);
-        connection = new OIMJMXWrapper();
-        connection.initialize(configuration);
         resetDefaultUI();
         clustered.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
-                    changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.CLUSTERED, "true");
+                    changedDefaultValues.put(OIM_CACHE_ATTRS.CLUSTERED, "true");
                 } else {
-                    changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.CLUSTERED, "false");
+                    changedDefaultValues.put(OIM_CACHE_ATTRS.CLUSTERED, "false");
                 }
             }
         });
@@ -88,103 +89,103 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
             @Override
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
-                    changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.ENABLED, "true");
+                    changedDefaultValues.put(OIM_CACHE_ATTRS.ENABLED, "true");
                 } else {
-                    changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.ENABLED, "false");
+                    changedDefaultValues.put(OIM_CACHE_ATTRS.ENABLED, "false");
                 }
             }
         });
         expirationTime.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.ExpirationTime, expirationTime.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.ExpirationTime, expirationTime.getText());
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.ExpirationTime, expirationTime.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.ExpirationTime, expirationTime.getText());
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.ExpirationTime, expirationTime.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.ExpirationTime, expirationTime.getText());
             }
         });
         threadLocalEnabled.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
-                    changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.ThreadLocalCacheEnabled, "true");
+                    changedDefaultValues.put(OIM_CACHE_ATTRS.ThreadLocalCacheEnabled, "true");
                 } else {
-                    changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.ThreadLocalCacheEnabled, "false");
+                    changedDefaultValues.put(OIM_CACHE_ATTRS.ThreadLocalCacheEnabled, "false");
                 }
             }
         });
         cacheProviderClass.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.Provider, cacheProviderClass.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.Provider, cacheProviderClass.getText());
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.Provider, cacheProviderClass.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.Provider, cacheProviderClass.getText());
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.Provider, cacheProviderClass.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.Provider, cacheProviderClass.getText());
             }
         });
         multiCastAddress.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.MulticastAddress, multiCastAddress.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.MulticastAddress, multiCastAddress.getText());
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.MulticastAddress, multiCastAddress.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.MulticastAddress, multiCastAddress.getText());
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.MulticastAddress, multiCastAddress.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.MulticastAddress, multiCastAddress.getText());
             }
         });
         multiCastConfig.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.MulticastConfig, multiCastConfig.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.MulticastConfig, multiCastConfig.getText());
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.MulticastConfig, multiCastConfig.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.MulticastConfig, multiCastConfig.getText());
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.MulticastConfig, multiCastConfig.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.MulticastConfig, multiCastConfig.getText());
             }
         });
         cacheSize.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.Size, cacheSize.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.Size, cacheSize.getText());
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.Size, cacheSize.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.Size, cacheSize.getText());
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                changedDefaultValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.Size, cacheSize.getText());
+                changedDefaultValues.put(OIM_CACHE_ATTRS.Size, cacheSize.getText());
             }
         });
-        final OIMJMXWrapper.Details cacheCategory = connection.getCacheCategories();
+        final Details cacheCategory = cacheManager.getCacheCategories();
         DefaultTableModel tableModel = new DefaultTableModel(cacheCategory.getData(), cacheCategory.getColumns()) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -195,26 +196,26 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
             @Override
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
-                    changedCategoryValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.ENABLED, "true");
+                    changedCategoryValues.put(OIM_CACHE_ATTRS.ENABLED, "true");
                 } else {
-                    changedCategoryValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.ENABLED, "false");
+                    changedCategoryValues.put(OIM_CACHE_ATTRS.ENABLED, "false");
                 }
             }
         });
         cacheCategoryExpires.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                changedCategoryValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.ExpirationTime, cacheCategoryExpires.getText());
+                changedCategoryValues.put(OIM_CACHE_ATTRS.ExpirationTime, cacheCategoryExpires.getText());
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                changedCategoryValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.ExpirationTime, cacheCategoryExpires.getText());
+                changedCategoryValues.put(OIM_CACHE_ATTRS.ExpirationTime, cacheCategoryExpires.getText());
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                changedCategoryValues.put(OIMJMXWrapper.OIM_CACHE_ATTRS.ExpirationTime, cacheCategoryExpires.getText());
+                changedCategoryValues.put(OIM_CACHE_ATTRS.ExpirationTime, cacheCategoryExpires.getText());
             }
         });
         cacheCategoryTable = JGComponentFactory.getCurrent().createReadOnlyTable(tableModel);
@@ -239,9 +240,9 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
                 Utils.executeAsyncOperation("Save Cache Defaults", new Runnable() {
                     @Override
                     public void run() {
-                        for (OIMJMXWrapper.OIM_CACHE_ATTRS cacheAttr : changedDefaultValues.keySet()) {
+                        for (OIM_CACHE_ATTRS cacheAttr : changedDefaultValues.keySet()) {
                             try {
-                                connection.setCacheDetails(null, cacheAttr, changedDefaultValues.get(cacheAttr));
+                                cacheManager.setCacheDetails(null, cacheAttr, changedDefaultValues.get(cacheAttr));
                             } catch (Exception exception) {
                                 displayMessage("Configuration update failed.", "Failed to set " + cacheAttr + " to " + changedDefaultValues.get(cacheAttr) + ". ", exception);
                             }
@@ -260,9 +261,9 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
                         try {
                             int selectedRow = cacheCategoryTable.getSelectedRow();
                             Map<String, Object> detail = cacheCategory.getItemAt(selectedRow);
-                            for (OIMJMXWrapper.OIM_CACHE_ATTRS cacheAttr : changedCategoryValues.keySet()) {
+                            for (OIM_CACHE_ATTRS cacheAttr : changedCategoryValues.keySet()) {
                                 String value = changedCategoryValues.get(cacheAttr);
-                                connection.setCacheDetails(detail, cacheAttr, value);
+                                cacheManager.setCacheDetails(detail, cacheAttr, value);
                                 switch (cacheAttr) {
                                     case ENABLED:
                                         cacheCategoryTable.setValueAt(value, selectedRow, 1);
@@ -298,18 +299,18 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
     }
 
     private void resetDefaultUI() {
-        clustered.setSelected(connection.<Boolean>getCacheDetails(OIMJMXWrapper.OIM_CACHE_ATTRS.CLUSTERED));
-        enabled.setSelected(connection.<Boolean>getCacheDetails(OIMJMXWrapper.OIM_CACHE_ATTRS.ENABLED));
-        expirationTime.setText(connection.<Integer>getCacheDetails(OIMJMXWrapper.OIM_CACHE_ATTRS.ExpirationTime).toString());
-        threadLocalEnabled.setSelected(connection.<Boolean>getCacheDetails(OIMJMXWrapper.OIM_CACHE_ATTRS.ThreadLocalCacheEnabled));
-        cacheProviderClass.setText(connection.<String>getCacheDetails(OIMJMXWrapper.OIM_CACHE_ATTRS.Provider));
-        multiCastAddress.setText(connection.<String>getCacheDetails(OIMJMXWrapper.OIM_CACHE_ATTRS.MulticastAddress));
-        multiCastConfig.setText(connection.<String>getCacheDetails(OIMJMXWrapper.OIM_CACHE_ATTRS.MulticastConfig));
-        cacheSize.setText(connection.<Integer>getCacheDetails(OIMJMXWrapper.OIM_CACHE_ATTRS.Size).toString());
+        clustered.setSelected(cacheManager.<Boolean>getCacheDetails(OIM_CACHE_ATTRS.CLUSTERED));
+        enabled.setSelected(cacheManager.<Boolean>getCacheDetails(OIM_CACHE_ATTRS.ENABLED));
+        expirationTime.setText(cacheManager.<Integer>getCacheDetails(OIM_CACHE_ATTRS.ExpirationTime).toString());
+        threadLocalEnabled.setSelected(cacheManager.<Boolean>getCacheDetails(OIM_CACHE_ATTRS.ThreadLocalCacheEnabled));
+        cacheProviderClass.setText(cacheManager.<String>getCacheDetails(OIM_CACHE_ATTRS.Provider));
+        multiCastAddress.setText(cacheManager.<String>getCacheDetails(OIM_CACHE_ATTRS.MulticastAddress));
+        multiCastConfig.setText(cacheManager.<String>getCacheDetails(OIM_CACHE_ATTRS.MulticastConfig));
+        cacheSize.setText(cacheManager.<Integer>getCacheDetails(OIM_CACHE_ATTRS.Size).toString());
     }
 
     private JComponent buildPanel() {
-        JPanel cacheDefaultUI = FormBuilder.create().columns("right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
+        return FormBuilder.create().columns("right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
                 .rows("p, 3dlu, p, 7dlu, p, 3dlu, p, 3dlu, p, 3dlu, p, 5dlu, p, 3dlu, p, 3dlu, p, 3dlu, p")
                 .add(enabled).xy(3, 1)
                 .addLabel("Default Time to Expire?").xy(5, 1).add(expirationTime).xy(7, 1)
@@ -325,7 +326,6 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
                 .add(cacheCategoryEnabled).xy(3, 15).addLabel("Time to Expire").xy(5, 15).add(cacheCategoryExpires).xy(7, 15)
                 .add(saveCategoryValues).xy(3, 17)
                 .build();
-        return cacheDefaultUI;
     }
 
     @Override
@@ -336,10 +336,6 @@ public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
     @Override
     public void destroyComponent() {
         logger.debug("Destroying {}", this);
-        if (connection != null) {
-            connection.destroy();
-            connection = null;
-        }
         logger.debug("Destroyed {}", this);
     }
 

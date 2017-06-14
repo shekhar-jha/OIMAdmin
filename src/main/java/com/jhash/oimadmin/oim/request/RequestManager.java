@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 Shekhar Jha
+ * Copyright 2015 Shekhar Jha
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,17 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.jhash.oimadmin;
 
-public class OIMAdminException extends RuntimeException {
+package com.jhash.oimadmin.oim.request;
 
-    private static final long serialVersionUID = 1L;
+import com.jhash.oimadmin.oim.OIMConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-    public OIMAdminException(String message, Exception exception) {
-        super(message, exception);
+public class RequestManager {
+
+    private static final Logger logger = LoggerFactory.getLogger(RequestManager.class);
+    private final OIMConnection oimConnection;
+
+    public RequestManager(OIMConnection oimConnection) {
+        this.oimConnection = oimConnection;
     }
 
-    public OIMAdminException(String message) {
-        super(message);
+
+    public Request getRequestDetails(String requestIDValue) {
+        return oimConnection.getRequestDetails(requestIDValue);
     }
 }

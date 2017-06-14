@@ -15,22 +15,21 @@
  */
 package com.jhash.oimadmin.oim;
 
+import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.Config.Configuration;
 import com.jhash.oimadmin.Config.PLATFORM;
 import com.jhash.oimadmin.Connection;
 import com.jhash.oimadmin.OIMAdminException;
+import com.jhash.oimadmin.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.management.MBeanServerConnection;
-import javax.management.ObjectName;
+import javax.management.ObjectInstance;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class JMXConnection extends AbstractConnection {
 
@@ -40,11 +39,13 @@ public class JMXConnection extends AbstractConnection {
     public static final String ATTR_JMX_USER = "jmx_user";
     public static final String ATTR_JMX_PWD = "jmx_pwd";
 
-    public static final String ATTR_WL_JMX_WLSERVERS = "com.bea:Name=DomainRuntimeService,Type=weblogic.management.mbeanservers.domainruntime.DomainRuntimeServiceMBean";
 
     private static final Logger logger = LoggerFactory.getLogger(JMXConnection.class);
-
+    private final Map<OIM_JMX_BEANS, ObjectInstance> beanCache = new HashMap<>();
+    private final Map<OIM_JMX_BEANS, List<ObjectInstance>> beanTypeCache = new HashMap<>();
     private JMXConnector jmxConnector = null;
+    private MBeanServerConnection serverConnection = null;
+    private Config.OIM_VERSION oimVersion = null;
 
     public JMXConnection() {
         STRING_REPRESENTATION = "JMXConnection:";
@@ -60,18 +61,20 @@ public class JMXConnection extends AbstractConnection {
             logger.debug("Created JMX Connector");
             String connectionId = jmxConnector.getConnectionId();
             STRING_REPRESENTATION = STRING_REPRESENTATION + "(Connection ID: " + connectionId + ")";
+            serverConnection = jmxConnector.getMBeanServerConnection();
+            isConnected = true;
         } catch (Exception exception) {
             throw new OIMAdminException("Failed to create JMX Connector while initializing JMX Connection " + this,
                     exception);
         }
-        isConnected = true;
+        oimVersion = OIMUtils.getVersion(this);
         logger.debug("Initialized JMX Connection");
     }
 
     private JMXConnector createJMXConnector(Configuration config) {
         logger.debug("Trying to create JMX Connector using configuration {}", config);
-        Map<String, Object> env = new HashMap<String, Object>();
-        JMXServiceURL serviceUrl = null;
+        Map<String, Object> env = new HashMap<>();
+        JMXServiceURL serviceUrl;
         String hostname = config.getProperty(ATTR_JMX_HOSTNAME);
         logger.debug("Host name ({})={}", ATTR_JMX_HOSTNAME, hostname);
         if (hostname == null || hostname.isEmpty())
@@ -92,7 +95,7 @@ public class JMXConnection extends AbstractConnection {
         switch (platform) {
             case WEBLOGIC:
                 String protocol = config.getProperty(ATTR_JMX_PROTOCOL, "t3");
-                int port = Integer.valueOf(portString).intValue();
+                int port = Integer.valueOf(portString);
                 String jndiroot = "/jndi/";
                 String mserver = "weblogic.management.mbeanservers.domainruntime";
                 try {
@@ -138,6 +141,7 @@ public class JMXConnection extends AbstractConnection {
                     throw new OIMAdminException("Failed to create JBoss JMX connection for connection " + name + ".",
                             exception);
                 }
+                break;
             default:
                 throw new UnsupportedOperationException("The platform " + platform + " is not supported.");
         }
@@ -167,41 +171,258 @@ public class JMXConnection extends AbstractConnection {
     }
 
     public MBeanServerConnection getConnection() {
-        if (!isConnected)
+        if (!isConnected || serverConnection == null)
             throw new IllegalStateException("The JMX Connection is not initialized");
-        try {
-            return jmxConnector.getMBeanServerConnection();
-        } catch (Exception exception) {
-            throw new OIMAdminException("Failed to get connection to JMX Server " + name, exception);
+        return serverConnection;
+    }
+
+    public Config.OIM_VERSION getVersion() {
+        return oimVersion;
+    }
+
+    private void initializeBeanCache() {
+        logger.trace("Initializing Bean cache for connection {}", this);
+        synchronized (beanCache) {
+            if (beanCache.isEmpty()) {
+                Set<ObjectInstance> allBeans;
+                try {
+                    allBeans = getConnection().queryMBeans(null, null);
+                } catch (Exception exception) {
+                    throw new OIMAdminException("Failed to get a list of all the beans ", exception);
+                }
+                for (ObjectInstance bean : allBeans) {
+                    try {
+                        String beanName = JMXUtils.getName(bean);
+                        String beanType = JMXUtils.getType(bean);
+                        if (beanName != null && OIM_JMX_BEANS.beanNames.contains(beanName)) {
+                            OIM_JMX_BEANS mappedBean = OIM_JMX_BEANS.beanMapping.get(beanName);
+                            if (mappedBean.type == null) {
+                                logger.trace("Located Bean {} for requested bean {} with name {}", new Object[]{bean, mappedBean, beanName});
+                                beanCache.put(mappedBean, bean);
+                            } else if (mappedBean.type.equals(beanType)) {
+                                logger.trace("Located Bean {} for requested bean {} with name {} & type {}", new Object[]{bean, mappedBean, beanName, beanType});
+                                beanCache.put(mappedBean, bean);
+                            } else {
+                                logger.trace("Ignoring bean {} since type {} != {} of bean {}", new Object[]{bean, beanType, mappedBean.type, mappedBean});
+                            }
+                        }
+                        if (beanType != null && OIM_JMX_BEANS.beanTypeNames.contains(beanType)) {
+                            OIM_JMX_BEANS mappedBean = OIM_JMX_BEANS.beanTypeMapping.get(beanType);
+                            logger.trace("Located Bean {} for requested bean {} of type {}", new Object[]{bean, mappedBean, beanType});
+                            List<ObjectInstance> beanList;
+                            if (beanTypeCache.containsKey(mappedBean)) {
+                                beanList = beanTypeCache.get(mappedBean);
+                            } else {
+                                beanList = new ArrayList<>();
+                                beanTypeCache.put(mappedBean, beanList);
+                            }
+                            beanList.add(bean);
+                        }
+                    } catch (Exception exception) {
+                        throw new OIMAdminException("Failed to process bean " + bean, exception);
+                    }
+                }
+            }
+        }
+        logger.trace("Initialized Bean cache for connection {}", this);
+    }
+
+    private List<ObjectInstance> getBeansOfType(OIM_JMX_BEANS jmxBeans) {
+        if (beanTypeCache.isEmpty()) {
+            initializeBeanCache();
+        }
+        if (!beanTypeCache.containsKey(jmxBeans)) {
+            Set<ObjectInstance> result = JMXUtils.getJMXBean(getConnection(), jmxBeans);
+            if (result.isEmpty()) {
+                return null;
+            } else {
+                List<ObjectInstance> resultAsList = new ArrayList<>(result);
+                beanTypeCache.put(jmxBeans, resultAsList);
+                if (result.size() == 1 && !Utils.isEmpty(jmxBeans.name)) {
+                    beanCache.put(jmxBeans, resultAsList.get(0));
+                }
+                if (Utils.isEmpty(jmxBeans.name)) {
+                    for (ObjectInstance resultItem : resultAsList) {
+                        beanCache.put(new OIM_JMX_BEANS(resultItem), resultItem);
+                    }
+                }
+            }
+        }
+        return beanTypeCache.get(jmxBeans);
+    }
+
+    private ObjectInstance getBean(OIM_JMX_BEANS jmxBean) {
+        if (beanCache.isEmpty()) {
+            initializeBeanCache();
+        }
+        if (!beanCache.containsKey(jmxBean)) {
+            Set<ObjectInstance> result = JMXUtils.getJMXBean(getConnection(), jmxBean);
+            if (result.isEmpty()) {
+                return null;
+            } else {
+                List<ObjectInstance> resultAsList = new ArrayList<>(result);
+                if (!Utils.isEmpty(jmxBean.type)) {
+                    beanTypeCache.put(jmxBean, resultAsList);
+                }
+                ObjectInstance resultValue = resultAsList.get(0);
+                beanCache.put(jmxBean, resultValue);
+            }
+        }
+        return beanCache.get(jmxBean);
+    }
+
+    public <T> T getValue(OIM_JMX_BEANS bean, String attributeName) {
+        if (bean == null || Utils.isEmpty(attributeName)) {
+            logger.info("Either bean {} or requested attribute {} is null", bean, attributeName);
+            return null;
+        }
+        ObjectInstance objectInstance = getBean(bean);
+        if (objectInstance == null) {
+            logger.warn("Could not locate the bean corresponding to {}", bean);
+            return null;
+        }
+        return (T) JMXUtils.getValue(getConnection(), objectInstance, attributeName);
+    }
+
+    public void setValue(OIM_JMX_BEANS bean, String attributeName, Object value) {
+        if (bean == null || Utils.isEmpty(attributeName)) {
+            logger.info("Either bean {} or attribute to set {} is null", bean, attributeName);
+            return;
+        }
+        ObjectInstance objectInstance = getBean(bean);
+        if (objectInstance == null) {
+            logger.warn("Could not locate the bean corresponding to {}", bean);
+            return;
+        }
+        JMXUtils.setValue(getConnection(), objectInstance, attributeName, value);
+    }
+
+    public Object invoke(JMX_BEAN_METHOD method, Object... parameterValues) {
+        if (method == null) {
+            logger.info("Method to invoke is null");
+            return null;
+        }
+        if (method.bean == null) {
+            logger.info("Bean associated with method {} to invoke is null", method);
+            return null;
+        }
+        ObjectInstance objectInstance = getBean(method.bean);
+        if (objectInstance == null) {
+            logger.warn("Could not locate the bean corresponding to {}", method.bean);
+            return null;
+        }
+        return JMXUtils.invoke(getConnection(), objectInstance, method.methodName, method.methodParameterClass, parameterValues);
+    }
+
+    public void invoke(final OIM_JMX_BEANS bean, ProcessBeanType processBean) {
+        if (bean == null) {
+            logger.info("No bean was provided for invocation of {}", processBean);
+            return;
+        }
+        if (bean.name == null) {
+            List<ObjectInstance> objectInstances = getBeansOfType(bean);
+            if (objectInstances != null) {
+                for (ObjectInstance objectInstance : objectInstances) {
+                    processBean.execute(new JMXUtils.ProcessingBeanImpl(getConnection(), objectInstance));
+                }
+            }
+        } else {
+            ObjectInstance objectInstance = getBean(bean);
+            processBean.execute(new JMXUtils.ProcessingBeanImpl(getConnection(), objectInstance));
+        }
+
+    }
+
+    public interface ProcessBeanType {
+
+        void execute(ProcessingBean bean);
+    }
+
+    public interface ProcessingBean {
+        OIM_JMX_BEANS getBean();
+
+        Object getValue(String attributeName);
+
+        void setValue(String attributeName, Object value);
+
+        Object invoke(JMX_BEAN_METHOD method, Object... parameterValues);
+    }
+
+    public static class OIM_JMX_BEANS {
+
+        private static final Set<String> beanNames = new HashSet<>();
+        private static final Set<String> beanTypeNames = new HashSet<>();
+        private static final Map<String, OIM_JMX_BEANS> beanMapping = new HashMap<>();
+        private static final Map<String, OIM_JMX_BEANS> beanTypeMapping = new HashMap<>();
+
+        public final String name;
+        public final String type;
+        private final String stringRepresentation;
+
+        public OIM_JMX_BEANS(String name) {
+            this(name, null);
+        }
+
+        public OIM_JMX_BEANS(ObjectInstance bean) {
+            this(JMXUtils.getName(bean), JMXUtils.getType(bean));
+        }
+
+        public OIM_JMX_BEANS(String name, String type) {
+            if (name == null && type == null)
+                throw new NullPointerException("JMX Bean definition can not have both name and type as null value");
+            this.name = name;
+            this.type = type;
+            if (name != null) {
+                OIM_JMX_BEANS.beanNames.add(name);
+                OIM_JMX_BEANS.beanMapping.put(name, this);
+            }
+            if (type != null) {
+                OIM_JMX_BEANS.beanTypeNames.add(type);
+                beanTypeMapping.put(type, this);
+            }
+            stringRepresentation = "JMX Bean [" + (name == null ? "" : name) + ":" + (type == null ? "" : type) + "]";
+        }
+
+        @Override
+        public String toString() {
+            return stringRepresentation;
+        }
+
+        @Override
+        public int hashCode() {
+            return stringRepresentation.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            return o instanceof OIM_JMX_BEANS && (this == o || stringRepresentation.equalsIgnoreCase(((OIM_JMX_BEANS) o).stringRepresentation));
+        }
+
+    }
+
+    public static class JMX_BEAN_METHOD {
+        final OIM_JMX_BEANS bean;
+        final String methodName;
+        final String[] methodParameterClass;
+        final String stringRepresentation;
+
+        public JMX_BEAN_METHOD(OIM_JMX_BEANS bean, String methodName) {
+            this(bean, methodName, new String[0]);
+        }
+
+        public JMX_BEAN_METHOD(OIM_JMX_BEANS bean, String methodName, String[] methodParameterClass) {
+            if (bean == null || methodName == null || methodParameterClass == null)
+                throw new NullPointerException("JMX Bean Method definition can not have null value");
+            this.bean = bean;
+            this.methodName = methodName;
+            this.methodParameterClass = methodParameterClass;
+            stringRepresentation = "JMX Bean Method [" + (bean.name == null ? "*:" + bean.type : bean.name) + "." + methodName + "()]";
+        }
+
+        @Override
+        public String toString() {
+            return stringRepresentation;
         }
     }
 
-    public Set<String> getRuntimeServers() {
-        logger.debug("Trying to get name of servers running in the JMX server domain");
-        Set<String> runtimeServerNames = new HashSet<String>();
-        logger.debug("Trying to get MBeanServerConnection connection");
-        MBeanServerConnection connection = getConnection();
-        logger.debug("Trying to get attribute ServerRuntimes for JMX Bean {} on connection {}", ATTR_WL_JMX_WLSERVERS,
-                connection);
-        try {
-            ObjectName[] serverRuntimeObjects = (ObjectName[]) (connection.getAttribute(new ObjectName(
-                    ATTR_WL_JMX_WLSERVERS), "ServerRuntimes"));
-            logger.debug("Trying to validate received runtime objects {}", serverRuntimeObjects);
-            if (serverRuntimeObjects != null && serverRuntimeObjects.length > 0) {
-                logger.debug("Processing all runtime objects");
-                for (ObjectName serverRuntimeObject : serverRuntimeObjects) {
-                    logger.debug("Trying to get attribute Name for JMX Bean {}", serverRuntimeObject);
-                    String name = (String) connection.getAttribute(serverRuntimeObject, "Name");
-                    logger.debug("Read attribute Name as {}", name);
-                    runtimeServerNames.add(name);
-                }
-                logger.debug("Processed all runtime objects");
-            } else {
-                logger.debug("No Runtime Objects were returned");
-            }
-        } catch (Exception exception) {
-            throw new OIMAdminException("Could not locate servers running in the JMX server domain", exception);
-        }
-        return runtimeServerNames;
-    }
 }

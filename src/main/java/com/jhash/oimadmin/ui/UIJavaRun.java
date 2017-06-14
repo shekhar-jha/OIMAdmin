@@ -156,7 +156,7 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
     }
 
     private JPanel buildPanel() {
-        JPanel panel = FormBuilder.create().columns("right:pref, 3dlu, pref:grow, 2dlu, pref")
+        return FormBuilder.create().columns("right:pref, 3dlu, pref:grow, 2dlu, pref")
                 .rows("p, 3dlu, [p,50dlu], 3dlu, [p,50dlu], 3dlu, p, 3dlu, p, 3dlu, [p,50dlu], 3dlu, p, 3dlu, p, 3dlu, p, 3dlu,p, 2dlu, fill:p:grow").border(Borders.DIALOG)
                 .addLabel("Main Class").xy(1, 1).add(mainClass).xyw(3, 1, 3)
                 .addLabel("VM Options").xy(1, 3).add(vmOptions).xyw(3, 3, 3)
@@ -170,7 +170,6 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
                 .add(input).xyw(1, 19, 5)
                 .add(new JideScrollPane(output)).xyw(1, 21, 5)
                 .build();
-        return panel;
     }
 
     public void setWorkingDirectory(String workingDirectory) {
