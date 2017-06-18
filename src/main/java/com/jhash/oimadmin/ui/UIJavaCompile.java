@@ -20,7 +20,6 @@ import com.jgoodies.jsdl.common.builder.FormBuilder;
 import com.jgoodies.jsdl.component.JGComponentFactory;
 import com.jgoodies.jsdl.component.JGTextField;
 import com.jhash.oimadmin.Config;
-import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
 import com.jidesoft.swing.JideScrollPane;
 import com.jidesoft.swing.JideSplitPane;
@@ -41,7 +40,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
 
-public class UIJavaCompile extends AbstractUIComponent<JPanel> {
+public class UIJavaCompile extends AbstractUIComponent<JPanel, UIJavaCompile> {
 
     private static final Logger logger = LoggerFactory.getLogger(UIJavaCompile.class);
     final JGTextField classNameText = new JGTextField();
@@ -54,8 +53,8 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel> {
     private JComboBox<String> sourceCodeSelector;
 
 
-    public UIJavaCompile(String name, String prefix, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
-        super(name, false, configuration, selectionTree, displayArea);
+    public UIJavaCompile(String name, String prefix, AbstractUIComponent parent) {
+        super(name, parent);
         templatePrefix = prefix + "-";
     }
 

@@ -31,28 +31,17 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
+public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel, TraceOrchestrationDetails> {
 
     private static final Logger logger = LoggerFactory.getLogger(TraceRequestDetails.class);
-    private final boolean destroyOnClose;
     private final OrchManager orchestrationManager;
     private JTextField orchestrationID = JGComponentFactory.getCurrent().createTextField();
     private OrchestrationDetailUI orchestrationDetailPanel;
     private JPanel traceOrchestrationUI;
 
     public TraceOrchestrationDetails(OrchManager orchManager, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
-        this(orchManager, false, name, configuration, selectionTree, displayArea);
-    }
-
-    public TraceOrchestrationDetails(OrchManager orchManager, boolean destroyOnClose, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
-        this.destroyOnClose = destroyOnClose;
         this.orchestrationManager = orchManager;
-    }
-
-    @Override
-    public boolean destroyComponentOnClose() {
-        return destroyOnClose;
     }
 
     @Override
@@ -82,9 +71,9 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel> {
                 .rows("2dlu, p")
                 .addLabel("Orchestration ID").xy(2, 2).add(orchestrationID).xy(4, 2).add(retrieve).xy(8, 2)
                 .build();
-        orchestrationDetailPanel = new OrchestrationDetailUI<>(orchestrationManager, this).initialize();
+        orchestrationDetailPanel = new OrchestrationDetailUI(orchestrationManager, this).initialize();
         JideTabbedPane tabbedPane = new JideTabbedPane();
-        tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getUIComponent());
+        tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getDisplayComponent());
         traceOrchestrationUI = new JPanel(new BorderLayout());
         traceOrchestrationUI.add(searchCriteria, BorderLayout.NORTH);
         traceOrchestrationUI.add(tabbedPane, BorderLayout.CENTER);

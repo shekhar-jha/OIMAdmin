@@ -36,7 +36,7 @@ import javax.swing.event.DocumentListener;
 import java.awt.event.*;
 import java.io.File;
 
-public class ConnectionDetails extends AbstractUIComponent<JPanel> {
+public class ConnectionDetails extends AbstractUIComponent<JPanel, ConnectionDetails> {
 
     private static final Logger logger = LoggerFactory.getLogger(ConnectionDetails.class);
 

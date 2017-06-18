@@ -31,7 +31,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Map;
 
-public class OIMClientUI extends AbstractUIComponent<JPanel> {
+public class OIMClientUI extends AbstractUIComponent<JPanel, OIMClientUI> {
 
     private static final Logger logger = LoggerFactory.getLogger(OIMClientUI.class);
     JButton compileButton = new JButton("Compile");
@@ -46,15 +46,10 @@ public class OIMClientUI extends AbstractUIComponent<JPanel> {
     }
 
     @Override
-    public boolean destroyComponentOnClose() {
-        return true;
-    }
-
-    @Override
     public void initializeComponent() {
         logger.debug("Initializing {}...", this);
         executeButton.setEnabled(false);
-        javaCompiler = new UIJavaCompile("Compile", "OIMClientSource", configuration, selectionTree, displayArea);
+        javaCompiler = new UIJavaCompile("Compile", "OIMClientSource", this);
         compileButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -78,7 +73,7 @@ public class OIMClientUI extends AbstractUIComponent<JPanel> {
                 });
             }
         });
-        javaRun = new UIJavaRun("Execute", configuration, selectionTree, displayArea);
+        javaRun = new UIJavaRun("Execute", this);
         executeButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -170,9 +165,10 @@ public class OIMClientUI extends AbstractUIComponent<JPanel> {
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         logger.trace("Processing action on menu {} ", newOIMClientMenuItem);
-                        OIMClientUI oimClientUI = new OIMClientUI("New OIM Client ...", configuration.getConnectionDetails(""), selectionTree, displayArea);
-                        oimClientUI.initialize();
-                        displayArea.add(oimClientUI);
+                        OIMClientUI oimClientUI = new OIMClientUI("New OIM Client ...",
+                                configuration.getConnectionDetails(""), selectionTree,
+                                displayArea).setDestroyComponentOnClose(true).initialize();
+                        // displayArea.add(oimClientUI);
                         logger.trace("Processed action on menu {} ", newOIMClientMenuItem);
                     }
                 });

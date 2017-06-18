@@ -22,9 +22,7 @@ import com.jgoodies.jsdl.component.JGComponentFactory;
 import com.jgoodies.jsdl.component.JGTable;
 import com.jgoodies.jsdl.component.JGTextArea;
 import com.jgoodies.jsdl.component.JGTextField;
-import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.OIMAdminException;
-import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
 import com.jidesoft.swing.JideButton;
 import com.jidesoft.swing.JideScrollPane;
@@ -44,7 +42,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class UIJavaRun extends AbstractUIComponent<JPanel> {
+public class UIJavaRun extends AbstractUIComponent<JPanel, UIJavaRun> {
 
     private static final Logger logger = LoggerFactory.getLogger(UIJavaRun.class);
 
@@ -62,8 +60,8 @@ public class UIJavaRun extends AbstractUIComponent<JPanel> {
     Process runningProcess;
     private JPanel uiJavaRunPanel;
 
-    public UIJavaRun(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
-        super(name, configuration, selectionTree, displayArea);
+    public UIJavaRun(String name, AbstractUIComponent parent) {
+        super(name, parent);
     }
 
     public String generateClassPath() {

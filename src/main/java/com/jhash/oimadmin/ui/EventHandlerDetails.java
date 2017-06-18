@@ -39,7 +39,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.Map;
 
-public class EventHandlerDetails extends AbstractUIComponent<JPanel> {
+public class EventHandlerDetails extends AbstractUIComponent<JPanel, EventHandlerDetails> {
 
     private static final Logger logger = LoggerFactory.getLogger(EventHandlerDetails.class);
 

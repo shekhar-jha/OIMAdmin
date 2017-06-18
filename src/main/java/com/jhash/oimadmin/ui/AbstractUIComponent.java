@@ -17,6 +17,7 @@
 package com.jhash.oimadmin.ui;
 
 import com.jhash.oimadmin.Config;
+import com.jhash.oimadmin.OIMAdminException;
 import com.jhash.oimadmin.UIComponent;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jidesoft.swing.JideButton;
@@ -33,31 +34,72 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
-public abstract class AbstractUIComponent<T extends JComponent> extends JPanel implements UIComponent<JComponent> {
+public abstract class AbstractUIComponent<T extends JComponent, W extends AbstractUIComponent<T, W>> extends JPanel implements UIComponent<JComponent> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractUIComponent.class);
     protected final String name;
     protected final Config.Configuration configuration;
     protected final UIComponentTree selectionTree;
     protected final DisplayArea displayArea;
-    protected final boolean publish;
-    protected JPanel displayComponent;
+    protected final AbstractUIComponent<?, ?> parent;
+    private final String internalRepresentation;
+    protected JComponent displayComponent;
     protected JPanel messageDisplayComponent;
     protected JPanel messagePanel;
+    protected boolean publish;
+    protected boolean destroyComponentOnClose = false;
     private COMPONENT_STATE status = COMPONENT_STATE.NOT_INITIALIZED;
+    private Deque<AbstractUIComponent<?, ?>> childComponents = new ArrayDeque<>();
 
     public AbstractUIComponent(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
-        this(name, true, configuration, selectionTree, displayArea);
-    }
-
-
-    public AbstractUIComponent(String name, boolean publish, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         this.name = name;
         this.configuration = configuration;
         this.selectionTree = selectionTree;
         this.displayArea = displayArea;
-        this.publish = publish;
+        parent = null;
+        setPublish(true);
+        internalRepresentation = "{COMPONENT: " + name + "[" + super.toString() + "]}";
+    }
+
+    public AbstractUIComponent(String name, AbstractUIComponent<?, ?> parent) {
+        this.name = name;
+        if (parent == null)
+            throw new OIMAdminException("No parent was provided for the component being created. Can not continue.");
+        this.configuration = parent.configuration;
+        this.selectionTree = parent.selectionTree;
+        this.displayArea = parent.displayArea;
+        this.parent = parent;
+        this.parent.registerEventListener(this);
+        setPublish(false);
+        internalRepresentation = parent.toString() + ">> {COMPONENT: " + name + "[" + super.toString() + "]}";
+    }
+
+    protected void registerEventListener(AbstractUIComponent childComponent) {
+        logger.debug("Registering event listener {}", childComponent);
+        if (childComponent == null)
+            return;
+        childComponents.addFirst(childComponent);
+        logger.debug("Registered event listener.");
+    }
+
+    protected void unRegisterEventListener(AbstractUIComponent childComponent) {
+        logger.debug("Unregister event listener {}", childComponent);
+        if (childComponent == null)
+            return;
+        childComponents.remove(childComponent);
+        logger.debug("Unregistered event listener.");
+    }
+
+    public void triggerEvent(AbstractUIComponent parent, COMPONENT_STATE parentState) {
+        logger.debug("Received event {} from {}", parentState, parent);
+        if (parentState == COMPONENT_STATE.INITIALIZATION_IN_PROGRESS && getStatus() == COMPONENT_STATE.NOT_INITIALIZED)
+            initialize();
+        if (parentState == COMPONENT_STATE.DESTRUCTION_IN_PROGRESS && getStatus() == COMPONENT_STATE.INITIALIZED)
+            destroy();
+        logger.debug("Processed event {} from {}", parentState, parent);
     }
 
     @Override
@@ -74,40 +116,61 @@ public abstract class AbstractUIComponent<T extends JComponent> extends JPanel i
         return status;
     }
 
-    public void setStatus(COMPONENT_STATE status) {
+    private void setStatus(COMPONENT_STATE status) {
         this.status = status;
+        this.triggerEvent(this, status);
+        for (AbstractUIComponent component : childComponents) {
+            component.triggerEvent(this, status);
+        }
     }
 
-    public boolean destroyComponentOnClose() {
-        return false;
+    public W setPublish(boolean publish) {
+        if (getStatus() == COMPONENT_STATE.NOT_INITIALIZED) {
+            this.publish = publish;
+            return (W) this;
+        } else {
+            throw new IllegalStateException("The component " + this + " status is " + getStatus()
+                    + ". setPublish can be called only if component is " + COMPONENT_STATE.NOT_INITIALIZED);
+        }
+    }
+
+    public boolean isDestroyComponentOnClose() {
+        return destroyComponentOnClose;
+    }
+
+    public W setDestroyComponentOnClose(boolean destroyComponentOnClose) {
+        this.destroyComponentOnClose = destroyComponentOnClose;
+        return (W) this;
     }
 
     @Override
-    public UIComponent initialize() {
+    public W initialize() {
         logger.debug("Trying to initialize UI Component");
-        if (getStatus() == COMPONENT_STATE.INITIALIZATION_IN_PROGRESS) {
+        COMPONENT_STATE status = getStatus();
+        if (status == COMPONENT_STATE.INITIALIZATION_IN_PROGRESS) {
             logger.warn("Trying to initialize UI Component {} which is already being initialized, ignoring the trigger", this);
-            return this;
+            return (W) this;
         }
-        if (getStatus() == COMPONENT_STATE.INITIALIZED) {
-            if (publish)
-                displayArea.add(this);
+        if (status == COMPONENT_STATE.INITIALIZED) {
             logger.debug("Nothing to do since component {} is already initialized.", this);
-            return this;
+        } else {
+            setStatus(COMPONENT_STATE.INITIALIZATION_IN_PROGRESS);
+            try {
+                initializeComponent();
+                setStatus(COMPONENT_STATE.INITIALIZED);
+            } catch (Exception exception) {
+                logger.warn("Failed to initialize the component " + this, exception);
+                logger.debug("Setting node status as ", COMPONENT_STATE.FAILED);
+                setStatus(COMPONENT_STATE.FAILED);
+            }
         }
-        setStatus(COMPONENT_STATE.INITIALIZATION_IN_PROGRESS);
-        try {
-            initializeComponent();
-            if (publish)
-                displayArea.add(this);
-            setStatus(COMPONENT_STATE.INITIALIZED);
-            logger.debug("Initialized UI Component");
-        } catch (Exception exception) {
-            logger.warn("Failed to initialize the component " + this, exception);
-            logger.debug("Setting node status as ", COMPONENT_STATE.FAILED);
-            setStatus(COMPONENT_STATE.FAILED);
+        if (publish) {
+            displayArea.add(this);
+        } else {
+            logger.debug("Not publishing the component.");
         }
-        return this;
+        logger.debug("Initialized UI Component");
+        return (W) this;
     }
 
     public abstract void initializeComponent();
@@ -115,24 +178,28 @@ public abstract class AbstractUIComponent<T extends JComponent> extends JPanel i
     public abstract void destroyComponent();
 
     @Override
-    public final synchronized JPanel getComponent() {
+    public final synchronized JComponent getComponent() {
         if (displayComponent == null) {
-            JPanel packagedComponent = new JPanel(new BorderLayout());
-            packagedComponent.add(getDisplayComponent(), BorderLayout.CENTER);
-            messagePanel = new JPanel(new BorderLayout());
-            JideButton closeButton = new JideButton("X");
-            closeButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    messageDisplayComponent.removeAll();
-                    displayComponent.remove(messagePanel);
-                    displayComponent.revalidate();
-                }
-            });
-            messageDisplayComponent = new JPanel(new VerticalLayout());
-            messagePanel.add(messageDisplayComponent, BorderLayout.CENTER);
-            messagePanel.add(closeButton, BorderLayout.EAST);
-            displayComponent = packagedComponent;
+            if (parent != null) {
+                displayComponent = getDisplayComponent();
+            } else {
+                JPanel packagedComponent = new JPanel(new BorderLayout());
+                packagedComponent.add(getDisplayComponent(), BorderLayout.CENTER);
+                messagePanel = new JPanel(new BorderLayout());
+                JideButton closeButton = new JideButton("X");
+                closeButton.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        messageDisplayComponent.removeAll();
+                        displayComponent.remove(messagePanel);
+                        displayComponent.revalidate();
+                    }
+                });
+                messageDisplayComponent = new JPanel(new VerticalLayout());
+                messagePanel.add(messageDisplayComponent, BorderLayout.CENTER);
+                messagePanel.add(closeButton, BorderLayout.EAST);
+                displayComponent = packagedComponent;
+            }
         }
         return displayComponent;
     }
@@ -140,39 +207,46 @@ public abstract class AbstractUIComponent<T extends JComponent> extends JPanel i
     public abstract T getDisplayComponent();
 
     public void displayMessage(String title, String message, Exception exception) {
-        if (messageDisplayComponent != null & messagePanel != null) {
-            synchronized (messageDisplayComponent) {
-                messageDisplayComponent.add(new JideLabel("<html><b>" + title + "</b></html>"));
-                messageDisplayComponent.add(new JSeparator(SwingConstants.HORIZONTAL));
-                final JideLabel messageLabel = new JideLabel(message);
-                if (exception != null) {
-                    messageLabel.setText(messageLabel.getText() + " Cause : " + exception.getCause());
-                    StringWriter exceptionAsStringWriter = new StringWriter();
-                    exception.printStackTrace(new PrintWriter(exceptionAsStringWriter));
-                    String exceptionStackTrace = exceptionAsStringWriter.toString();
-                    exceptionStackTrace = "<html>" + exceptionStackTrace.replace(System.lineSeparator(), "<br/>") + "</html>";
-                    messageLabel.setToolTipText(exceptionStackTrace);
-                }
-                messageDisplayComponent.add(messageLabel);
-                messageDisplayComponent.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseClicked(MouseEvent e) {
-                        super.mouseClicked(e);
-                        JOptionPane.showMessageDialog(AbstractUIComponent.this, messageLabel.getToolTipText(), messageLabel.getText(), JOptionPane.ERROR_MESSAGE);
-                    }
-                });
-                displayComponent.add(messagePanel, BorderLayout.NORTH);
-                displayComponent.revalidate();
-            }
+        if (parent != null) {
+            parent.displayMessage(title, message, exception);
         } else {
-            JOptionPane.showMessageDialog(this, message, title, JOptionPane.ERROR_MESSAGE);
+            if (messageDisplayComponent != null & messagePanel != null) {
+                synchronized (messageDisplayComponent) {
+                    messageDisplayComponent.add(new JideLabel("<html><b>" + title + "</b></html>"));
+                    messageDisplayComponent.add(new JSeparator(SwingConstants.HORIZONTAL));
+                    final JideLabel messageLabel = new JideLabel(message);
+                    if (exception != null) {
+                        messageLabel.setText(messageLabel.getText() + " Cause : " + exception.getCause());
+                        StringWriter exceptionAsStringWriter = new StringWriter();
+                        exception.printStackTrace(new PrintWriter(exceptionAsStringWriter));
+                        String exceptionStackTrace = exceptionAsStringWriter.toString();
+                        exceptionStackTrace = "<html>" + exceptionStackTrace.replace(System.lineSeparator(), "<br/>") + "</html>";
+                        messageLabel.setToolTipText(exceptionStackTrace);
+                    }
+                    messageDisplayComponent.add(messageLabel);
+                    messageDisplayComponent.addMouseListener(new MouseAdapter() {
+                        @Override
+                        public void mouseClicked(MouseEvent e) {
+                            super.mouseClicked(e);
+                            JOptionPane.showMessageDialog(AbstractUIComponent.this, messageLabel.getToolTipText(), messageLabel.getText(), JOptionPane.ERROR_MESSAGE);
+                        }
+                    });
+                    displayComponent.add(messagePanel, BorderLayout.NORTH);
+                    displayComponent.revalidate();
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, message, title, JOptionPane.ERROR_MESSAGE);
+            }
         }
-
     }
 
     @Override
     public void destroy() {
         logger.debug("Trying to destroy {}", this);
+        if (getStatus() == COMPONENT_STATE.DESTRUCTION_IN_PROGRESS) {
+            logger.warn("Trying to destroy UI Component {} which is already being destroyed, ignoring the trigger", this);
+            return;
+        }
         if (getStatus() == COMPONENT_STATE.INITIALIZED) {
             logger.debug("Component in {} state, setting status to {} before destroying", getStatus(), COMPONENT_STATE.DESTRUCTION_IN_PROGRESS);
             setStatus(COMPONENT_STATE.DESTRUCTION_IN_PROGRESS);
@@ -191,7 +265,34 @@ public abstract class AbstractUIComponent<T extends JComponent> extends JPanel i
         }
     }
 
-    public enum COMPONENT_STATE {
-        NOT_INITIALIZED, INITIALIZED, INITIALIZED_NO_OP, FAILED, INITIALIZATION_IN_PROGRESS, DESTRUCTION_IN_PROGRESS
+    @Override
+    public String toString() {
+        return internalRepresentation;
+    }
+
+    public static class COMPONENT_STATE<M> {
+        public static final COMPONENT_STATE NOT_INITIALIZED = new COMPONENT_STATE("NOT_INITIALIZED");
+        public static final COMPONENT_STATE INITIALIZED = new COMPONENT_STATE("INITIALIZED");
+        public static final COMPONENT_STATE INITIALIZED_NO_OP = new COMPONENT_STATE("INITIALIZED_NO_OP");
+        public static final COMPONENT_STATE FAILED = new COMPONENT_STATE("FAILED");
+        public static final COMPONENT_STATE INITIALIZATION_IN_PROGRESS = new COMPONENT_STATE("INITIALIZATION_IN_PROGRESS");
+        public static final COMPONENT_STATE DESTRUCTION_IN_PROGRESS = new COMPONENT_STATE("DESTRUCTION_IN_PROGRESS");
+
+        public final M stateDetails;
+        private final String name;
+
+        public COMPONENT_STATE(String name) {
+            this(name, null);
+        }
+
+        public COMPONENT_STATE(String name, M stateDetails) {
+            this.name = "COMPONENT STATE: " + name;
+            this.stateDetails = stateDetails;
+        }
+
+        @Override
+        public String toString() {
+            return name;
+        }
     }
 }

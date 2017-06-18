@@ -41,7 +41,7 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.util.*;
 
-public class EventHandlerUI extends AbstractUIComponent<JPanel> {
+public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> {
 
     public static final String[] EVENT_HANDLER_STAGES = {"", "preprocess", "action", "audit",
             "postprocess", "veto", "canceled"};
@@ -83,15 +83,9 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
     }
 
     @Override
-    public boolean destroyComponentOnClose() {
-        return true;
-    }
-
-    @Override
     public void initializeComponent() {
         logger.debug("Initializing {} ...", this);
-        javaCompiler = new UIJavaCompile("Source Code", "EventHandlerSource", configuration, selectionTree, displayArea);
-        javaCompiler.initialize();
+        javaCompiler = new UIJavaCompile("Source Code", "EventHandlerSource", this).initialize();
         nameField.setText("CustomEventHandler");
         nameField.setToolTipText("Name of event handler");
         orcTargetLabel
@@ -198,10 +192,9 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
         // operationType.setSelectedItem(associatedOperationSplitDetails[1]);
         eventHandlerTypes.setSelectedItem(EVENT_HANDLER_TYPES[0]);
         javaCompiler.classNameText.setText(classNameText.getText());
-        configurationPanel = new EventHandlerConfigurationPanel("Configure");
+        configurationPanel = new EventHandlerConfigurationPanel("Configure").setPublish(false).initialize();
         configurationPanel.initialize();
-        packagePanel = new EventHandlerPackagePanel("Package");
-        packagePanel.initialize();
+        packagePanel = new EventHandlerPackagePanel("Package").setPublish(false).initialize();
         eventHandlerUI = buildEventHandlerUI();
         logger.debug("Initialized {}", this);
     }
@@ -288,7 +281,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
         logger.debug("Destroyed  {}", this);
     }
 
-    public class EventHandlerConfigurationPanel extends AbstractUIComponent<JideSplitPane> {
+    public class EventHandlerConfigurationPanel extends AbstractUIComponent<JideSplitPane, EventHandlerConfigurationPanel> {
 
         JideSplitPane configurationSplitPane = new JideSplitPane(JideSplitPane.HORIZONTAL_SPLIT);
         private JTextArea pluginXMLTextArea = new JTextArea();
@@ -297,7 +290,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
         private JButton eventHandlerXMLGenerateButton = JGComponentFactory.getCurrent().createButton("Generate..");
 
         public EventHandlerConfigurationPanel(String name) {
-            super(name, false, EventHandlerUI.this.configuration, EventHandlerUI.this.selectionTree, EventHandlerUI.this.displayArea);
+            super(name, EventHandlerUI.this.configuration, EventHandlerUI.this.selectionTree, EventHandlerUI.this.displayArea);
         }
 
         @Override
@@ -361,7 +354,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
 
     }
 
-    public class EventHandlerPackagePanel extends AbstractUIComponent<JPanel> {
+    public class EventHandlerPackagePanel extends AbstractUIComponent<JPanel, EventHandlerPackagePanel> {
 
         JLabel jarFileLocationLabel = new JLabel();
         JLabel pluginFileLocationLabel = new JLabel();
@@ -379,7 +372,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel> {
 
 
         public EventHandlerPackagePanel(String name) {
-            super(name, false, EventHandlerUI.this.configuration, EventHandlerUI.this.selectionTree, EventHandlerUI.this.displayArea);
+            super(name, EventHandlerUI.this.configuration, EventHandlerUI.this.selectionTree, EventHandlerUI.this.displayArea);
         }
 
         @Override

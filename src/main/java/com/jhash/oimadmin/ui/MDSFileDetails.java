@@ -30,7 +30,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class MDSFileDetails extends AbstractUIComponent<JPanel> {
+public class MDSFileDetails extends AbstractUIComponent<JPanel, MDSFileDetails> {
 
     private static final Logger logger = LoggerFactory.getLogger(MDSFileDetails.class);
 

@@ -50,7 +50,7 @@ public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<Manager> 
         newEventHandlerMenu.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                EventHandlerUI eventHandlerUI = new EventHandlerUI(eventManager, oimConnection, "New EventHandler..", configuration, selectionTree, displayArea);
+                EventHandlerUI eventHandlerUI = new EventHandlerUI(eventManager, oimConnection, "New EventHandler..", configuration, selectionTree, displayArea).setDestroyComponentOnClose(true);
                 eventHandlerUI.initialize();
                 openedNewEventHandlers.add(eventHandlerUI);
                 displayArea.add(eventHandlerUI);

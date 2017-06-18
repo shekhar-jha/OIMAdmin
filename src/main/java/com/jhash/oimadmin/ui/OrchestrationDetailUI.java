@@ -33,9 +33,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.*;
 
-public class OrchestrationDetailUI<T extends JComponent> {
+public class OrchestrationDetailUI extends AbstractUIComponent<JPanel, OrchestrationDetailUI> {
+
     private static final Logger logger = LoggerFactory.getLogger(OrchestrationDetailUI.class);
-    private final AbstractUIComponent<T> parent;
     private final OrchManager orchestrationManager;
 
     private JTextField orcProcessID = UIUtils.createTextField();
@@ -99,12 +99,13 @@ public class OrchestrationDetailUI<T extends JComponent> {
 
     private JPanel orchestrationDetailsUIPanel;
 
-    public OrchestrationDetailUI(OrchManager orchestrationManager, AbstractUIComponent<T> parent) {
-        this.parent = parent;
+    public OrchestrationDetailUI(OrchManager orchestrationManager, AbstractUIComponent parent) {
+        super("Orchestration Details", parent);
         this.orchestrationManager = orchestrationManager;
     }
 
-    public OrchestrationDetailUI initialize() {
+    @Override
+    public void initializeComponent() {
         JPanel contextPanel = FormBuilder.create().columns("3dlu, right:pref, 3dlu, pref:grow, 7dlu, right:pref, 3dlu, pref:grow, 3dlu")
                 .rows("2dlu, fill:p:grow")
                 .add(new JideScrollPane(orcProcessContextValue)).xyw(2, 2, 7)
@@ -299,17 +300,25 @@ public class OrchestrationDetailUI<T extends JComponent> {
                 .addLabel("Created On").xy(2, 18).add(orcProcessCreatedOn).xy(4, 18).addLabel("Modified On").xy(6, 18).add(orcProcessModifiedOn).xy(8, 18)
                 .add(orchestrationDetailTabbedPanel).xyw(2, 20, 7)
                 .build();
-        return this;
     }
 
-    public JPanel getUIComponent() {
+    @Override
+    public JPanel getDisplayComponent() {
         return orchestrationDetailsUIPanel;
+    }
+
+    @Override
+    public void destroyComponent() {
+        logger.debug("Destroying component {}", this);
+        reset();
+        logger.debug("Destroyed component {}", this);
     }
 
     public void reset() {
         resetBaseDetails();
         resetProcessDetails();
         resetOrchestrationDetails();
+        resetEventDetails();
         orcProcessContextValue.setText("");
     }
 

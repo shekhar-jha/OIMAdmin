@@ -39,7 +39,7 @@ import java.io.FileWriter;
 import java.util.Date;
 import java.util.List;
 
-public class OIMPerformanceDetails extends AbstractUIComponent<JComponent> {
+public class OIMPerformanceDetails extends AbstractUIComponent<JComponent, OIMPerformanceDetails> {
 
     private static final Logger logger = LoggerFactory.getLogger(OIMPerformanceDetails.class);
     private final PerfManager performanceManager;

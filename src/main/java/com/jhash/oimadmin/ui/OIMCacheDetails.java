@@ -40,7 +40,7 @@ import java.awt.event.ItemListener;
 import java.util.HashMap;
 import java.util.Map;
 
-public class OIMCacheDetails extends AbstractUIComponent<JComponent> {
+public class OIMCacheDetails extends AbstractUIComponent<JComponent, OIMCacheDetails> {
 
     private static final Logger logger = LoggerFactory.getLogger(OIMCacheDetails.class);
     private static final String DEFAULT_CACHE_CONFIG = "Default Cache Configuration";

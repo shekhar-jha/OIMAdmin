@@ -39,11 +39,10 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
 
-public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
+public class TraceRequestDetails extends AbstractUIComponent<JPanel, TraceRequestDetails> {
 
     private static final Logger logger = LoggerFactory.getLogger(TraceRequestDetails.class);
 
-    private final boolean destroyOnClose;
     private final RequestManager requestManager;
     private final OrchManager orchestrationManager;
     private JTextField beneficiaryType = UIUtils.createTextField();
@@ -77,22 +76,11 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
     private JPanel traceRequestUI;
 
 
-    public TraceRequestDetails(RequestManager requestManager, OrchManager orchestrationManager, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
-        this(requestManager, orchestrationManager, false, name, configuration, selectionTree, displayArea);
-    }
-
-    public TraceRequestDetails(RequestManager requestManager, OrchManager orchManager, boolean destroyOnClose, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public TraceRequestDetails(RequestManager requestManager, OrchManager orchManager, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
         this.requestManager = requestManager;
         this.orchestrationManager = orchManager;
-        this.destroyOnClose = destroyOnClose;
     }
-
-    @Override
-    public boolean destroyComponentOnClose() {
-        return destroyOnClose;
-    }
-
 
     private void retrieveRequestDetails(String requestIDValue) {
         try {
@@ -330,8 +318,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
                         @Override
                         public void run() {
                             try {
-                                TraceRequestDetails childRequestDetails = new TraceRequestDetails(requestManager, orchestrationManager, true, "Request (" + requestId + ")", configuration, selectionTree, displayArea);
-                                childRequestDetails.initialize();
+                                TraceRequestDetails childRequestDetails = new TraceRequestDetails(requestManager, orchestrationManager, "Request (" + requestId + ")", configuration, selectionTree, displayArea).setDestroyComponentOnClose(true).initialize();
                                 childRequestDetails.retrieveRequestDetails(requestId);
                             } catch (Exception exception) {
                                 displayMessage("Failed to load child request detail", "Failed to load child request details for request " + requestId, exception);
@@ -373,8 +360,8 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel> {
         JideTabbedPane tabbedPane = new JideTabbedPane();
         tabbedPane.addTab("Request Detail", requestDetailPanel);
         if (orchestrationManager != null) {
-            orchestrationDetailPanel = new OrchestrationDetailUI<>(orchestrationManager, this).initialize();
-            tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getUIComponent());
+            orchestrationDetailPanel = new OrchestrationDetailUI(orchestrationManager, this).initialize();
+            tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getDisplayComponent());
         }
         tabbedPane.addTab("Approval Detail", approvalDetailPanel);
         traceRequestUI = new JPanel(new BorderLayout());

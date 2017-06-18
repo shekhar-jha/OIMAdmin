@@ -358,7 +358,7 @@ public class OIMAdmin extends JFrame {
                     if (uiComponentToObjectMap.containsKey(source)) {
                         UIComponent<? extends JComponent> uiComponentObject = uiComponentToObjectMap.get(source);
                         if (uiComponentObject instanceof AbstractUIComponent) {
-                            if (((AbstractUIComponent) uiComponentObject).destroyComponentOnClose()) {
+                            if (((AbstractUIComponent) uiComponentObject).isDestroyComponentOnClose()) {
                                 uiComponentObject.destroy();
                             } else {
                                 logger.trace("Component should not be destroyed on close. Just removing the component from display");
