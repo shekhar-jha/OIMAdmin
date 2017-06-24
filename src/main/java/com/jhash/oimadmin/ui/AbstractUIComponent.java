@@ -36,6 +36,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
+import java.util.Map;
 
 public abstract class AbstractUIComponent<T extends JComponent, W extends AbstractUIComponent<T, W>> extends JPanel implements UIComponent<JComponent> {
 
@@ -53,6 +55,7 @@ public abstract class AbstractUIComponent<T extends JComponent, W extends Abstra
     protected boolean destroyComponentOnClose = false;
     private COMPONENT_STATE status = COMPONENT_STATE.NOT_INITIALIZED;
     private Deque<AbstractUIComponent<?, ?>> childComponents = new ArrayDeque<>();
+    private Map<ID, Callback> callbacks = new HashMap<>();
 
     public AbstractUIComponent(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         this.name = name;
@@ -83,6 +86,23 @@ public abstract class AbstractUIComponent<T extends JComponent, W extends Abstra
             return;
         childComponents.addFirst(childComponent);
         logger.debug("Registered event listener.");
+    }
+
+    protected W registerCallback(ID id, Callback callback) {
+        logger.debug("Registering callback {}={}", id, callback);
+        if (callback != null && id != null) {
+            callbacks.put(id, callback);
+        }
+        logger.debug("Registered callback");
+        return (W) this;
+    }
+
+    public <I, O, CB extends Callback<I, O>> O executeCallback(ID<I, O, CB> id, I input) {
+        if (callbacks.containsKey(id)) {
+            return (O) callbacks.get(id).call(input);
+        } else {
+            return null;
+        }
     }
 
     protected void unRegisterEventListener(AbstractUIComponent childComponent) {
@@ -268,6 +288,18 @@ public abstract class AbstractUIComponent<T extends JComponent, W extends Abstra
     @Override
     public String toString() {
         return internalRepresentation;
+    }
+
+    public interface Callback<I, O> {
+
+        O call(I value);
+    }
+
+    public interface ID<I, O, T extends Callback<I, O>> {
+    }
+
+    public static class CLASS_ID<I, O, T extends Callback<I, O>> implements ID<I, O, T> {
+
     }
 
     public static class COMPONENT_STATE<M> {
