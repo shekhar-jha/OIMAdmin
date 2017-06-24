@@ -19,6 +19,9 @@ package com.jhash.oimadmin.ui;
 import com.jgoodies.jsdl.component.JGComponentFactory;
 
 import javax.swing.*;
+import javax.swing.text.JTextComponent;
+import java.util.Arrays;
+import java.util.List;
 
 public class UIUtils {
 
@@ -61,6 +64,74 @@ public class UIUtils {
         JCheckBox checkBox = JGComponentFactory.getCurrent().createCheckBox(value);
         checkBox.setEnabled(false);
         return checkBox;
+    }
+
+    public static class TextFieldCallback implements AbstractUIComponent.Callback<String, String> {
+
+        private final JTextComponent value;
+
+        public TextFieldCallback(JTextComponent item) {
+            value = item;
+        }
+
+        public String call() {
+            return call("");
+        }
+
+        @Override
+        public String call(String defaultValue) {
+            if (value == null)
+                return defaultValue;
+            return value.getText();
+        }
+    }
+
+    public static class ComboBoxCallback<T> implements AbstractUIComponent.Callback<T, T> {
+
+        private final JComboBox<T> value;
+        private final Class<T> returnType;
+
+        public ComboBoxCallback(JComboBox<T> value, Class<T> returnTypeClass) {
+            this.value = value;
+            this.returnType = returnTypeClass;
+        }
+
+        public T call() {
+            return call(null);
+        }
+
+        @Override
+        public T call(T defaultValue) {
+            Object selectedItem = value.getSelectedItem();
+            if (selectedItem == null)
+                return defaultValue;
+            if (returnType != null && returnType.isAssignableFrom(selectedItem.getClass()))
+                return returnType.cast(selectedItem);
+            else
+                return defaultValue;
+        }
+    }
+
+    public static class CheckBoxCallback<T> implements AbstractUIComponent.Callback<T, T> {
+        private final JCheckBox value;
+        private final List<T> mappedValue;
+
+        public CheckBoxCallback(JCheckBox value, T mappedValueTrue, T mappedValueFalse) {
+            this.value = value;
+            this.mappedValue = Arrays.asList(mappedValueTrue, mappedValueFalse);
+        }
+
+        @Override
+        public T call(T defaultValue) {
+            if (value == null)
+                return defaultValue;
+            boolean isSelected = value.isSelected();
+            if (isSelected)
+                return mappedValue.get(0);
+            else
+                return mappedValue.get(1);
+        }
+
     }
 
 }
