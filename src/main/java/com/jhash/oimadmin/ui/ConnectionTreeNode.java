@@ -24,6 +24,7 @@ import com.jhash.oimadmin.oim.cache.CacheManager;
 import com.jhash.oimadmin.oim.eventHandlers.Manager;
 import com.jhash.oimadmin.oim.orch.OrchManager;
 import com.jhash.oimadmin.oim.perf.PerfManager;
+import com.jhash.oimadmin.oim.plugins.PluginManager;
 import com.jhash.oimadmin.oim.request.RequestManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +84,10 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
         Manager eventManager = null;
         if (connections.contains(CONNECTION_TYPES.JMX)) {
             eventManager = new Manager(connections.getConnection(CONNECTION_TYPES.JMX));
-            selectionTree.addChildNode(this, new EventHandlersTreeNode(eventManager, connections.getConnection(CONNECTION_TYPES.OIM), "Event Handlers", configuration, selectionTree, displayArea));
+            PluginManager pluginManager = null;
+            if (connections.contains(CONNECTION_TYPES.OIM))
+                pluginManager = new PluginManager(connections.getConnection(CONNECTION_TYPES.OIM));
+            selectionTree.addChildNode(this, new EventHandlersTreeNode(eventManager, pluginManager, "Event Handlers", configuration, selectionTree, displayArea));
         }
         selectionTree.addChildNode(this, new OIMAdminTreeNode.OIMAdminTreeNodeNoAction("Scheduled Tasks", this, selectionTree));
         DummyAdminTreeNode cacheNode = new DummyAdminTreeNode("Cache", configuration, selectionTree, displayArea);

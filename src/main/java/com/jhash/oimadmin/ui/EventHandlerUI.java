@@ -25,8 +25,8 @@ import com.jgoodies.jsdl.component.JGTextField;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
-import com.jhash.oimadmin.oim.OIMConnection;
 import com.jhash.oimadmin.oim.eventHandlers.Manager;
+import com.jhash.oimadmin.oim.plugins.PluginManager;
 import com.jidesoft.swing.JideScrollPane;
 import com.jidesoft.swing.JideSplitPane;
 import com.jidesoft.swing.JideTabbedPane;
@@ -57,29 +57,40 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
             "Defines the event handlers for out-of-band orchestration flows, such as veto and cancel.",
             "Identifies the event handlers that will be executed in the compensation flow of the orchestration."
     };
+    public static final ID<String, String, UIUtils.TextFieldCallback> CLASSNAME = new CLASS_ID<>();
+    public static final ID<String, String, UIUtils.TextFieldCallback> NAME = new CLASS_ID<>();
+    public static final ID<String, String, UIUtils.ComboBoxCallback<String>> EVENT_HANDLERTYPE = new CLASS_ID<>();
+    public static final ID<String, String, UIUtils.ComboBoxCallback<String>> ENTITY_TYPE = new CLASS_ID<>();
+    public static final ID<String, String, UIUtils.ComboBoxCallback<String>> OPERATION_TYPE = new CLASS_ID<>();
+    public static final ID<String, String, UIUtils.ComboBoxCallback<String>> STAGE = new CLASS_ID<>();
+    public static final ID<String, String, UIUtils.TextFieldCallback> ORDER = new CLASS_ID<>();
+    public static final ID<String, String, UIUtils.CheckBoxCallback<String>> SYNC = new CLASS_ID<>();
+    public static final ID<String, String, Callback<String, String>> JAR_ROOT_FOLDER = new CLASS_ID<>();
+    public static final ID<String, String, UIUtils.TextFieldCallback> EVENT_HANDLER_DEF = new CLASS_ID<>();
+    public static final ID<String, String, UIUtils.TextFieldCallback> PLUGIN_DEFINITION = new CLASS_ID<>();
     private static final Logger logger = LoggerFactory.getLogger(EventHandlerUI.class);
 
     private final Manager eventHandlerManager;
-    private final OIMConnection oimConnection;
+    private final PluginManager pluginManager;
     private JGTextField nameField = new JGTextField(20);
     private JLabel orcTargetLabel = new JLabel("oracle.iam.platform.kernel.vo.EntityOrchestration");
     private JCheckBox syncCheckBox = new JCheckBox();
     private JCheckBox txCheckBox = new JCheckBox();
     private JGTextField classNameText = new JGTextField(80);
     private JGTextField orderField = new JGTextField(20);
-    private JComboBox<String> stageComboBox = new JComboBox<String>(EVENT_HANDLER_STAGES);
-    private JComboBox<String> entityType = new JComboBox<String>();
-    private JComboBox<String> operationType = new JComboBox<String>();
-    private JComboBox<String> eventHandlerTypes = new JComboBox<String>(EVENT_HANDLER_TYPES);
+    private JComboBox<String> stageComboBox = new JComboBox<>(EVENT_HANDLER_STAGES);
+    private JComboBox<String> entityType = new JComboBox<>();
+    private JComboBox<String> operationType = new JComboBox<>();
+    private JComboBox<String> eventHandlerTypes = new JComboBox<>(EVENT_HANDLER_TYPES);
     private JPanel eventHandlerUI;
     private UIJavaCompile javaCompiler;
     private EventHandlerConfigurationPanel configurationPanel;
     private EventHandlerPackagePanel packagePanel;
 
-    public EventHandlerUI(Manager manager, OIMConnection oimConnection, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
+    public EventHandlerUI(Manager manager, PluginManager pluginManager, String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
         this.eventHandlerManager = manager;
-        this.oimConnection = oimConnection;
+        this.pluginManager = pluginManager;
     }
 
     @Override
@@ -101,11 +112,11 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
                 .setToolTipText("Identifies the order (or sequence) in which the event handler is executed.\n Order value is in the scope of entity, operation, and stage. Order value for each event handler in this scope must be unique. If there is a conflict, then the order in which these conflicted event handlers are executed is arbitrary."
                         + "\nSupported values are FIRST (same as Integer.MIN_VALUE), LAST (same as Integer.MAX_VALUE), or a numeral.");
         final Map<String, Set<String>> operationDetails = eventHandlerManager.getAvailableEventHandlers();
-        final Set<String> entityNames = new HashSet<String>();
+        final Set<String> entityNames = new HashSet<>();
         entityNames.addAll(operationDetails.keySet());
         entityNames.add("ANY");
         String[] entityNamesArray = entityNames.toArray(new String[0]);
-        entityType.setModel(new DefaultComboBoxModel<String>(entityNamesArray));
+        entityType.setModel(new DefaultComboBoxModel<>(entityNamesArray));
         entityType
                 .setToolTipText("Identifies the type of entity the event handler is executed on. A value of ANY sets the event handler to execute on any entity.");
         operationType
@@ -117,14 +128,14 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
                 String entityTypeSelected = (String) entityType.getSelectedItem();
                 if (entityTypeSelected != null && entityNames.contains(entityTypeSelected)) {
                     try {
-                        Set<String> operations = null;
+                        Set<String> operations;
                         if (operationDetails.containsKey(entityTypeSelected)) {
                             operations = operationDetails.get(entityTypeSelected);
                         } else {
-                            operations = new HashSet<String>();
+                            operations = new HashSet<>();
                         }
                         operations.add("ANY");
-                        operationType.setModel(new DefaultComboBoxModel<String>(operations.toArray(new String[0])));
+                        operationType.setModel(new DefaultComboBoxModel<>(operations.toArray(new String[0])));
                     } catch (Exception exception) {
                         displayMessage("Entity Type selection failed", "Failed to load operation details associated with " + entityTypeSelected, exception);
                     }
@@ -192,9 +203,30 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
         // operationType.setSelectedItem(associatedOperationSplitDetails[1]);
         eventHandlerTypes.setSelectedItem(EVENT_HANDLER_TYPES[0]);
         javaCompiler.classNameText.setText(classNameText.getText());
-        configurationPanel = new EventHandlerConfigurationPanel("Configure").setPublish(false).initialize();
+        configurationPanel = new EventHandlerConfigurationPanel("Configure", this)
+                .registerCallback(CLASSNAME, new UIUtils.TextFieldCallback(classNameText))
+                .registerCallback(NAME, new UIUtils.TextFieldCallback(nameField))
+                .registerCallback(EVENT_HANDLERTYPE, new UIUtils.ComboBoxCallback<>(eventHandlerTypes, String.class))
+                .registerCallback(ENTITY_TYPE, new UIUtils.ComboBoxCallback<>(entityType, String.class))
+                .registerCallback(OPERATION_TYPE, new UIUtils.ComboBoxCallback<>(operationType, String.class))
+                .registerCallback(STAGE, new UIUtils.ComboBoxCallback<>(stageComboBox, String.class))
+                .registerCallback(ORDER, new UIUtils.TextFieldCallback(orderField))
+                .registerCallback(SYNC, new UIUtils.CheckBoxCallback<>(syncCheckBox, "TRUE", "FALSE"))
+                .initialize();
         configurationPanel.initialize();
-        packagePanel = new EventHandlerPackagePanel("Package").setPublish(false).initialize();
+        packagePanel = new EventHandlerPackagePanel(pluginManager, "Package", this)
+                .registerCallback(CLASSNAME, new UIUtils.TextFieldCallback(classNameText))
+                .registerCallback(NAME, new UIUtils.TextFieldCallback(nameField))
+                .registerCallback(CLASSNAME, new UIUtils.TextFieldCallback(classNameText))
+                .registerCallback(EVENT_HANDLER_DEF, new UIUtils.TextFieldCallback(configurationPanel.eventHandlerXMLTextArea))
+                .registerCallback(PLUGIN_DEFINITION, new UIUtils.TextFieldCallback(configurationPanel.pluginXMLTextArea))
+                .registerCallback(JAR_ROOT_FOLDER, new Callback<String, String>() {
+                    @Override
+                    public String call(String value) {
+                        return javaCompiler.getOutputDirectory();
+                    }
+                })
+                .initialize();
         eventHandlerUI = buildEventHandlerUI();
         logger.debug("Initialized {}", this);
     }
@@ -281,7 +313,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
         logger.debug("Destroyed  {}", this);
     }
 
-    public class EventHandlerConfigurationPanel extends AbstractUIComponent<JideSplitPane, EventHandlerConfigurationPanel> {
+    public static class EventHandlerConfigurationPanel extends AbstractUIComponent<JideSplitPane, EventHandlerConfigurationPanel> {
 
         JideSplitPane configurationSplitPane = new JideSplitPane(JideSplitPane.HORIZONTAL_SPLIT);
         private JTextArea pluginXMLTextArea = new JTextArea();
@@ -289,8 +321,8 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
         private JTextArea eventHandlerXMLTextArea = new JTextArea(Utils.readFile("templates/eventHandlerxml"));
         private JButton eventHandlerXMLGenerateButton = JGComponentFactory.getCurrent().createButton("Generate..");
 
-        public EventHandlerConfigurationPanel(String name) {
-            super(name, EventHandlerUI.this.configuration, EventHandlerUI.this.selectionTree, EventHandlerUI.this.displayArea);
+        public EventHandlerConfigurationPanel(String name, AbstractUIComponent parent) {
+            super(name, parent);
         }
 
         @Override
@@ -304,7 +336,8 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     pluginXMLTextArea.setText(Utils.processString(pluginXMLTextArea.getText(), new String[][]{
-                            {"CLASSNAME", classNameText.getText()}, {"NAME", nameField.getText()}}));
+                            {"CLASSNAME", executeCallback(CLASSNAME, "")}, {"NAME", executeCallback(NAME, "")
+                    }}));
                 }
             });
             pluginXMLButtonPanel.add(pluginXMLGenerateButton);
@@ -320,14 +353,14 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
                 public void actionPerformed(ActionEvent e) {
                     eventHandlerXMLTextArea.setText(Utils.processString(eventHandlerXMLTextArea.getText(),
                             new String[][]{
-                                    {"CLASS_NAME", classNameText.getText()},
-                                    {"NAME", nameField.getText()},
-                                    {"EVENT_HANDLER", (String) eventHandlerTypes.getSelectedItem()},
-                                    {"ENTITY", (String) entityType.getSelectedItem()},
-                                    {"OPERATION", (String) operationType.getSelectedItem()},
-                                    {"STAGE", (String) stageComboBox.getSelectedItem()},
-                                    {"ORDER", orderField.getText()},
-                                    {"SYNC", (syncCheckBox.isSelected() ? "TRUE" : "FALSE")}}));
+                                    {"CLASS_NAME", executeCallback(CLASSNAME, "")},
+                                    {"NAME", executeCallback(NAME, "")},
+                                    {"EVENT_HANDLER", executeCallback(EVENT_HANDLERTYPE, "")},
+                                    {"ENTITY", executeCallback(ENTITY_TYPE, "")},
+                                    {"OPERATION", executeCallback(OPERATION_TYPE, "")},
+                                    {"STAGE", executeCallback(STAGE, "")},
+                                    {"ORDER", executeCallback(ORDER, "")},
+                                    {"SYNC", executeCallback(SYNC, "")}}));
                 }
             });
             eventHandlerXMLButtonPanel.add(eventHandlerXMLGenerateButton);
@@ -354,8 +387,9 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
 
     }
 
-    public class EventHandlerPackagePanel extends AbstractUIComponent<JPanel, EventHandlerPackagePanel> {
+    public static class EventHandlerPackagePanel extends AbstractUIComponent<JPanel, EventHandlerPackagePanel> {
 
+        private final PluginManager pluginManager;
         JLabel jarFileLocationLabel = new JLabel();
         JLabel pluginFileLocationLabel = new JLabel();
         JButton generateJarFromClass = JGComponentFactory.getCurrent().createButton("Generate Jar");
@@ -370,9 +404,9 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
         String eventHandlerPluginZip;
         String eventHandlerCodeJar;
 
-
-        public EventHandlerPackagePanel(String name) {
-            super(name, EventHandlerUI.this.configuration, EventHandlerUI.this.selectionTree, EventHandlerUI.this.displayArea);
+        public EventHandlerPackagePanel(PluginManager pluginManager, String name, AbstractUIComponent parent) {
+            super(name, parent);
+            this.pluginManager = pluginManager;
         }
 
         @Override
@@ -384,15 +418,16 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
 
                 @Override
                 public void actionPerformed(ActionEvent e) {
+                    String rootDirectory = executeCallback(JAR_ROOT_FOLDER, null);
                     try {
                         File eventHandlerCodeJarFile = new File(eventHandlerCodeJar);
                         if (eventHandlerCodeJarFile.exists()) {
                             FileUtils.forceDelete(eventHandlerCodeJarFile);
                         }
-                        Utils.createJarFileFromDirectory(javaCompiler.getOutputDirectory(), eventHandlerCodeJar);
+                        Utils.createJarFileFromDirectory(rootDirectory, eventHandlerCodeJar);
                         jarFileLocationLabel.setText(eventHandlerCodeJar);
                     } catch (Exception exception) {
-                        displayMessage("Packaging Event handler jar Failed", "Failed to create jar " + eventHandlerCodeJar + " with Event Handler code available in " + javaCompiler.getOutputDirectory() + " directory", exception);
+                        displayMessage("Packaging Event handler jar Failed", "Failed to create jar " + eventHandlerCodeJar + " with Event Handler code available in " + rootDirectory + " directory", exception);
                     }
                 }
             });
@@ -432,11 +467,11 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
                             FileUtils.forceDelete(eventHandlerPluginZipFile);
                         }
                         Map<String, byte[]> content = new HashMap<String, byte[]>();
-                        content.put("plugin.xml", configurationPanel.pluginXMLTextArea.getText().getBytes());
+                        content.put("plugin.xml", executeCallback(PLUGIN_DEFINITION, "").getBytes());
                         File eventHandlerJarFile = new File(jarFileLocationLabel.getText());
                         content.put("lib/EventHandler.jar", FileUtils.readFileToByteArray(eventHandlerJarFile));
-                        String eventHandlerDetailFile = "META-INF/" + nameField.getText() + ".xml";
-                        content.put(eventHandlerDetailFile, configurationPanel.eventHandlerXMLTextArea.getText().getBytes());
+                        String eventHandlerDetailFile = "META-INF/" + executeCallback(NAME, "") + ".xml";
+                        content.put(eventHandlerDetailFile, executeCallback(EVENT_HANDLER_DEF, "").getBytes());
                         Utils.createJarFileFromContent(content, new String[]{"plugin.xml", "lib/EventHandler.jar", eventHandlerDetailFile}, eventHandlerPluginZip);
                         pluginFileLocationLabel.setText(eventHandlerPluginZip);
                     } catch (Exception exception) {
@@ -444,13 +479,13 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
                     }
                 }
             });
-            if (oimConnection != null) {
+            if (pluginManager != null) {
                 registerPlugin.addActionListener(new ActionListener() {
 
                     @Override
                     public void actionPerformed(ActionEvent e) {
                         try {
-                            oimConnection.registerPlugin(FileUtils.readFileToByteArray(new File(pluginFileLocationLabel.getText())));
+                            pluginManager.registerPlugin(FileUtils.readFileToByteArray(new File(pluginFileLocationLabel.getText())));
                         } catch (Exception exception) {
                             displayMessage("Plugin registration failed", "Failed to register plugin " + pluginFileLocationLabel.getText(), exception);
                         }
@@ -465,14 +500,14 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
                     }
                 });
             }
-            if (oimConnection != null) {
+            if (pluginManager != null) {
                 unregisterPlugin.addActionListener(new ActionListener() {
 
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        String pluginName = classNameText.getText();
+                        String pluginName = executeCallback(CLASSNAME, null);
                         try {
-                            oimConnection.unregisterPlugin(pluginName);
+                            pluginManager.unregisterPlugin(pluginName);
                         } catch (Exception exception) {
                             displayMessage("Unregister plugin failed", "Failed to unregister plugin " + pluginName, exception);
                         }
@@ -483,7 +518,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
                 unregisterPlugin.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent e) {
-                        displayMessage("Unregister plugin failed", "No OIM Connection is available to unregister plugin " + classNameText.getText(), null);
+                        displayMessage("Unregister plugin failed", "No OIM Connection is available to unregister plugin " + executeCallback(CLASSNAME, "Not provided"), null);
                     }
                 });
 
@@ -509,7 +544,11 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
                 try {
                     File eventHandlerCodeJarFile = new File(eventHandlerCodeJar);
                     if (eventHandlerCodeJarFile.exists() && eventHandlerCodeJarFile.isFile()) {
-                        eventHandlerCodeJarFile.delete();
+                        if (eventHandlerCodeJarFile.delete()) {
+                            logger.debug("Successfully deleted file {}", eventHandlerCodeJarFile);
+                        } else {
+                            logger.warn("Failed to delete file {}", eventHandlerCodeJarFile);
+                        }
                     }
                 } catch (Exception exception) {
                     logger.warn("Could not delete jar file " + eventHandlerCodeJar + " that contains event handler's compiled code", exception);
@@ -520,7 +559,11 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
                 try {
                     File eventHandlerPluginZipFile = new File(eventHandlerPluginZip);
                     if (eventHandlerPluginZipFile.exists() && eventHandlerPluginZipFile.isFile()) {
-                        eventHandlerPluginZipFile.delete();
+                        if (eventHandlerPluginZipFile.delete()) {
+                            logger.debug("Successfully deleted file {}", eventHandlerPluginZipFile);
+                        } else {
+                            logger.warn("Failed to delete file {}", eventHandlerPluginZipFile);
+                        }
                     }
                 } catch (Exception exception) {
                     logger.warn("Could not delete event handler plugin zip file " + eventHandlerPluginZip, exception);

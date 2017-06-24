@@ -19,9 +19,9 @@ package com.jhash.oimadmin.ui;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
-import com.jhash.oimadmin.oim.OIMConnection;
 import com.jhash.oimadmin.oim.eventHandlers.Manager;
 import com.jhash.oimadmin.oim.eventHandlers.OperationDetail;
+import com.jhash.oimadmin.oim.plugins.PluginManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +41,7 @@ public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<Manager> 
     private final Manager eventManager;
     private Set<OperationDetail> operations;
 
-    public EventHandlersTreeNode(final Manager eventManager, final OIMConnection oimConnection, String name, final Config.Configuration configuration, final UIComponentTree selectionTree, final DisplayArea displayArea) {
+    public EventHandlersTreeNode(final Manager eventManager, final PluginManager pluginManager, String name, final Config.Configuration configuration, final UIComponentTree selectionTree, final DisplayArea displayArea) {
         super(name, configuration, selectionTree, displayArea);
         this.eventManager = eventManager;
         eventHandlerMenu = new JPopupMenu();
@@ -50,7 +50,7 @@ public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<Manager> 
         newEventHandlerMenu.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                EventHandlerUI eventHandlerUI = new EventHandlerUI(eventManager, oimConnection, "New EventHandler..", configuration, selectionTree, displayArea).setDestroyComponentOnClose(true);
+                EventHandlerUI eventHandlerUI = new EventHandlerUI(eventManager, pluginManager, "New EventHandler..", configuration, selectionTree, displayArea).setDestroyComponentOnClose(true);
                 eventHandlerUI.initialize();
                 openedNewEventHandlers.add(eventHandlerUI);
                 displayArea.add(eventHandlerUI);
