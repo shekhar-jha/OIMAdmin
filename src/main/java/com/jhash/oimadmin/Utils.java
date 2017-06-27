@@ -19,14 +19,11 @@ import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.tools.*;
 import java.io.*;
 import java.lang.reflect.Method;
-import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.InvalidParameterException;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Map;
@@ -41,59 +38,8 @@ import java.util.zip.ZipOutputStream;
 public class Utils {
 
     public final static ThreadFactory threadFactory = Executors.defaultThreadFactory();
+    public static final String LINE_SEPARATOR = System.getProperty("line.separator");
     private static final Logger logger = LoggerFactory.getLogger(Utils.class);
-
-    public static DiagnosticCollector<JavaFileObject> compileJava(String className, String code,
-                                                                  String outputFileLocation) {
-        logger.trace("Entering compileJava({},{},{})", new Object[]{className, code, outputFileLocation});
-        File outputFileDirectory = new File(outputFileLocation);
-        logger.trace("Validating if the output location {} exists and is a directory", outputFileLocation);
-        if (outputFileDirectory.exists()) {
-            if (outputFileDirectory.isDirectory()) {
-                try {
-                    logger.trace("Deleting the directory and its content");
-                    FileUtils.deleteDirectory(outputFileDirectory);
-                } catch (IOException exception) {
-                    throw new OIMAdminException("Failed to delete directory " + outputFileLocation + " and its content",
-                            exception);
-                }
-            } else {
-                throw new InvalidParameterException("The location " + outputFileLocation + " was expected to be a directory but it is a file.");
-            }
-        }
-        logger.trace("Creating destination directory for compiled class file");
-        outputFileDirectory.mkdirs();
-
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        if (compiler == null) {
-            throw new NullPointerException("Failed to locate a java compiler. Please ensure that application is being run using JDK (Java Development Kit) and NOT JRE (Java Runtime Environment) ");
-        }
-        StandardJavaFileManager fileManager = compiler.getStandardFileManager(null, null, null);
-
-        Iterable<File> files = Arrays.asList(new File(outputFileLocation));
-        boolean success = false;
-        DiagnosticCollector<JavaFileObject> diagnostics = new DiagnosticCollector<JavaFileObject>();
-        try {
-            JavaFileObject javaFileObject = new InMemoryJavaFileObject(className, code);
-            fileManager.setLocation(StandardLocation.CLASS_OUTPUT, files);
-
-            JavaCompiler.CompilationTask task = compiler.getTask(null, fileManager, diagnostics,
-                    Arrays.asList("-source", "1.6", "-target", "1.6"), null,
-                    Arrays.asList(javaFileObject));
-            success = task.call();
-            fileManager.close();
-        } catch (Exception exception) {
-            throw new OIMAdminException("Failed to compile " + className, exception);
-        }
-
-        if (!success) {
-            logger.trace("Exiting compileJava(): Return Value {}", diagnostics);
-            return diagnostics;
-        } else {
-            logger.trace("Exiting compileJava(): Return Value null");
-            return null;
-        }
-    }
 
     public static String processString(String content, String[][] replacements) {
         if (replacements != null && replacements.length > 0) {
@@ -431,16 +377,4 @@ public class Utils {
 
     }
 
-    private static class InMemoryJavaFileObject extends SimpleJavaFileObject {
-        private String contents = null;
-
-        public InMemoryJavaFileObject(String className, String contents) throws Exception {
-            super(URI.create("string:///" + className.replace('.', '/') + Kind.SOURCE.extension), Kind.SOURCE);
-            this.contents = contents;
-        }
-
-        public CharSequence getCharContent(boolean ignoreEncodingErrors) throws IOException {
-            return contents;
-        }
-    }
 }

@@ -34,9 +34,9 @@ import java.util.Map;
 public class OIMClientUI extends AbstractUIComponent<JPanel, OIMClientUI> {
 
     private static final Logger logger = LoggerFactory.getLogger(OIMClientUI.class);
-    JButton compileButton = new JButton("Compile");
-    JButton executeButton = new JButton("Run..");
-    JPanel oimClientUI;
+    private JButton compileButton = new JButton("Compile");
+    private JButton executeButton = new JButton("Run..");
+    private JPanel oimClientUI;
     private JideTabbedPane compileAndRunControlPanel = new JideTabbedPane();
     private UIJavaCompile javaCompiler;
     private UIJavaRun javaRun;
@@ -49,28 +49,28 @@ public class OIMClientUI extends AbstractUIComponent<JPanel, OIMClientUI> {
     public void initializeComponent() {
         logger.debug("Initializing {}...", this);
         executeButton.setEnabled(false);
-        javaCompiler = new UIJavaCompile("Compile", "OIMClientSource", this);
+        javaCompiler = new UIJavaCompile("OIMClientSource", "Compile", this)
+                .registerCallback(UIJavaCompile.COMPILE_UPDATE, new Callback<Boolean, Object>() {
+                    @Override
+                    public Object call(Boolean successfulCompile) {
+                        if (successfulCompile) {
+                            executeButton.setEnabled(true);
+                            compileAndRunControlPanel.setSelectedComponent(javaRun.getComponent());
+                            javaRun.setWorkingDirectory(javaCompiler.getOutputDirectory());
+                        } else {
+                            executeButton.setEnabled(false);
+                        }
+                        compileButton.setEnabled(true);
+                        compileButton.setText("Compile");
+                        return null;
+                    }
+                });
         compileButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 compileButton.setText("Compiling...");
                 compileButton.setEnabled(false);
-                Utils.executeAsyncOperation("Compiling Java Client", new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            if (javaCompiler.compile()) {
-                                executeButton.setEnabled(true);
-                                compileAndRunControlPanel.setSelectedComponent(javaRun.getComponent());
-                                javaRun.setWorkingDirectory(javaCompiler.getOutputDirectory());
-                            }
-                        } catch (Exception exception) {
-                            displayMessage("Compilation failed", "Failed to compile source code", exception);
-                        }
-                        compileButton.setEnabled(true);
-                        compileButton.setText("Compile");
-                    }
-                });
+                javaCompiler.compile();
             }
         });
         javaRun = new UIJavaRun("Execute", this);

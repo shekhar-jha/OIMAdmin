@@ -21,6 +21,9 @@ import com.jgoodies.jsdl.component.JGComponentFactory;
 import com.jgoodies.jsdl.component.JGTextField;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.Utils;
+import com.jhash.oimadmin.oim.OIMConnection;
+import com.jhash.oimadmin.oim.code.CompileUnit;
+import com.jhash.oimadmin.oim.code.Java;
 import com.jidesoft.swing.JideScrollPane;
 import com.jidesoft.swing.JideSplitPane;
 import org.apache.commons.io.FileUtils;
@@ -30,9 +33,6 @@ import org.slf4j.LoggerFactory;
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.tools.Diagnostic;
-import javax.tools.DiagnosticCollector;
-import javax.tools.JavaFileObject;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -43,42 +43,52 @@ import java.util.ArrayList;
 public class UIJavaCompile extends AbstractUIComponent<JPanel, UIJavaCompile> {
 
     private static final Logger logger = LoggerFactory.getLogger(UIJavaCompile.class);
+    public static ID<Boolean, Object, Callback<Boolean, Object>> COMPILE_UPDATE = new CLASS_ID<>();
     final JGTextField classNameText = new JGTextField();
+    private final Java java = new Java();
+    private final String templatePrefix;
+    private final Config.OIM_VERSION oimVersion;
     private JTextArea sourceCode = JGComponentFactory.getCurrent().createTextArea();
     private JTextArea compileResultTextArea = JGComponentFactory.getCurrent().createReadOnlyTextArea();
     private JButton compileButton = JGComponentFactory.getCurrent().createButton("Compile..");
     private JPanel javaCompileUI;
     private String outputDirectory;
-    private String templatePrefix;
     private JComboBox<String> sourceCodeSelector;
+    private JComboBox<Config.OIM_VERSION> oimVersionSelector;
 
-
-    public UIJavaCompile(String name, String prefix, AbstractUIComponent parent) {
-        super(name, parent);
-        templatePrefix = prefix + "-";
+    public UIJavaCompile(String prefix, String name, AbstractUIComponent parent) {
+        this(null, prefix, name, parent);
     }
 
-    public boolean compile() {
-        boolean successfulCompile = false;
-        DiagnosticCollector<JavaFileObject> returnedValue = Utils.compileJava(classNameText.getText(),
-                sourceCode.getText(), outputDirectory);
+    public UIJavaCompile(Config.OIM_VERSION oimVersion, String prefix, String name, AbstractUIComponent parent) {
+        super(name, parent);
+        templatePrefix = prefix + "-";
+        this.oimVersion = oimVersion;
+    }
 
-        if (returnedValue != null) {
-            StringBuilder message = new StringBuilder();
-            for (Diagnostic<?> d : returnedValue.getDiagnostics()) {
-                switch (d.getKind()) {
-                    case ERROR:
-                        message.append("ERROR: " + d.toString() + "\n");
-                    default:
-                        message.append(d.toString() + "\n");
+    public void compile() {
+        compileButton.setText("Compiling...");
+        compileButton.setEnabled(false);
+        Utils.executeAsyncOperation("Compiling Java Client", new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    boolean successfulCompile = false;
+                    String result = java.compile(new CompileUnit(classNameText.getText(), sourceCode.getText()), outputDirectory);
+                    if (result != null) {
+                        compileResultTextArea.setText(result);
+                    } else {
+                        compileResultTextArea.setText("Compilation successful");
+                        successfulCompile = true;
+                    }
+                    executeCallback(COMPILE_UPDATE, successfulCompile);
+                } catch (Exception exception) {
+                    displayMessage("Compilation failed", "Failed to compile source code", exception);
                 }
+                compileButton.setEnabled(true);
+                compileButton.setText("Compile");
             }
-            compileResultTextArea.setText(message.toString());
-        } else {
-            compileResultTextArea.setText("Compilation successful");
-            successfulCompile = true;
-        }
-        return successfulCompile;
+        });
     }
 
     @Override
@@ -127,6 +137,21 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel, UIJavaCompile> {
                 sourceCodeSelector.setSelectedIndex(0);
             }
         }
+        Config.OIM_VERSION[] versions = Config.OIM_VERSION.values();
+        oimVersionSelector = new JComboBox<>(versions);
+        oimVersionSelector.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                java.util.List<File> classPath = OIMConnection.getClassPath(configuration, (Config.OIM_VERSION) oimVersionSelector.getSelectedItem());
+                logger.debug("Updating classpath to {}", classPath);
+                java.setClassPath(classPath);
+            }
+        });
+        if (oimVersion != null) {
+            oimVersionSelector.setSelectedItem(oimVersion);
+        } else {
+            oimVersionSelector.setSelectedItem(Config.OIM_VERSION.LATEST);
+        }
         compileButton.addActionListener(new ActionListener() {
 
             @Override
@@ -147,9 +172,10 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel, UIJavaCompile> {
         JPanel sourceCodeTextPanel = new JPanel(new BorderLayout());
         sourceCodeTextPanel.add(new JideScrollPane(sourceCode), BorderLayout.CENTER);
         JPanel sourceCodeTextButtonPanel = FormBuilder.create().columns("right:pref, 3dlu, pref:grow")
-                .rows("p, 2dlu, p, 2dlu")
+                .rows("p, 2dlu, p, 2dlu, p, 2dlu")
                 .addLabel("Class Name").xy(1, 1).add(classNameText).xy(3, 1)
                 .addLabel("Template").xy(1, 3).add(sourceCodeSelector == null ? new JLabel("Not Available") : sourceCodeSelector).xy(3, 3)
+                .addLabel("OIM Version").xy(1, 5).add(oimVersionSelector).xy(3, 5)
                 .build();
         sourceCodeTextPanel.add(sourceCodeTextButtonPanel, BorderLayout.NORTH);
         sourceCodeTextPanel.add(new JLabel(), BorderLayout.SOUTH);

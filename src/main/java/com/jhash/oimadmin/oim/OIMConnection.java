@@ -31,6 +31,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.lang.reflect.Constructor;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.Blob;
@@ -60,6 +61,79 @@ public class OIMConnection extends AbstractConnection {
 
     public OIMConnection() {
         STRING_REPRESENTATION = "OIMConnection:";
+    }
+
+    public static ClassLoader getOIMClass(Configuration config, Config.OIM_VERSION version) {
+        try {
+            if (!oimClientClassLoaders.containsKey(version)) {
+                synchronized (oimClientClassLoaders) {
+                    logger.debug("Locating Base Directory for OIM Classes for version {}", version);
+                    File oimBaseDirectory = null;
+                    File oimClientJar = new File(JrfUtils.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath());
+                    logger.debug("Located Path of Jar containing OIMClient as {}", oimClientJar);
+                    if (oimClientJar == null) {
+                        throw new NullPointerException("Failed to locate the path of OIMClient jar for version " + version);
+                    }
+                    oimBaseDirectory = oimClientJar.getParentFile();
+                    logger.debug("Located Base Directory as {}", oimBaseDirectory);
+                    if (oimBaseDirectory == null) {
+                        throw new NullPointerException("Failed to locate the base directory for libraries of OIM version " + version);
+                    }
+                    List<URL> jarLocations = new ArrayList<>();
+                    int index = 1;
+                    int missedIndex = 0;
+                    do {
+                        String jarLocationKey = "sysadmin.classpath.version." + version + ".url." + index++;
+                        String jarLocationValue = config.getProperty(jarLocationKey);
+                        if (!Utils.isEmpty(jarLocationValue)) {
+                            File jarLocationFile = new File(oimBaseDirectory, jarLocationValue);
+                            if (jarLocationFile.exists() && jarLocationFile.isFile() && jarLocationFile.canRead()) {
+                                logger.debug("Located Jar {} at {}", jarLocationValue, jarLocationFile);
+                                jarLocations.add(jarLocationFile.toURI().toURL());
+                            } else {
+                                logger.warn("Failed to locate Jar {} at {}", jarLocationValue, jarLocationFile);
+                            }
+                        } else {
+                            missedIndex++;
+                        }
+                    } while (missedIndex < 10);
+                    if (!jarLocations.isEmpty()) {
+                        logger.debug("System Classpath : {}", System.getProperty("java.class.path"));
+                        ClassLoader classLoader = new URLClassLoader(jarLocations.toArray(new URL[]{}));
+                        logger.info("Using CUSTOM class loader {} for version {}", classLoader, version);
+                        oimClientClassLoaders.put(version, classLoader);
+                    } else {
+                        ClassLoader classLoader = JrfUtils.class.getClassLoader();
+                        logger.info("Using DEFAULT class loader {} for version {}", classLoader, version);
+                        oimClientClassLoaders.put(version, classLoader);
+                    }
+                }
+            }
+            return oimClientClassLoaders.get(version);
+        } catch (Exception exception) {
+            throw new OIMAdminException("Failed to load OIM Client Class", exception);
+        }
+    }
+
+    public static List<File> getClassPath(Configuration config, Config.OIM_VERSION oimVersion) {
+        List<File> classPath = new ArrayList<>();
+        ClassLoader classLoader = getOIMClass(config, oimVersion);
+        if (classLoader != null) {
+            if (classLoader instanceof URLClassLoader) {
+                URL[] jarLocations = ((URLClassLoader) classLoader).getURLs();
+                if (jarLocations != null && jarLocations.length > 0) {
+                    for (URL jarLocation : jarLocations) {
+                        try {
+                            File jarFile = new File(jarLocation.toURI());
+                            classPath.add(jarFile);
+                        } catch (URISyntaxException exception) {
+                            logger.warn("Failed to create URI from URL " + jarLocation + " from class loader " + classLoader, exception);
+                        }
+                    }
+                }
+            }
+        }
+        return classPath;
     }
 
     public void initializeConnection(Configuration config) {
@@ -106,7 +180,7 @@ public class OIMConnection extends AbstractConnection {
         PLATFORM platform = PLATFORM.fromString(config.getProperty(Connection.ATTR_CONN_PLATFORM));
         Config.OIM_VERSION oimVersion = Config.OIM_VERSION.fromString(config.getProperty(ATTR_OIM_VERSION));
         try {
-            Class<?> oimClient = getOIMClass(oimVersion).loadClass("oracle.iam.platform.OIMClient");
+            Class<?> oimClient = getOIMClass(config, oimVersion).loadClass("oracle.iam.platform.OIMClient");
             logger.debug("Located OIM Client Class with classloader {} from {}", oimClient.getClassLoader(), oimClient.getProtectionDomain().getCodeSource().getLocation().toURI().getPath());
             Constructor<?> oimClientConstructor = oimClient.getConstructor(Hashtable.class);
             switch (platform) {
@@ -128,57 +202,7 @@ public class OIMConnection extends AbstractConnection {
     }
 
     public ClassLoader getClassLoader() {
-        return getOIMClass(version);
-    }
-
-    private ClassLoader getOIMClass(Config.OIM_VERSION version) {
-        try {
-            if (!oimClientClassLoaders.containsKey(version)) {
-                logger.debug("Locating Base Directory for OIM Classes for version {}", version);
-                File oimBaseDirectory = null;
-                File oimClientJar = new File(JrfUtils.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath());
-                logger.debug("Located Path of Jar containing OIMClient as {}", oimClientJar);
-                if (oimClientJar == null) {
-                    throw new NullPointerException("Failed to locate the path of OIMClient jar for version " + version);
-                }
-                oimBaseDirectory = oimClientJar.getParentFile();
-                logger.debug("Located Base Directory as {}", oimBaseDirectory);
-                if (oimBaseDirectory == null) {
-                    throw new NullPointerException("Failed to locate the base directory for libraries of OIM version " + version);
-                }
-                List<URL> jarLocations = new ArrayList<>();
-                int index = 1;
-                int missedIndex = 0;
-                do {
-                    String jarLocationKey = "sysadmin.classpath.version." + version + ".url." + index++;
-                    String jarLocationValue = config.getProperty(jarLocationKey);
-                    if (!Utils.isEmpty(jarLocationValue)) {
-                        File jarLocationFile = new File(oimBaseDirectory, jarLocationValue);
-                        if (jarLocationFile.exists() && jarLocationFile.isFile() && jarLocationFile.canRead()) {
-                            logger.debug("Located Jar {} at {}", jarLocationValue, jarLocationFile);
-                            jarLocations.add(jarLocationFile.toURI().toURL());
-                        } else {
-                            logger.warn("Failed to locate Jar {} at {}", jarLocationValue, jarLocationFile);
-                        }
-                    } else {
-                        missedIndex++;
-                    }
-                } while (missedIndex < 10);
-                if (!jarLocations.isEmpty()) {
-                    logger.debug("System Classpath : {}", System.getProperty("java.class.path"));
-                    ClassLoader classLoader = new URLClassLoader(jarLocations.toArray(new URL[]{}));
-                    logger.info("Using CUSTOM class loader {} for version {}", classLoader, version);
-                    oimClientClassLoaders.put(version, classLoader);
-                } else {
-                    ClassLoader classLoader = JrfUtils.class.getClassLoader();
-                    logger.info("Using DEFAULT class loader {} for version {}", classLoader, version);
-                    oimClientClassLoaders.put(version, classLoader);
-                }
-            }
-            return oimClientClassLoaders.get(version);
-        } catch (Exception exception) {
-            throw new OIMAdminException("Failed to load OIM Client Class", exception);
-        }
+        return getOIMClass(config, version);
     }
 
     public boolean login() {
@@ -195,7 +219,7 @@ public class OIMConnection extends AbstractConnection {
             logger.debug("Trying to login user {}", userName);
             ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
             try {
-                Thread.currentThread().setContextClassLoader(getOIMClass(version));
+                Thread.currentThread().setContextClassLoader(getClassLoader());
                 Object roles = oimClient.getClass().getMethod("login", String.class, char[].class).invoke(oimClient, userName, password);
                 logger.debug("Successfully performed login. Roles {}", roles);
             } finally {
@@ -215,7 +239,7 @@ public class OIMConnection extends AbstractConnection {
             return null;
         if (!isLogin)
             throw new IllegalStateException("The OIM Connection " + this + " is not in a login state");
-        ClassLoader oimClassLoader = getOIMClass(version);
+        ClassLoader oimClassLoader = getClassLoader();
         logger.debug("OIM Class Loader located {}", oimClassLoader);
         try {
             return oimClassLoader.loadClass(className);
@@ -230,7 +254,7 @@ public class OIMConnection extends AbstractConnection {
             logger.debug("Loaded service class {} with classloader {} from {}", new Object[]{oimServiceClass, oimServiceClass.getClassLoader(), oimServiceClass.getProtectionDomain().getCodeSource().getLocation()});
             ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
             try {
-                Thread.currentThread().setContextClassLoader(getOIMClass(version));
+                Thread.currentThread().setContextClassLoader(getClassLoader());
                 Object service = oimClient.getClass().getMethod("getService", Class.class).invoke(oimClient, oimServiceClass);
                 if (service != null) {
                     logger.debug("Loaded service as {} with class loader {}", service, service.getClass().getClassLoader());
@@ -254,7 +278,7 @@ public class OIMConnection extends AbstractConnection {
             logger.debug("Trying to register plugin of size {} ", data.length);
             ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
             try {
-                Thread.currentThread().setContextClassLoader(getOIMClass(version));
+                Thread.currentThread().setContextClassLoader(getClassLoader());
                 platformService.getClass().getMethod("registerPlugin", byte[].class).invoke(platformService, data);
             } finally {
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
@@ -273,7 +297,7 @@ public class OIMConnection extends AbstractConnection {
             logger.debug("Trying to unregister plugin {}", name);
             ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
             try {
-                Thread.currentThread().setContextClassLoader(getOIMClass(version));
+                Thread.currentThread().setContextClassLoader(getClassLoader());
                 platformService.getClass().getMethod("unRegisterPlugin", String.class).invoke(platformService, name);
             } finally {
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
@@ -294,7 +318,7 @@ public class OIMConnection extends AbstractConnection {
             logger.debug("Trying to purge cache {}", cacheName);
             ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
             try {
-                Thread.currentThread().setContextClassLoader(getOIMClass(version));
+                Thread.currentThread().setContextClassLoader(getClassLoader());
                 platformService.getClass().getMethod("purgeCache", String.class).invoke(platformService, cacheName);
             } finally {
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
@@ -313,9 +337,9 @@ public class OIMConnection extends AbstractConnection {
             logger.debug("Loaded Request Service {}", requestService);
             ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
             try {
-                Thread.currentThread().setContextClassLoader(getOIMClass(version));
+                Thread.currentThread().setContextClassLoader(getClassLoader());
                 getClass("oracle.iam.request.vo.Request");
-                return new Request(requestService.getClass().getMethod("getBasicRequestData", String.class).invoke(requestService, requestId), getOIMClass(version));
+                return new Request(requestService.getClass().getMethod("getBasicRequestData", String.class).invoke(requestService, requestId), getClassLoader());
             } finally {
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
             }
@@ -332,7 +356,7 @@ public class OIMConnection extends AbstractConnection {
             logger.trace("Trying to invoke method {} with parameters {} on DDKernelService {}", new Object[]{method, parameters, kernelService});
             ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
             try {
-                Thread.currentThread().setContextClassLoader(getOIMClass(version));
+                Thread.currentThread().setContextClassLoader(getClassLoader());
                 Object result = kernelService.getClass().getMethod("invoke", String.class, Object[].class, Class[].class).invoke(kernelService, method, parameters, parameterTypes);
                 logger.trace("Returned result {}", result);
                 return (T) result;
@@ -348,7 +372,7 @@ public class OIMConnection extends AbstractConnection {
         ObjectInputStream ins = null;
         try {
             Object readObject = Utils.getObjectInputStream(new GZIPInputStream(orchestrationObject.getBinaryStream()), getClassLoader()).readObject();
-            return new PublicProcessImpl(readObject, getOIMClass(version));
+            return new PublicProcessImpl(readObject, getClassLoader());
         } catch (Exception e) {
             throw new OIMAdminException("Failed to read process object from Blob " + orchestrationObject, e);
         } finally {
@@ -374,7 +398,7 @@ public class OIMConnection extends AbstractConnection {
                 logger.debug("Trying to perform logout");
                 ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
                 try {
-                    Thread.currentThread().setContextClassLoader(getOIMClass(version));
+                    Thread.currentThread().setContextClassLoader(getClassLoader());
                     oimClient.getClass().getMethod("logout").invoke(oimClient);
                 } finally {
                     Thread.currentThread().setContextClassLoader(currentClassLoader);
