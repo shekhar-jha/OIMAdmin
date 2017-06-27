@@ -16,10 +16,7 @@
 
 package com.jhash.oimadmin.ui;
 
-import com.jhash.oimadmin.Config;
-import com.jhash.oimadmin.OIMAdminException;
-import com.jhash.oimadmin.UIComponent;
-import com.jhash.oimadmin.UIComponentTree;
+import com.jhash.oimadmin.*;
 import com.jidesoft.swing.JideButton;
 import com.jidesoft.swing.JideLabel;
 import org.jdesktop.swingx.VerticalLayout;
@@ -226,7 +223,7 @@ public abstract class AbstractUIComponent<T extends JComponent, W extends Abstra
 
     public abstract T getDisplayComponent();
 
-    public void displayMessage(String title, String message, Exception exception) {
+    public void displayMessage(final String title, String message, Exception exception) {
         if (parent != null) {
             parent.displayMessage(title, message, exception);
         } else {
@@ -235,20 +232,26 @@ public abstract class AbstractUIComponent<T extends JComponent, W extends Abstra
                     messageDisplayComponent.add(new JideLabel("<html><b>" + title + "</b></html>"));
                     messageDisplayComponent.add(new JSeparator(SwingConstants.HORIZONTAL));
                     final JideLabel messageLabel = new JideLabel(message);
+                    final String exceptionStackTrace;
                     if (exception != null) {
                         messageLabel.setText(messageLabel.getText() + " Cause : " + exception.getCause());
                         StringWriter exceptionAsStringWriter = new StringWriter();
                         exception.printStackTrace(new PrintWriter(exceptionAsStringWriter));
-                        String exceptionStackTrace = exceptionAsStringWriter.toString();
-                        exceptionStackTrace = "<html>" + exceptionStackTrace.replace(System.lineSeparator(), "<br/>") + "</html>";
-                        messageLabel.setToolTipText(exceptionStackTrace);
+                        exceptionStackTrace = exceptionAsStringWriter.toString();
+                        String htmlStackexceptionStackTrace = "<html>" + exceptionStackTrace.replace(System.lineSeparator(), "<br/>") + "</html>";
+                        messageLabel.setToolTipText(htmlStackexceptionStackTrace);
+                    } else {
+                        exceptionStackTrace = null;
                     }
                     messageDisplayComponent.add(messageLabel);
-                    messageDisplayComponent.addMouseListener(new MouseAdapter() {
+                    messageLabel.addMouseListener(new MouseAdapter() {
                         @Override
                         public void mouseClicked(MouseEvent e) {
                             super.mouseClicked(e);
-                            JOptionPane.showMessageDialog(AbstractUIComponent.this, messageLabel.getToolTipText(), messageLabel.getText(), JOptionPane.ERROR_MESSAGE);
+                            String toolTipText = messageLabel.getToolTipText();
+                            String message = messageLabel.getText();
+                            JOptionPane.showMessageDialog(AbstractUIComponent.this,
+                                    message + (Utils.isEmpty(exceptionStackTrace) ? "" : System.lineSeparator() + exceptionStackTrace), title, JOptionPane.ERROR_MESSAGE);
                         }
                     });
                     displayComponent.add(messagePanel, BorderLayout.NORTH);
