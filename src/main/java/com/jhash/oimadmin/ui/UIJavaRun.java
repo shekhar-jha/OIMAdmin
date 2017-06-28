@@ -64,26 +64,6 @@ public class UIJavaRun extends AbstractUIComponent<JPanel, UIJavaRun> {
         super(name, parent);
     }
 
-    public String generateClassPath() {
-        logger.debug("Trying to generate class path for OIMClient");
-        StringBuilder classPathBuilder = new StringBuilder();
-        try {
-            File parentDirectory = Utils.getDirectoryContainingJarForClass("oracle.iam.platform.OIMClient");
-            for (String jarName : new String[]{"commons-logging.jar", "eclipselink.jar", "jrf-api.jar", "oimclient.jar", "spring.jar", "wlfullclient.jar"}) {
-                File jarFile = new File(parentDirectory, jarName);
-                if (jarFile.exists()) {
-                    classPathBuilder.append(File.pathSeparator);
-                    classPathBuilder.append(jarFile.getAbsoluteFile());
-                }
-            }
-        } catch (Exception exception) {
-            displayMessage("Classpath error", "Failed to generate class path", exception);
-        }
-        String classPath = classPathBuilder.toString();
-        logger.debug("Generated classpath for OIMClient {}", classPath);
-        return classPath;
-    }
-
     @Override
     public void initializeComponent() {
         logger.debug("Initializing {}", this);
@@ -95,10 +75,6 @@ public class UIJavaRun extends AbstractUIComponent<JPanel, UIJavaRun> {
         vmOptionsTableModel.setRowCount(10);
         vmOptions = JGComponentFactory.getCurrent().createTable(vmOptionsTableModel);
         programArguments = JGComponentFactory.getCurrent().createTable(new DefaultTableModel(new String[]{"Arguments"}, 10));
-        String classPath = generateClassPath();
-        if (!Utils.isEmpty(classPath)) {
-            classPaths.setText(classPath);
-        }
         DefaultTableModel tableModel = new DefaultTableModel(new String[]{"Name", "Value"}, 10);
         environmentVariable = JGComponentFactory.getCurrent().createTable(tableModel);
         environmentVariable.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -175,6 +151,19 @@ public class UIJavaRun extends AbstractUIComponent<JPanel, UIJavaRun> {
         this.workingDirectory.setText(workingDirectory);
     }
 
+    public void setClassPath(List<File> classPath) {
+        if (classPath != null && !classPath.isEmpty()) {
+            StringBuilder classPathBuilder = new StringBuilder(".").append(File.pathSeparator);
+            for (File classPathItem : classPath) {
+                classPathBuilder.append(classPathItem.getAbsoluteFile()).append(File.pathSeparator);
+            }
+            classPathBuilder.append(System.getProperty("java.class.path"));
+            this.classPaths.setText(classPathBuilder.toString());
+        } else {
+            this.classPaths.setText("");
+        }
+    }
+
     @Override
     public JPanel getDisplayComponent() {
         return uiJavaRunPanel;
@@ -238,11 +227,15 @@ public class UIJavaRun extends AbstractUIComponent<JPanel, UIJavaRun> {
             }
         }
         logger.debug("Environment : {}", environmentProperties);
+        StringBuilder classPathBuilder = new StringBuilder();
         String classPathString = classPaths.getText();
-        if (classPathString != null && !classPathString.isEmpty()) {
-            String classPathStringValue = classPaths.getText();
-            logger.debug("Adding class path CLASSPATH={}", classPathStringValue);
-            processBuilder.environment().put("CLASSPATH", classPathStringValue);
+        if (!Utils.isEmpty(classPathString)) {
+            classPathBuilder.append(classPathString);
+        }
+        String classPath = classPathBuilder.toString();
+        if (!Utils.isEmpty(classPath)) {
+            logger.debug("Adding class path CLASSPATH={}", classPath);
+            processBuilder.environment().put("CLASSPATH", classPath);
         }
         logger.debug("Redirecting error to standard output");
         processBuilder.redirectErrorStream(true);

@@ -59,6 +59,7 @@ public class OIMClientUI extends AbstractUIComponent<JPanel, OIMClientUI> {
                             executeButton.setEnabled(true);
                             compileAndRunControlPanel.setSelectedComponent(javaRun.getComponent());
                             javaRun.setWorkingDirectory(javaCompiler.getOutputDirectory());
+                            javaRun.setClassPath(java.getClassPath());
                         } else {
                             executeButton.setEnabled(false);
                         }
