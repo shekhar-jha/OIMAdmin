@@ -6,12 +6,12 @@ A java swing application to play with Oracle Identity Manager. The code has been
 Getting started
 ---------------
 
-1. Ensure that you are using JDK 1.8 (JDK is needed for compilation)
+1. Ensure that you are using JRE 1.7 or later (JDK is needed for compilation)
 2. Download the latest release from https://github.com/shekhar-jha/OIMAdmin/releases
 3. unzip it in any folder e.g. C:\apps
 4. Run the application by double clicking the OIMAdmin.jar file or by using following command<br/>
 ```
-<JDK 1.8 Home>\bin\java -jar C:\apps\dist\OIMAdmin.jar
+$JAVA_HOME\bin\java -jar C:\apps\OIMAdmin\OIMAdmin.jar
 ```
 
 **Notes:**

@@ -1,3 +1,12 @@
+Version 0.10
+-----------------
+
+1. Support for Java 1.7 - The product can now be run using Java 1.7
+2. Support for multiple OIM Client libraries - The system can be configured to use specific version of client libraries.
+3. Libraries Updates - OIM 11g R2 PS2 & PS3 libraries are now shipped with tool.
+4. Better error handling while opening connection trees.
+5. Major refactoring to reduce number of connections being created and separate OIM functionality across multiple classes
+
 Version 0.9
 -----------------
 
