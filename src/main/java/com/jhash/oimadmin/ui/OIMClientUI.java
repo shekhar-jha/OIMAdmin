@@ -20,6 +20,7 @@ import com.jgoodies.jsdl.common.builder.FormBuilder;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
+import com.jhash.oimadmin.oim.code.Java;
 import com.jidesoft.swing.JideSplitPane;
 import com.jidesoft.swing.JideTabbedPane;
 import org.slf4j.Logger;
@@ -34,6 +35,7 @@ import java.util.Map;
 public class OIMClientUI extends AbstractUIComponent<JPanel, OIMClientUI> {
 
     private static final Logger logger = LoggerFactory.getLogger(OIMClientUI.class);
+    private Java java = new Java();
     private JButton compileButton = new JButton("Compile");
     private JButton executeButton = new JButton("Run..");
     private JPanel oimClientUI;
@@ -49,7 +51,7 @@ public class OIMClientUI extends AbstractUIComponent<JPanel, OIMClientUI> {
     public void initializeComponent() {
         logger.debug("Initializing {}...", this);
         executeButton.setEnabled(false);
-        javaCompiler = new UIJavaCompile("OIMClientSource", "Compile", this)
+        javaCompiler = new UIJavaCompile(java, "OIMClientSource", "Compile", this)
                 .registerCallback(UIJavaCompile.COMPILE_UPDATE, new Callback<Boolean, Object>() {
                     @Override
                     public Object call(Boolean successfulCompile) {

@@ -29,6 +29,7 @@ import java.net.URI;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class Java {
@@ -37,6 +38,10 @@ public class Java {
     private List<File> classPath = new ArrayList<>();
 
     public Java() {
+    }
+
+    public List<File> getClassPath() {
+        return Collections.unmodifiableList(this.classPath);
     }
 
     public Java setClassPath(List<File> classPath) {

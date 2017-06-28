@@ -23,6 +23,7 @@ import com.jgoodies.jsdl.component.JGTextField;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.UIComponentTree;
 import com.jhash.oimadmin.Utils;
+import com.jhash.oimadmin.oim.code.Java;
 import com.jhash.oimadmin.oim.eventHandlers.Manager;
 import com.jhash.oimadmin.oim.plugins.PluginManager;
 import com.jidesoft.swing.JideScrollPane;
@@ -71,6 +72,7 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
 
     private final Manager eventHandlerManager;
     private final PluginManager pluginManager;
+    private Java java;
     private JGTextField nameField = new JGTextField(20);
     private JLabel orcTargetLabel = new JLabel("oracle.iam.platform.kernel.vo.EntityOrchestration");
     private JCheckBox syncCheckBox = new JCheckBox();
@@ -95,7 +97,8 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
     @Override
     public void initializeComponent() {
         logger.debug("Initializing {} ...", this);
-        javaCompiler = new UIJavaCompile(eventHandlerManager.getVersion(), "EventHandlerSource", "Source Code", this).initialize();
+        java = new Java();
+        javaCompiler = new UIJavaCompile(java, eventHandlerManager.getVersion(), "EventHandlerSource", "Source Code", this).initialize();
         nameField.setText("CustomEventHandler");
         nameField.setToolTipText("Name of event handler");
         orcTargetLabel

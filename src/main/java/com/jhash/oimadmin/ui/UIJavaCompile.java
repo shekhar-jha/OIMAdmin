@@ -37,6 +37,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
 
@@ -45,25 +46,30 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel, UIJavaCompile> {
     private static final Logger logger = LoggerFactory.getLogger(UIJavaCompile.class);
     public static ID<Boolean, Object, Callback<Boolean, Object>> COMPILE_UPDATE = new CLASS_ID<>();
     final JGTextField classNameText = new JGTextField();
-    private final Java java = new Java();
+    private final Java java;
     private final String templatePrefix;
     private final Config.OIM_VERSION oimVersion;
     private JTextArea sourceCode = JGComponentFactory.getCurrent().createTextArea();
     private JTextArea compileResultTextArea = JGComponentFactory.getCurrent().createReadOnlyTextArea();
     private JButton compileButton = JGComponentFactory.getCurrent().createButton("Compile..");
+    private JButton saveButton = JGComponentFactory.getCurrent().createButton("Save");
+    private JButton saveAsButton = JGComponentFactory.getCurrent().createButton("Save As..");
+    private JGTextField additionalClassPath = new JGTextField();
     private JPanel javaCompileUI;
-    private String outputDirectory;
     private JComboBox<String> sourceCodeSelector;
     private JComboBox<Config.OIM_VERSION> oimVersionSelector;
+    private String outputDirectory;
+    private File templateDirectory;
 
-    public UIJavaCompile(String prefix, String name, AbstractUIComponent parent) {
-        this(null, prefix, name, parent);
+    public UIJavaCompile(Java java, String prefix, String name, AbstractUIComponent parent) {
+        this(java, null, prefix, name, parent);
     }
 
-    public UIJavaCompile(Config.OIM_VERSION oimVersion, String prefix, String name, AbstractUIComponent parent) {
+    public UIJavaCompile(Java java, Config.OIM_VERSION oimVersion, String prefix, String name, AbstractUIComponent parent) {
         super(name, parent);
         templatePrefix = prefix + "-";
         this.oimVersion = oimVersion;
+        this.java = java;
     }
 
     public void compile() {
@@ -74,6 +80,23 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel, UIJavaCompile> {
             public void run() {
                 try {
                     boolean successfulCompile = false;
+                    java.util.List<File> classPath = OIMConnection.getClassPath(configuration, (Config.OIM_VERSION) oimVersionSelector.getSelectedItem());
+                    logger.debug("Updating classpath to {}", classPath);
+                    java.setClassPath(classPath);
+                    String additionalClassPathValue = additionalClassPath.getText();
+                    if (!Utils.isEmpty(additionalClassPathValue)) {
+                        String[] classPathItems = additionalClassPathValue.split(File.pathSeparator);
+                        for (String classPathItem : classPathItems) {
+                            if (!Utils.isEmpty(classPathItem)) {
+                                File classPathItemFile = new File(classPathItem);
+                                if (classPathItemFile.exists() && classPathItemFile.canRead()) {
+                                    java.addClassPath(classPathItemFile);
+                                } else {
+                                    displayMessage("Compilation Warning", "Classpath entry " + classPathItem + " is not valid. Ignoring it for compilation.");
+                                }
+                            }
+                        }
+                    }
                     String result = java.compile(new CompileUnit(classNameText.getText(), sourceCode.getText()), outputDirectory);
                     if (result != null) {
                         compileResultTextArea.setText(result);
@@ -91,6 +114,44 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel, UIJavaCompile> {
         });
     }
 
+    public boolean save(String templateName, String code) {
+        String errorTitle = "Saving template failed";
+        if (templateDirectory != null) {
+            FileWriter templateFileWriter = null;
+            try {
+                File templateFileToSave = new File(templateDirectory, templatePrefix + templateName);
+                if (templateFileToSave.exists()) {
+                    if (templateFileToSave.isDirectory()) {
+                        displayMessage(errorTitle, "An existing directory with same name exists at "
+                                + templateFileToSave.getAbsolutePath()
+                                + ". Please rename the template or delete existing directory before proceeding.");
+                        return false;
+                    }
+                    if (!templateFileToSave.canWrite()) {
+                        displayMessage(errorTitle, "The file " + templateFileToSave.getAbsolutePath() + " can not be overwritten.");
+                        return false;
+                    }
+                }
+                templateFileWriter = new FileWriter(templateFileToSave, false);
+                templateFileWriter.write(code);
+                templateFileWriter.flush();
+                return true;
+            } catch (Exception exception) {
+                displayMessage(errorTitle, "Failed to save template " + templateName + " due to error.", exception);
+                if (templateFileWriter != null) {
+                    try {
+                        templateFileWriter.close();
+                    } catch (Exception fileCloseException) {
+                        logger.debug("Failed to close template file", fileCloseException);
+                    }
+                }
+            }
+        } else {
+            displayMessage(errorTitle, "Failed to save template " + templateName + " due to missing template directory.");
+        }
+        return false;
+    }
+
     @Override
     public void initializeComponent() {
         logger.debug("Initializing {}", this);
@@ -99,6 +160,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel, UIJavaCompile> {
         final File templateDirectory = new File(configuration.getWorkArea() + File.separator + Config.VAL_WORK_AREA_CONF + File.separator + "templates");
         logger.debug("Trying to validate template directory {} exists and is directory", templateDirectory);
         if (templateDirectory.exists() && templateDirectory.isDirectory()) {
+            this.templateDirectory = templateDirectory;
             logger.debug("Trying to list files in directory");
             String[] listOfFile = templateDirectory.list(new FilenameFilter() {
                 @Override
@@ -137,16 +199,28 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel, UIJavaCompile> {
                 sourceCodeSelector.setSelectedIndex(0);
             }
         }
-        Config.OIM_VERSION[] versions = Config.OIM_VERSION.values();
-        oimVersionSelector = new JComboBox<>(versions);
-        oimVersionSelector.addActionListener(new ActionListener() {
+        saveButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                java.util.List<File> classPath = OIMConnection.getClassPath(configuration, (Config.OIM_VERSION) oimVersionSelector.getSelectedItem());
-                logger.debug("Updating classpath to {}", classPath);
-                java.setClassPath(classPath);
+                String sourceCodeTemplateName = (String) sourceCodeSelector.getSelectedItem();
+                String sourceCodeText = sourceCode.getText();
+                save(sourceCodeTemplateName, sourceCodeText);
             }
         });
+        saveAsButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String newTemplateName = JOptionPane.showInputDialog(UIJavaCompile.this, "Template name");
+                if (Utils.isEmpty(newTemplateName))
+                    displayMessage("Invalid template", "Please provide valid template name.");
+                if (save(newTemplateName, sourceCode.getText())) {
+                    sourceCodeSelector.addItem(newTemplateName);
+                    sourceCodeSelector.setSelectedItem(newTemplateName);
+                }
+            }
+        });
+        Config.OIM_VERSION[] versions = Config.OIM_VERSION.values();
+        oimVersionSelector = new JComboBox<>(versions);
         if (oimVersion != null) {
             oimVersionSelector.setSelectedItem(oimVersion);
         } else {
@@ -171,14 +245,27 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel, UIJavaCompile> {
     private JPanel buildCodePanel() {
         JPanel sourceCodeTextPanel = new JPanel(new BorderLayout());
         sourceCodeTextPanel.add(new JideScrollPane(sourceCode), BorderLayout.CENTER);
-        JPanel sourceCodeTextButtonPanel = FormBuilder.create().columns("right:pref, 3dlu, pref:grow")
+        JPanel sourceCodeSelectorButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        Component applicationSourceCodeSelector = null;
+        if (sourceCodeSelector != null) {
+            applicationSourceCodeSelector = sourceCodeSelector;
+            sourceCodeSelectorButtonPanel.add(saveButton);
+            sourceCodeSelectorButtonPanel.add(saveAsButton);
+        } else {
+            applicationSourceCodeSelector = new JLabel("Not Available");
+        }
+        JPanel versionSelectorPanel = new JPanel();
+        versionSelectorPanel.add(oimVersionSelector);
+        JPanel sourceCodeTextButtonPanel = FormBuilder.create().columns("right:pref, 3dlu, pref, 3dlu, right:pref, 3dlu, pref:grow")
                 .rows("p, 2dlu, p, 2dlu, p, 2dlu")
-                .addLabel("Class Name").xy(1, 1).add(classNameText).xy(3, 1)
-                .addLabel("Template").xy(1, 3).add(sourceCodeSelector == null ? new JLabel("Not Available") : sourceCodeSelector).xy(3, 3)
+                .addLabel("Class Name").xy(1, 1).add(classNameText).xyw(3, 1, 5)
+                .addLabel("Template").xy(1, 3).add(applicationSourceCodeSelector).xy(3, 3)
+                .add(sourceCodeSelectorButtonPanel).xyw(5, 3, 3)
                 .addLabel("OIM Version").xy(1, 5).add(oimVersionSelector).xy(3, 5)
+                .addLabel("Additional Classpath").xy(5, 5).add(additionalClassPath).xy(7, 5)
                 .build();
         sourceCodeTextPanel.add(sourceCodeTextButtonPanel, BorderLayout.NORTH);
-        sourceCodeTextPanel.add(new JLabel(), BorderLayout.SOUTH);
+        sourceCodeTextPanel.add(new JLabel(" "), BorderLayout.SOUTH);
 
         JPanel sourceCodeControlPanel = new JPanel(new BorderLayout());
         JPanel sourceCodeButtonPanel = FormBuilder.create().columns("center:pref")
@@ -186,7 +273,7 @@ public class UIJavaCompile extends AbstractUIComponent<JPanel, UIJavaCompile> {
                 .add(compileButton).xy(1, 1).build();
         sourceCodeControlPanel.add(sourceCodeButtonPanel, BorderLayout.NORTH);
         sourceCodeControlPanel.add(new JideScrollPane(compileResultTextArea), BorderLayout.CENTER);
-        sourceCodeControlPanel.add(new JLabel(), BorderLayout.SOUTH);
+        sourceCodeControlPanel.add(new JLabel("  "), BorderLayout.SOUTH);
 
         JideSplitPane sourceCodePanel = new JideSplitPane();
         sourceCodePanel.add(sourceCodeTextPanel, 0);
