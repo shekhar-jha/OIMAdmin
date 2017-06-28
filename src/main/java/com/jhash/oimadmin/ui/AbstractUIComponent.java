@@ -223,6 +223,10 @@ public abstract class AbstractUIComponent<T extends JComponent, W extends Abstra
 
     public abstract T getDisplayComponent();
 
+    public void displayMessage(String title, String message) {
+        displayMessage(title, message, null);
+    }
+
     public void displayMessage(final String title, String message, Exception exception) {
         if (parent != null) {
             parent.displayMessage(title, message, exception);
