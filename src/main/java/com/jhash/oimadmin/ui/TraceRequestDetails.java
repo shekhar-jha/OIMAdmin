@@ -361,7 +361,7 @@ public class TraceRequestDetails extends AbstractUIComponent<JPanel, TraceReques
         tabbedPane.addTab("Request Detail", requestDetailPanel);
         if (orchestrationManager != null) {
             orchestrationDetailPanel = new OrchestrationDetailUI(orchestrationManager, this).initialize();
-            tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getDisplayComponent());
+            tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getComponent());
         }
         tabbedPane.addTab("Approval Detail", approvalDetailPanel);
         traceRequestUI = new JPanel(new BorderLayout());

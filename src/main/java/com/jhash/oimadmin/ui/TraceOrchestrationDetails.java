@@ -73,7 +73,7 @@ public class TraceOrchestrationDetails extends AbstractUIComponent<JPanel, Trace
                 .build();
         orchestrationDetailPanel = new OrchestrationDetailUI(orchestrationManager, this).initialize();
         JideTabbedPane tabbedPane = new JideTabbedPane();
-        tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getDisplayComponent());
+        tabbedPane.addTab("Orchestration", orchestrationDetailPanel.getComponent());
         traceOrchestrationUI = new JPanel(new BorderLayout());
         traceOrchestrationUI.add(searchCriteria, BorderLayout.NORTH);
         traceOrchestrationUI.add(tabbedPane, BorderLayout.CENTER);
