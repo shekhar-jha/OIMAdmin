@@ -246,9 +246,10 @@ public class UIJavaRun extends AbstractUIComponent<JPanel, UIJavaRun> {
             input.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    String textToWrite = input.getText();
+                    String textToWrite = input.getText() + System.lineSeparator();
                     try {
                         runningProcess.getOutputStream().write(textToWrite.getBytes());
+                        runningProcess.getOutputStream().flush();
                     } catch (Exception exception) {
                         displayMessage("Execution error", "Failed to write the input " + textToWrite + " to input of process " + processBuilder.command(), exception);
                     }
