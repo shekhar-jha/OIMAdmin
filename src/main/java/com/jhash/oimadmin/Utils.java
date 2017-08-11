@@ -304,34 +304,41 @@ public class Utils {
         return invoke(object, methodName, null);
     }
 
+    public static Method getMethod(Class<?> processClass, String methodName, Class... parameterTypes) {
+        if (processClass == null || Utils.isEmpty(methodName))
+            return null;
+        try {
+            return processClass.getDeclaredMethod(methodName, parameterTypes);
+        } catch (NoSuchMethodException exception) {
+
+        }
+        Class applicableClass = processClass;
+        while (applicableClass != null) {
+            try {
+                Method method = applicableClass.getDeclaredMethod(methodName, parameterTypes);
+                if (method != null) {
+                    method.setAccessible(true);
+                    return method;
+                }
+            } catch (NoSuchMethodException exception) {
+
+            }
+            applicableClass = applicableClass.getSuperclass();
+        }
+        return null;
+    }
+
     public static <T> T invoke(Object object, String methodName, T defaultValue) {
         if (object == null || Utils.isEmpty(methodName))
             return defaultValue;
         Class applicableClass = object.getClass();
+        Method method = getMethod(applicableClass, methodName);
         try {
-            return (T) applicableClass.getMethod(methodName).invoke(object);
-        } catch (NoSuchMethodException exception) {
-
+            return (T) method.invoke(object);
         } catch (Exception exception) {
             logger.warn("Failed to invoke " + methodName + " on object of type " + object.getClass(), exception);
+            return defaultValue;
         }
-        while (applicableClass != null) {
-            try {
-                Method method = applicableClass.getDeclaredMethod(methodName);
-                if (method != null) {
-                    method.setAccessible(true);
-                    return (T) method.invoke(object);
-                }
-            } catch (NoSuchMethodException exception) {
-
-            } catch (Exception exception) {
-                logger.warn("Failed to invoke " + methodName + " on object of type " + object.getClass(), exception);
-                return defaultValue;
-            }
-            applicableClass = applicableClass.getSuperclass();
-        }
-        logger.warn("Method " + methodName + " could not be located on object (or it's class hierarchy) of type " + object.getClass());
-        return defaultValue;
     }
 
     public static String generateStringRepresentation(Throwable throwable) {

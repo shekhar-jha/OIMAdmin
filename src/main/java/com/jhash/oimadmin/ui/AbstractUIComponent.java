@@ -16,7 +16,14 @@
 
 package com.jhash.oimadmin.ui;
 
-import com.jhash.oimadmin.*;
+import com.jhash.oimadmin.Utils;
+import com.jhash.oimadmin.events.Event;
+import com.jhash.oimadmin.events.EventConsumer;
+import com.jhash.oimadmin.events.EventSource;
+import com.jhash.oimadmin.ui.component.EventEnabledServiceComponentImpl;
+import com.jhash.oimadmin.ui.component.ParentComponent;
+import com.jhash.oimadmin.ui.component.PublishableComponent;
+import com.jhash.oimadmin.ui.utils.UIUtils;
 import com.jidesoft.swing.JideButton;
 import com.jidesoft.swing.JideLabel;
 import org.jdesktop.swingx.VerticalLayout;
@@ -29,126 +36,50 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Map;
 
-public abstract class AbstractUIComponent<T extends JComponent, W extends AbstractUIComponent<T, W>> extends JPanel implements UIComponent<JComponent> {
+public abstract class AbstractUIComponent<T extends JComponent, W extends AbstractUIComponent<T, W>> extends EventEnabledServiceComponentImpl<W> implements UIComponent<JComponent>, PublishableComponent<W> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractUIComponent.class);
-    protected final String name;
-    protected final Config.Configuration configuration;
-    protected final UIComponentTree selectionTree;
-    protected final DisplayArea displayArea;
-    protected final AbstractUIComponent<?, ?> parent;
-    private final String internalRepresentation;
     protected JComponent displayComponent;
     protected JPanel messageDisplayComponent;
     protected JPanel messagePanel;
-    protected boolean publish;
+    protected boolean publish = false;
     protected boolean destroyComponentOnClose = false;
-    private COMPONENT_STATE status = COMPONENT_STATE.NOT_INITIALIZED;
-    private Deque<AbstractUIComponent<?, ?>> childComponents = new ArrayDeque<>();
-    private Map<ID, Callback> callbacks = new HashMap<>();
 
-    public AbstractUIComponent(String name, Config.Configuration configuration, UIComponentTree selectionTree, DisplayArea displayArea) {
-        this.name = name;
-        this.configuration = configuration;
-        this.selectionTree = selectionTree;
-        this.displayArea = displayArea;
-        parent = null;
-        setPublish(true);
-        internalRepresentation = "{COMPONENT: " + name + "[" + super.toString() + "]}";
+    public AbstractUIComponent(String name, ParentComponent parent) {
+        super(name, parent);
     }
 
-    public AbstractUIComponent(String name, AbstractUIComponent<?, ?> parent) {
-        this.name = name;
-        if (parent == null)
-            throw new OIMAdminException("No parent was provided for the component being created. Can not continue.");
-        this.configuration = parent.configuration;
-        this.selectionTree = parent.selectionTree;
-        this.displayArea = parent.displayArea;
-        this.parent = parent;
-        this.parent.registerEventListener(this);
-        setPublish(false);
-        internalRepresentation = parent.toString() + ">> {COMPONENT: " + name + "[" + super.toString() + "]}";
-    }
-
-    protected void registerEventListener(AbstractUIComponent childComponent) {
-        logger.debug("Registering event listener {}", childComponent);
-        if (childComponent == null)
-            return;
-        childComponents.addFirst(childComponent);
-        logger.debug("Registered event listener.");
-    }
-
-    protected W registerCallback(ID id, Callback callback) {
-        logger.debug("Registering callback {}={}", id, callback);
-        if (callback != null && id != null) {
-            callbacks.put(id, callback);
-        }
-        logger.debug("Registered callback");
-        return (W) this;
-    }
-
-    public <I, O, CB extends Callback<I, O>> O executeCallback(ID<I, O, CB> id, I input) {
-        if (callbacks.containsKey(id)) {
-            return (O) callbacks.get(id).call(input);
-        } else {
-            return null;
-        }
-    }
-
-    protected void unRegisterEventListener(AbstractUIComponent childComponent) {
-        logger.debug("Unregister event listener {}", childComponent);
-        if (childComponent == null)
-            return;
-        childComponents.remove(childComponent);
-        logger.debug("Unregistered event listener.");
-    }
-
-    public void triggerEvent(AbstractUIComponent parent, COMPONENT_STATE parentState) {
-        logger.debug("Received event {} from {}", parentState, parent);
-        if (parentState == COMPONENT_STATE.INITIALIZATION_IN_PROGRESS && getStatus() == COMPONENT_STATE.NOT_INITIALIZED)
-            initialize();
-        if (parentState == COMPONENT_STATE.DESTRUCTION_IN_PROGRESS && getStatus() == COMPONENT_STATE.INITIALIZED)
-            destroy();
-        logger.debug("Processed event {} from {}", parentState, parent);
-    }
 
     @Override
-    public String getName() {
-        return name;
+    public boolean handleEvent(EventSource parent, Event event) {
+        //TODO:
+        return false;
     }
 
-    @Override
-    public Config.Configuration getConfiguration() {
-        return configuration;
-    }
-
-    public COMPONENT_STATE getStatus() {
-        return status;
-    }
-
-    private void setStatus(COMPONENT_STATE status) {
-        this.status = status;
-        this.triggerEvent(this, status);
-        for (AbstractUIComponent component : childComponents) {
-            component.triggerEvent(this, status);
-        }
+    public <I, O> O executeCallback(CallbackEvent<I, O> event, I input) {
+        CallbackSource<I, O> callbackSource = new CallbackSource<>(input);
+        triggerEvent(callbackSource, event);
+        return callbackSource.output;
     }
 
     public W setPublish(boolean publish) {
-        if (getStatus() == COMPONENT_STATE.NOT_INITIALIZED) {
+        if (getState() == NOT_INITIALIZED) {
             this.publish = publish;
             return (W) this;
         } else {
-            throw new IllegalStateException("The component " + this + " status is " + getStatus()
-                    + ". setPublish can be called only if component is " + COMPONENT_STATE.NOT_INITIALIZED);
+            throw new IllegalStateException("The component " + this + " status is " + getState()
+                    + ". setPublish can be called only if component is " + NOT_INITIALIZED);
         }
+    }
+
+    public W publish() {
+        if (publish) {
+            getDisplayArea().add(this);
+        } else {
+            logger.debug("Not publishing the component.");
+        }
+        return (W) this;
     }
 
     public boolean isDestroyComponentOnClose() {
@@ -161,43 +92,21 @@ public abstract class AbstractUIComponent<T extends JComponent, W extends Abstra
     }
 
     @Override
-    public W initialize() {
+    public final void initializeComponent() {
         logger.debug("Trying to initialize UI Component");
-        COMPONENT_STATE status = getStatus();
-        if (status == COMPONENT_STATE.INITIALIZATION_IN_PROGRESS) {
-            logger.warn("Trying to initialize UI Component {} which is already being initialized, ignoring the trigger", this);
-            return (W) this;
-        }
-        if (status == COMPONENT_STATE.INITIALIZED) {
-            logger.debug("Nothing to do since component {} is already initialized.", this);
-        } else {
-            setStatus(COMPONENT_STATE.INITIALIZATION_IN_PROGRESS);
-            try {
-                initializeComponent();
-                setStatus(COMPONENT_STATE.INITIALIZED);
-            } catch (Exception exception) {
-                logger.warn("Failed to initialize the component " + this, exception);
-                logger.debug("Setting node status as ", COMPONENT_STATE.FAILED);
-                setStatus(COMPONENT_STATE.FAILED);
-            }
-        }
-        if (publish) {
-            displayArea.add(this);
-        } else {
-            logger.debug("Not publishing the component.");
-        }
+        super.initializeComponent();
+        setupDisplayComponent();
+        publish();
         logger.debug("Initialized UI Component");
-        return (W) this;
     }
 
-    public abstract void initializeComponent();
+    public abstract void setupDisplayComponent();
 
-    public abstract void destroyComponent();
 
     @Override
     public final synchronized JComponent getComponent() {
         if (displayComponent == null) {
-            if (parent != null) {
+            if (getParent() instanceof AbstractUIComponent) {
                 displayComponent = getDisplayComponent();
             } else {
                 JPanel packagedComponent = new JPanel(new BorderLayout());
@@ -227,9 +136,11 @@ public abstract class AbstractUIComponent<T extends JComponent, W extends Abstra
         displayMessage(title, message, null);
     }
 
+    @Override
     public void displayMessage(final String title, String message, Exception exception) {
-        if (parent != null) {
-            parent.displayMessage(title, message, exception);
+        ParentComponent parent = getParent();
+        if (parent instanceof AbstractUIComponent) {
+            ((AbstractUIComponent) parent).displayMessage(title, message, exception);
         } else {
             if (messageDisplayComponent != null & messagePanel != null) {
                 synchronized (messageDisplayComponent) {
@@ -239,9 +150,7 @@ public abstract class AbstractUIComponent<T extends JComponent, W extends Abstra
                     final String exceptionStackTrace;
                     if (exception != null) {
                         messageLabel.setText(messageLabel.getText() + " Cause : " + exception.getCause());
-                        StringWriter exceptionAsStringWriter = new StringWriter();
-                        exception.printStackTrace(new PrintWriter(exceptionAsStringWriter));
-                        exceptionStackTrace = exceptionAsStringWriter.toString();
+                        exceptionStackTrace = Utils.extractExceptionDetails(exception);
                         String htmlStackexceptionStackTrace = "<html>" + exceptionStackTrace.replace(System.lineSeparator(), "<br/>") + "</html>";
                         messageLabel.setToolTipText(htmlStackexceptionStackTrace);
                     } else {
@@ -252,9 +161,8 @@ public abstract class AbstractUIComponent<T extends JComponent, W extends Abstra
                         @Override
                         public void mouseClicked(MouseEvent e) {
                             super.mouseClicked(e);
-                            String toolTipText = messageLabel.getToolTipText();
                             String message = messageLabel.getText();
-                            JOptionPane.showMessageDialog(AbstractUIComponent.this,
+                            JOptionPane.showMessageDialog(messageLabel,
                                     message + (Utils.isEmpty(exceptionStackTrace) ? "" : System.lineSeparator() + exceptionStackTrace), title, JOptionPane.ERROR_MESSAGE);
                         }
                     });
@@ -262,76 +170,73 @@ public abstract class AbstractUIComponent<T extends JComponent, W extends Abstra
                     displayComponent.revalidate();
                 }
             } else {
-                JOptionPane.showMessageDialog(this, message, title, JOptionPane.ERROR_MESSAGE);
+                UIUtils.displayMessage(title, message, null);
             }
         }
     }
 
-    @Override
-    public void destroy() {
-        logger.debug("Trying to destroy {}", this);
-        if (getStatus() == COMPONENT_STATE.DESTRUCTION_IN_PROGRESS) {
-            logger.warn("Trying to destroy UI Component {} which is already being destroyed, ignoring the trigger", this);
-            return;
-        }
-        if (getStatus() == COMPONENT_STATE.INITIALIZED) {
-            logger.debug("Component in {} state, setting status to {} before destroying", getStatus(), COMPONENT_STATE.DESTRUCTION_IN_PROGRESS);
-            setStatus(COMPONENT_STATE.DESTRUCTION_IN_PROGRESS);
-            try {
-                if (publish)
-                    displayArea.remove(this);
-                destroyComponent();
-                logger.debug("Completed component destruction");
-            } catch (Exception exception) {
-                logger.warn("Failed to complete the component specific destruction process", exception);
-            }
-            logger.debug("Setting status to {}", COMPONENT_STATE.NOT_INITIALIZED);
-            setStatus(COMPONENT_STATE.NOT_INITIALIZED);
-        } else {
-            logger.debug("Skipping destroy since the component is not in {} state", COMPONENT_STATE.INITIALIZED);
-        }
-    }
+    public abstract void destroyDisplayComponent();
 
     @Override
-    public String toString() {
-        return internalRepresentation;
-    }
-
-    public interface Callback<I, O> {
-
-        O call(I value);
-    }
-
-    public interface ID<I, O, T extends Callback<I, O>> {
-    }
-
-    public static class CLASS_ID<I, O, T extends Callback<I, O>> implements ID<I, O, T> {
-
-    }
-
-    public static class COMPONENT_STATE<M> {
-        public static final COMPONENT_STATE NOT_INITIALIZED = new COMPONENT_STATE("NOT_INITIALIZED");
-        public static final COMPONENT_STATE INITIALIZED = new COMPONENT_STATE("INITIALIZED");
-        public static final COMPONENT_STATE INITIALIZED_NO_OP = new COMPONENT_STATE("INITIALIZED_NO_OP");
-        public static final COMPONENT_STATE FAILED = new COMPONENT_STATE("FAILED");
-        public static final COMPONENT_STATE INITIALIZATION_IN_PROGRESS = new COMPONENT_STATE("INITIALIZATION_IN_PROGRESS");
-        public static final COMPONENT_STATE DESTRUCTION_IN_PROGRESS = new COMPONENT_STATE("DESTRUCTION_IN_PROGRESS");
-
-        public final M stateDetails;
-        private final String name;
-
-        public COMPONENT_STATE(String name) {
-            this(name, null);
+    public final void destroyComponent() {
+        logger.debug("Trying to destroy ui component {}", this);
+        getDisplayArea().remove(this);
+        try {
+            destroyDisplayComponent();
+            logger.debug("Completed ui component destruction");
+        } catch (Exception exception) {
+            logger.warn("Failed to complete the component specific destruction process", exception);
+            throw exception;
         }
+    }
 
-        public COMPONENT_STATE(String name, M stateDetails) {
-            this.name = "COMPONENT STATE: " + name;
-            this.stateDetails = stateDetails;
+    interface CallbackEventSource<I, O> extends EventSource {
+
+        I getInput();
+
+        void setOutput(O output);
+    }
+
+    public static class CallbackSource<I, O> implements CallbackEventSource<I, O> {
+
+        private I input;
+        private O output;
+
+        public CallbackSource(I input) {
+            this.input = input;
         }
 
         @Override
-        public String toString() {
-            return name;
+        public I getInput() {
+            return input;
         }
+
+        public O getOutput() {
+            return output;
+        }
+
+        @Override
+        public void setOutput(O output) {
+            this.output = output;
+        }
+    }
+
+    public static class CallbackEvent<I, O> extends Event {
+
+        public CallbackEvent(String name) {
+            super(name);
+        }
+    }
+
+    public static abstract class Callback<I, O> implements EventConsumer {
+
+        public void triggerEvent(EventSource source, Event event) {
+            if (event instanceof CallbackEvent && source instanceof CallbackEventSource) {
+                CallbackEventSource<I, O> callbackEventSource = (CallbackEventSource<I, O>) source;
+                callbackEventSource.setOutput(call(callbackEventSource.getInput()));
+            }
+        }
+
+        public abstract O call(I value);
     }
 }

@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-package com.jhash.oimadmin.ui;
+package com.jhash.oimadmin.ui.component;
 
-import javax.swing.*;
+public interface PublishableComponent<T extends PublishableComponent> {
 
-public interface DisplayArea {
+    T setPublish(boolean publish);
 
-    void add(UIComponent<? extends JComponent> component);
-
-    void remove(UIComponent<? extends JComponent> component);
-
+    T publish();
 }

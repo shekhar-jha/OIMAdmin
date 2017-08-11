@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-package com.jhash.oimadmin.ui;
+package com.jhash.oimadmin.events;
 
-import javax.swing.*;
+import com.jhash.oimadmin.EnumClass;
 
-public interface DisplayArea {
+public class Event extends EnumClass {
 
-    void add(UIComponent<? extends JComponent> component);
+    public Event(String state) {
+        super(state);
+    }
 
-    void remove(UIComponent<? extends JComponent> component);
-
+    public Event(String state, Object comparator) {
+        super(state, comparator);
+    }
 }

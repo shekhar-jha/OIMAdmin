@@ -16,10 +16,14 @@
 package com.jhash.oimadmin.ui;
 
 import com.jhash.oimadmin.Config;
-import com.jhash.oimadmin.OIMAdminTreeNode;
-import com.jhash.oimadmin.OIMAdminTreeNode.NODE_STATE;
-import com.jhash.oimadmin.UIComponent;
-import com.jhash.oimadmin.UIComponentTree;
+import com.jhash.oimadmin.OIMAdminException;
+import com.jhash.oimadmin.service.Service;
+import com.jhash.oimadmin.ui.component.NamedComponent;
+import com.jhash.oimadmin.ui.componentTree.ROOTAdminTreeNode;
+import com.jhash.oimadmin.ui.componentTree.UIComponentTree;
+import com.jhash.oimadmin.ui.menu.ContextMenuEnabledNode;
+import com.jhash.oimadmin.ui.menu.MenuHandler;
+import com.jhash.oimadmin.ui.utils.MacOSXHandler;
 import com.jidesoft.swing.JideScrollPane;
 import com.jidesoft.swing.JideSplitPane;
 import com.jidesoft.swing.JideTabbedPane;
@@ -29,7 +33,11 @@ import org.slf4j.LoggerFactory;
 import javax.swing.*;
 import javax.swing.event.TreeExpansionEvent;
 import javax.swing.event.TreeExpansionListener;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
+import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreePath;
 import java.awt.event.*;
 import java.util.*;
@@ -40,6 +48,8 @@ public class OIMAdmin extends JFrame {
     private Config config = new Config();
     private UIComponentTreeImpl componentTree = null;
     private DisplayAreaImpl displayArea = null;
+    private MenuHandlerImpl menuHandler = null;
+    private ROOTAdminTreeNode rootNode = null;
 
     public static void main(String[] args) {
         logger.debug("Entering Main...");
@@ -57,16 +67,16 @@ public class OIMAdmin extends JFrame {
 
     public void initialize() {
         logger.debug("Trying to validate whether application is running on Mac");
-        if (System.getProperty("os.name").equals("Mac OS X")) {
+        if (MacOSXHandler.isMac()) {
             MacOSXHandler.initialize(this);
         }
         logger.debug("Loading configuration...");
         config.load();
         logger.debug("Configuration loaded.");
         try {
-            logger.debug("Setting UI Manager look and feel to default look and feel for current system i.e. {}",
-                    UIManager.getSystemLookAndFeelClassName());
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            String systemLookAndFeel = UIManager.getSystemLookAndFeelClassName();
+            logger.debug("Setting UI Manager look and feel to default look and feel for current system i.e. {}", systemLookAndFeel);
+            UIManager.setLookAndFeel(systemLookAndFeel);
             logger.debug("Native look and feel set.");
         } catch (Exception exception) {
             logger.warn("Error occurred while setting the native look and feel. Ignoring the error.", exception);
@@ -85,33 +95,17 @@ public class OIMAdmin extends JFrame {
         });
 
 
-        // Create common menu items
-        JMenu newMenu = new JMenu("New...");
-        newMenu.setMnemonic('N');
-        Map<STANDARD_MENUS, JMenu> standardMenus = new HashMap<STANDARD_MENUS, JMenu>();
-        standardMenus.put(STANDARD_MENUS.NEW, newMenu);
-        JMenuBar menuBar = new JMenuBar();
-        menuBar.add(newMenu);
-
         // Initialize all the UI Components
+        rootNode = new ROOTAdminTreeNode("ConnectionTreeNode", config);
         displayArea = initializeDisplayPane();
-        JideTabbedPane selectTabbedPane = initializeSelectionPane();
         componentTree = initializeSelectionTree();
+        JMenuBar menuBar = new JMenuBar();
+        menuHandler = new MenuHandlerImpl(menuBar);
 
-        // Initialize the Connection UI.
-        ConnectionTreeNode.ConnectionsRegisterUI connectionsUI = new ConnectionTreeNode.ConnectionsRegisterUI();
-        connectionsUI.registerMenu(config, menuBar, standardMenus, componentTree, displayArea);
-        connectionsUI.registerSelectionTree(config, componentTree, displayArea);
-        componentTree.connectionTree.expandPath(new TreePath(componentTree.connectionTree.getModel().getRoot()));
+        rootNode.setDisplayArea(displayArea).setUIComponentTree(componentTree).setMenuHandler(menuHandler).initialize();
+        componentTree.connectionTree.expandPath(new TreePath(rootNode.getUIObject().getPath()));
 
-        OIMClientUI.OIMClientRegisterUI clientUI = new OIMClientUI.OIMClientRegisterUI();
-        clientUI.registerMenu(config, menuBar, standardMenus, componentTree, displayArea);
-        clientUI.registerSelectionTree(config, componentTree, displayArea);
-
-        // Create the menu bar
-        menuBar.setOpaque(true);
-        menuBar.setPreferredSize(new java.awt.Dimension(200, 20));
-
+        JideTabbedPane selectTabbedPane = initializeSelectionPane();
         selectTabbedPane.addTab("Server Instances", componentTree.connectionTree);
         JideSplitPane splitPane = new JideSplitPane(JideSplitPane.HORIZONTAL_SPLIT);
         splitPane.add(new JideScrollPane(selectTabbedPane), 0);
@@ -119,7 +113,14 @@ public class OIMAdmin extends JFrame {
         splitPane.setProportionalLayout(true);
         splitPane.setProportions(new double[]{0.3});
 
-        setJMenuBar(menuBar);
+        // Create the menu bar
+        menuBar.setOpaque(true);
+        menuBar.setPreferredSize(new java.awt.Dimension(200, 20));
+        if (MacOSXHandler.isMac()) {
+            MacOSXHandler.registerMenuBar(menuBar);
+        } else {
+            setJMenuBar(menuBar);
+        }
         getContentPane().add(splitPane);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         pack();
@@ -144,16 +145,19 @@ public class OIMAdmin extends JFrame {
 
 
     private UIComponentTreeImpl initializeSelectionTree() {
-        AbstractUIComponentTreeNode.ROOTAdminTreeNode root = new AbstractUIComponentTreeNode.ROOTAdminTreeNode("ConnectionTreeNode");
-        final JTree localConnectionTree = new JTree(root);
+        final JTree localConnectionTree = new JTree(rootNode.getUIObject());
         localConnectionTree.addTreeExpansionListener(new TreeExpansionListener() {
             @Override
             public void treeExpanded(TreeExpansionEvent event) {
                 logger.trace("Processing tree ({}) expansion event {}", localConnectionTree, event);
                 try {
-                    if (event != null && event.getPath() != null && event.getPath().getLastPathComponent() != null) {
-                        OIMAdminTreeNode operatedNodeObject = (OIMAdminTreeNode) event.getPath().getLastPathComponent();
-                        operatedNodeObject.handleEvent(OIMAdminTreeNode.EVENT_TYPE.NODE_EXPAND);
+                    TreePath treePath;
+                    Object expandedNode;
+                    Object expandedNodeObject;
+                    if (event != null && (treePath = event.getPath()) != null
+                            && (expandedNode = treePath.getLastPathComponent()) instanceof DefaultMutableTreeNode
+                            && (expandedNodeObject = ((DefaultMutableTreeNode) expandedNode).getUserObject()) instanceof UIComponentTree.Node) {
+                        ((UIComponentTree.Node) expandedNodeObject).handleNodeEvent(UIComponentTree.EVENT_TYPE.NODE_EXPAND);
                     } else {
                         logger.warn(
                                 "Failed to identify the specific location of the tree being operated upon. Event received {}, Path: {}, Source: {}",
@@ -171,6 +175,48 @@ public class OIMAdmin extends JFrame {
                 logger.trace("Ignoring tree collapsed event {} on tree {}", event, localConnectionTree);
             }
         });
+        localConnectionTree.addTreeSelectionListener(new TreeSelectionListener() {
+            @Override
+            public void valueChanged(TreeSelectionEvent event) {
+                logger.trace("Processing tree({}) selection event {}", localConnectionTree, event);
+                try {
+                    TreePath treePath;
+                    Object selectedNode;
+                    Object selectedNodeObject;
+                    if (event != null && (treePath = event.getPath()) != null
+                            && (selectedNode = treePath.getLastPathComponent()) instanceof DefaultMutableTreeNode
+                            && (selectedNodeObject = ((DefaultMutableTreeNode) selectedNode).getUserObject()) instanceof UIComponentTree.Node) {
+                        ((UIComponentTree.Node) selectedNodeObject).handleNodeEvent(UIComponentTree.EVENT_TYPE.NODE_SELECTED);
+                    } else {
+                        logger.warn(
+                                "Failed to identify the specific location of the tree being operated upon. Event received {}, Path: {}, Source: {}",
+                                new Object[]{event, (event == null) ? "null" : event.getPath(),
+                                        (event == null) ? "null" : event.getSource()});
+                    }
+                    logger.trace("Handled new selected item");
+                } catch (Exception exception) {
+                    logger.warn("Failed to handle new selected item event " + event + " on tree " + localConnectionTree, exception);
+                }
+                try {
+                    TreePath previousSelectedNodePath;
+                    Object previouslySelectedNode;
+                    Object previouslySelectedNodeObject;
+                    if (event != null && (previousSelectedNodePath = event.getOldLeadSelectionPath()) != null
+                            && (previouslySelectedNode = previousSelectedNodePath.getLastPathComponent()) instanceof DefaultMutableTreeNode
+                            && (previouslySelectedNodeObject = ((DefaultMutableTreeNode) previouslySelectedNode).getUserObject()) instanceof UIComponentTree.Node) {
+                        ((UIComponentTree.Node) previouslySelectedNodeObject).handleNodeEvent(UIComponentTree.EVENT_TYPE.NODE_DESELECTED);
+                    } else {
+                        logger.warn(
+                                "Failed to identify the specific location of the tree being operated upon. Event received {}, Path: {}, Source: {}",
+                                new Object[]{event, (event == null) ? "null" : event.getOldLeadSelectionPath(),
+                                        (event == null) ? "null" : event.getSource()});
+                    }
+                } catch (Exception exception) {
+                    logger.warn("Failed to handle old selected item event " + event + " on tree " + localConnectionTree, exception);
+                }
+                logger.trace("Processed selection event.");
+            }
+        });
         localConnectionTree.addMouseListener(new MouseAdapter() {
 
             public void mousePressed(MouseEvent event) {
@@ -182,39 +228,20 @@ public class OIMAdmin extends JFrame {
                         logger.trace("Trying to check whether number of clicks {} is 2 i.e. it is a double click event",
                                 event.getClickCount());
                         if (event.getClickCount() >= 2) {
-                            Object clickedNodeObject = selPath.getLastPathComponent();
-                            NODE_STATE status = null;
+                            Object clickedNode;
+                            Object clickedNodeObject;
                             logger.trace("Trying to validate whether we have received identifiable node detail");
-                            if (clickedNodeObject != null && clickedNodeObject instanceof OIMAdminTreeNode) {
-                                ((OIMAdminTreeNode) clickedNodeObject).handleEvent(OIMAdminTreeNode.EVENT_TYPE.NODE_DISPLAY);
+                            if ((clickedNode = selPath.getLastPathComponent()) instanceof DefaultMutableTreeNode
+                                    && (clickedNodeObject = ((DefaultMutableTreeNode) clickedNode).getUserObject()) instanceof UIComponentTree.Node) {
+                                ((UIComponentTree.Node) clickedNodeObject).handleNodeEvent(UIComponentTree.EVENT_TYPE.NODE_DISPLAY);
                             } else {
-                                logger.trace("Failed to locate OIMAdminTreeNode node {} that was clicked", clickedNodeObject);
+                                logger.trace("Failed to locate node that was double clicked from path {}", selPath);
                             }
                         } else {
                             logger.trace("The number of clicks {} is not 2 i.e. double click. Ignoring event",
                                     event.getClickCount());
                             logger.trace("Trying to check whether the event is a popup menu event");
-                            if (event.isPopupTrigger()) {
-                                Object clickedNodeObject = selPath.getLastPathComponent();
-                                NODE_STATE status = null;
-                                logger.trace("Trying to validate whether we have received identifiable node detail");
-                                if (clickedNodeObject != null && clickedNodeObject instanceof OIMAdminTreeNode) {
-                                    if (clickedNodeObject instanceof ContextMenuEnabledNode) {
-                                        ContextMenuEnabledNode menuEnabledNode = (ContextMenuEnabledNode) clickedNodeObject;
-                                        if (menuEnabledNode.hasContextMenu()) {
-                                            JPopupMenu popupMenu = menuEnabledNode.getContextMenu();
-                                            if (popupMenu != null) {
-                                                popupMenu.show(event.getComponent(), event.getX(), event.getY());
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    logger.trace("Failed to locate OIMAdminTreeNode node {} that was clicked", clickedNodeObject);
-                                }
-
-                            } else {
-                                logger.trace("No popup event was detected. Ignoring event");
-                            }
+                            handlePopupEvent(event, selPath);
                         }
                     } else {
                         logger.trace("The event occurred at a location that did not correspond to a row. Ignoring the event");
@@ -234,25 +261,7 @@ public class OIMAdmin extends JFrame {
                         logger.trace("Trying to locate the node on which event occurred");
                         TreePath selPath = localConnectionTree.getPathForLocation(event.getX(), event.getY());
                         logger.trace("Validating whether event is a popup trigger");
-                        if (event.isPopupTrigger()) {
-                            Object clickedNodeObject = selPath.getLastPathComponent();
-                            logger.trace("Trying to validate whether we have received identifiable node detail");
-                            if (clickedNodeObject != null && clickedNodeObject instanceof OIMAdminTreeNode) {
-                                if (clickedNodeObject instanceof ContextMenuEnabledNode) {
-                                    ContextMenuEnabledNode menuEnabledNode = (ContextMenuEnabledNode) clickedNodeObject;
-                                    if (menuEnabledNode.hasContextMenu()) {
-                                        JPopupMenu popupMenu = menuEnabledNode.getContextMenu();
-                                        if (popupMenu != null) {
-                                            popupMenu.show(event.getComponent(), event.getX(), event.getY());
-                                        }
-                                    }
-                                }
-                            } else {
-                                logger.trace("Failed to locate OIMAdminTreeNode node {} that was clicked", clickedNodeObject);
-                            }
-                        } else {
-                            logger.trace("No popup event was detected. Ignoring event");
-                        }
+                        handlePopupEvent(event, selPath);
                     } else {
                         logger.trace("The event occurred at a location that did not correspond to a row. Ignoring the event");
                     }
@@ -263,26 +272,54 @@ public class OIMAdmin extends JFrame {
             }
 
         });
-        UIComponentTreeImpl localComponentTree = new UIComponentTreeImpl(localConnectionTree);
-        root.setUIComponentTree(localComponentTree);
-        return localComponentTree;
+        return new UIComponentTreeImpl(localConnectionTree);
+    }
+
+    private void handlePopupEvent(MouseEvent event, TreePath selPath) {
+        if (event.isPopupTrigger()) {
+            Object clickedNode = selPath.getLastPathComponent();
+            Object clickedNodeObject;
+            logger.trace("Trying to validate whether we have received identifiable node detail");
+            if (clickedNode instanceof DefaultMutableTreeNode
+                    && (clickedNodeObject = ((DefaultMutableTreeNode) clickedNode).getUserObject()) instanceof ContextMenuEnabledNode) {
+                ContextMenuEnabledNode menuEnabledNode = (ContextMenuEnabledNode) clickedNodeObject;
+                if (menuEnabledNode.hasContextMenu()) {
+                    JPopupMenu popupMenu = menuEnabledNode.getContextMenu();
+                    if (popupMenu != null) {
+                        logger.debug("Showing popup {}", popupMenu);
+                        popupMenu.show(event.getComponent(), event.getX(), event.getY());
+                    } else {
+                        logger.debug("No popup menu could be retrieved from node.");
+                    }
+                } else {
+                    logger.debug("No popup menu associated with node.");
+                }
+            } else {
+                logger.trace("Failed to locate node {} that was clicked", clickedNode);
+            }
+        } else {
+            logger.trace("No popup event was detected. Ignoring event");
+        }
     }
 
     public void destroy() {
         logger.debug("Trying to destroy OIMAdmin");
-        ((AbstractUIComponentTreeNode.ROOTAdminTreeNode) componentTree.getRootNode()).destroy();
+        if (componentTree != null)
+            componentTree.getRootNode().destroy();
         componentTree = null;
-        displayArea.destroy();
+        if (displayArea != null)
+            displayArea.destroy();
         displayArea = null;
+        if (menuHandler != null)
+            menuHandler.destroy();
+        menuHandler = null;
+        if (MacOSXHandler.isMac())
+            MacOSXHandler.cleanup(this);
         logger.debug("Destroyed OIMAdmin");
     }
 
-    public enum STANDARD_MENUS {
-        NEW
-    }
 
-
-    public static class UIComponentTreeImpl implements UIComponentTree {
+    private static class UIComponentTreeImpl implements UIComponentTree {
 
         private Logger logger = LoggerFactory.getLogger(UIComponentTreeImpl.class);
         private JTree connectionTree;
@@ -294,47 +331,73 @@ public class OIMAdmin extends JFrame {
         }
 
         @Override
-        public void addChildNode(OIMAdminTreeNode parent, OIMAdminTreeNode child) {
-            model.insertNodeInto(child, parent, parent.getChildCount());
+        public void addChildNode(Node parent, Node child) {
+            if (parent == null || child == null)
+                return;
+            Object parentUIObject;
+            Object childUIObject = null;
+            if ((parentUIObject = parent.getUIObject()) instanceof MutableTreeNode
+                    && (childUIObject = child.getUIObject()) instanceof MutableTreeNode) {
+                model.insertNodeInto((MutableTreeNode) childUIObject, (MutableTreeNode) parentUIObject, ((MutableTreeNode) parentUIObject).getChildCount());
+            } else {
+                throw new OIMAdminException("Expected parent " + parent + " and child " + child
+                        + " node to have MutableTreeNode but found parent " + parentUIObject + " and child " + childUIObject);
+            }
         }
 
         @Override
-        public List<OIMAdminTreeNode> getChildNodes(OIMAdminTreeNode parent) {
-            List<OIMAdminTreeNode> childNodes = new ArrayList<>();
-            int numberOfChildNodes = model.getChildCount(parent);
+        public List<Node> getChildNodes(Node parent) {
+            List<Node> childNodes = new ArrayList<>();
+            if (parent == null)
+                return childNodes;
+            int numberOfChildNodes = model.getChildCount(parent.getUIObject());
             for (int counter = 0; counter < numberOfChildNodes; counter++) {
-                Object nodeObject = model.getChild(parent, counter);
+                Object nodeObject = model.getChild(parent.getUIObject(), counter);
                 if (nodeObject == null)
                     throw new NullPointerException("Located a null node as child of node " + parent + " at index " + counter);
-                if (nodeObject instanceof OIMAdminTreeNode) {
-                    childNodes.add((OIMAdminTreeNode) nodeObject);
+                Object nodeUserObject;
+                if (nodeObject instanceof DefaultMutableTreeNode) {
+                    if ((nodeUserObject = ((DefaultMutableTreeNode) nodeObject).getUserObject()) instanceof Node) {
+                        childNodes.add((Node) nodeUserObject);
+                    } else {
+                        logger.warn("Located a node Object {} with user object of type {} instead of Node while enumerating child nodes of {}. Ignoring the node", new Object[]{nodeObject, (nodeUserObject != null ? nodeObject.getClass() : "null"), parent});
+                    }
                 } else {
-                    logger.warn("Located a node {} of type {} instead of OIMAdminTreeNode while enumerating child nodes of {}. Ignoring the node", new Object[]{nodeObject, nodeObject.getClass(), parent});
+                    logger.warn("Located a node {} of type {} instead of DefaultMutableTreeNode while enumerating child nodes of {}. Ignoring the node", new Object[]{nodeObject, nodeObject.getClass(), parent});
                 }
             }
             return childNodes;
         }
 
         @Override
-        public void removeChildNode(OIMAdminTreeNode parent, OIMAdminTreeNode child) {
-            model.removeNodeFromParent(child);
+        public void removeChildNode(Node parent, Node child) {
+            if (child != null) {
+                Object childUIObject;
+                if ((childUIObject = child.getUIObject()) instanceof MutableTreeNode) {
+                    model.removeNodeFromParent((MutableTreeNode) childUIObject);
+                } else {
+                    throw new OIMAdminException("Found child node to remove " + child + " did not contain MutableTreeNode. Located: " + childUIObject);
+                }
+            }
         }
 
         @Override
-        public OIMAdminTreeNode getRootNode() {
-            Object nodeObject = model.getRoot();
-            if (nodeObject == null)
-                throw new NullPointerException("Located a null root node of tree " + connectionTree);
-            if (nodeObject instanceof OIMAdminTreeNode) {
-                return ((OIMAdminTreeNode) nodeObject);
+        public ROOTAdminTreeNode getRootNode() {
+            Object rootNode = model.getRoot();
+            Object rootNodeObject;
+            if (!(rootNode instanceof DefaultMutableTreeNode))
+                throw new OIMAdminException("Located invalid root node of tree " + connectionTree + " as " + rootNode);
+            if (((rootNodeObject = ((DefaultMutableTreeNode) rootNode).getUserObject()) instanceof ROOTAdminTreeNode)) {
+                return ((ROOTAdminTreeNode) rootNodeObject);
             } else {
-                throw new ClassCastException("Expected class " + OIMAdminTreeNode.class + " but found class " + nodeObject.getClass() + " for node " + nodeObject);
+                throw new OIMAdminException("Expected class " + ROOTAdminTreeNode.class + " but found class "
+                        + (rootNodeObject == null ? "null" : rootNodeObject.getClass()) + " for node " + rootNode);
             }
         }
 
     }
 
-    public static class DisplayAreaImpl implements DisplayArea {
+    private static class DisplayAreaImpl implements DisplayArea {
 
         private static final Logger logger = LoggerFactory.getLogger(DisplayAreaImpl.class);
         private JideTabbedPane displayArea;
@@ -355,11 +418,11 @@ public class OIMAdmin extends JFrame {
                 public void actionPerformed(ActionEvent e) {
                     Object source = e.getSource();
                     logger.trace("Triggering close action on tab {}...", source);
-                    if (uiComponentToObjectMap.containsKey(source)) {
+                    if (source instanceof JComponent && uiComponentToObjectMap.containsKey(source)) {
                         UIComponent<? extends JComponent> uiComponentObject = uiComponentToObjectMap.get(source);
                         if (uiComponentObject instanceof AbstractUIComponent) {
                             if (((AbstractUIComponent) uiComponentObject).isDestroyComponentOnClose()) {
-                                uiComponentObject.destroy();
+                                ((AbstractUIComponent) uiComponentObject).destroy();
                             } else {
                                 logger.trace("Component should not be destroyed on close. Just removing the component from display");
                                 displayArea.remove((JComponent) source);
@@ -368,18 +431,17 @@ public class OIMAdmin extends JFrame {
                             logger.trace("Even though expected, the object {} is not an instance of {}", uiComponentObject, AbstractUIComponent.class);
                         }
                     } else {
-                        logger.trace("Could not locate UI component in {}", uiComponentToObjectMap);
+                        logger.trace("Could not locate UI component in {} for source {}", uiComponentToObjectMap, source);
                     }
                     logger.trace("Triggered close action on tab {}", source);
                 }
             });
-
         }
 
         @Override
         public void add(UIComponent<? extends JComponent> component) {
             if (component != null) {
-                String name = component.getName();
+                String name = (component instanceof NamedComponent) ? ((NamedComponent) component).getName() : component.toString();
                 if (objectToUIComponentMap.containsKey(component)) {
                     JComponent uiComponent = objectToUIComponentMap.get(component);
                     logger.trace("Component {} is known to display area. Validating if the associated UI Component {} is being displayed", component, uiComponent);
@@ -428,14 +490,140 @@ public class OIMAdmin extends JFrame {
             logger.debug("Destroying Display Area {}", this);
             Set<UIComponent> activeObjects = new HashSet<UIComponent>(objectToUIComponentMap.keySet());
             for (UIComponent component : activeObjects) {
-                try {
-                    logger.debug("Trying to destroy {}", component);
-                    component.destroy();
-                } catch (Exception exception) {
-                    logger.warn("Failed to destroy component " + component + ". Ignoring error.", exception);
+                if (component instanceof Service) {
+                    try {
+                        logger.debug("Trying to destroy {}", component);
+                        ((Service) component).destroy();
+                    } catch (Exception exception) {
+                        logger.warn("Failed to destroy component " + component + ". Ignoring error.", exception);
+                    }
                 }
             }
             logger.debug("Destroyed {}", this);
+        }
+    }
+
+    private static class MenuHandlerImpl implements MenuHandler {
+
+        private final JMenuBar menuBar;
+        private Map<MenuHandler.MENU, JMenuItem> menuMap = new HashMap<>();
+        private Map<MENU, Map<Context, ActionHandler>> menuActionMap = new HashMap<>();
+
+        public MenuHandlerImpl(JMenuBar menuBar) {
+            this.menuBar = menuBar;
+        }
+
+        @Override
+        public void register(MENU menuItem) {
+            register(menuItem, null, null);
+        }
+
+        @Override
+        public void register(MENU menuItem, Context context) {
+            register(menuItem, context, null);
+        }
+
+        @Override
+        public void register(MENU menuItem, ActionHandler actionHandler) {
+            register(menuItem, null, actionHandler);
+        }
+
+        @Override
+        public void register(final MENU menuItem, final Context context, final ActionHandler actionHandler) {
+            if (menuItem == null)
+                return;
+            logger.debug("Registering menu {}", menuItem);
+            if (!menuMap.containsKey(menuItem)) {
+                logger.debug("New Menu identified.");
+                JMenuItem menuObject = (actionHandler == null) ? new JMenu(menuItem.getName()) : new JMenuItem(menuItem.getName());
+                if (menuItem.keyStroke != null) {
+                    logger.debug("Setting accelerator {}", menuItem.keyStroke);
+                    menuObject.setAccelerator(menuItem.keyStroke);
+                }
+                if (actionHandler != null && context != null) {
+                    addActionHandler(menuItem, menuObject, context, actionHandler);
+                }
+                JMenuItem parentMenuItem = null;
+                if (menuItem.parent != null) {
+                    logger.debug("Locating parent {}", menuItem.parent);
+                    parentMenuItem = menuMap.get(menuItem.parent);
+                    if (parentMenuItem == null) {
+                        register(menuItem.parent, null, null);
+                        parentMenuItem = menuMap.get(menuItem.parent);
+                    }
+                }
+                if (parentMenuItem != null) {
+                    logger.debug("Adding menu to parent {}", parentMenuItem);
+                    parentMenuItem.add(menuObject);
+                } else {
+                    logger.debug("Adding menu to menu bar.");
+                    menuBar.add(menuObject);
+                }
+                menuMap.put(menuItem, menuObject);
+            } else {
+                logger.debug("Existing menu located.");
+                JMenuItem registeredMenuItem = menuMap.get(menuItem);
+                KeyStroke acceleratorKeyStroke = registeredMenuItem.getAccelerator();
+                if (acceleratorKeyStroke != menuItem.keyStroke) { // Key strokes are immutable?
+                    throw new OIMAdminException("An existing menu item has a different accelerator keystroke " + acceleratorKeyStroke + " compared to give menu " + menuItem);
+                }
+                if (actionHandler != null && context != null)
+                    addActionHandler(menuItem, registeredMenuItem, context, actionHandler);
+            }
+            logger.debug("Registered menu {}", menuItem);
+        }
+
+        private void addActionHandler(final MENU menuItem, JMenuItem menuObject, Context context, ActionHandler actionHandler) {
+            if (menuItem == null || context == null || actionHandler == null)
+                return;
+            Map<Context, ActionHandler> menuActionHandlerMapEntry = menuActionMap.get(menuItem);
+            if (menuActionHandlerMapEntry == null) {
+                menuActionHandlerMapEntry = new HashMap<>();
+                menuActionMap.put(menuItem, menuActionHandlerMapEntry);
+                menuObject.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        logger.debug("Invoking menu action handler for {}", menuItem);
+                        for (Map.Entry<Context, ActionHandler> actionHandlerEntry : menuActionMap.get(menuItem).entrySet()) {
+                            Context context = actionHandlerEntry.getKey();
+                            if (context != null && context.isActive()) {
+                                try {
+                                    logger.debug("Invoking action handler for menu {} with context {}", new Object[]{menuItem, context});
+                                    actionHandlerEntry.getValue().invoke(menuItem, context);
+                                    logger.debug("Invoked action handler.");
+                                } catch (Exception exception) {
+                                    logger.warn("Invocation of menu " + menuItem + " using context "
+                                            + context + " failed. Exception", exception);
+                                    context.displayMessage("Action handler invocation failed.", exception);
+                                }
+                            }
+                        }
+                        logger.debug("Completed menu action handler");
+                    }
+                });
+            }
+            menuActionHandlerMapEntry.put(context, actionHandler);
+        }
+
+        @Override
+        public void unregister(MENU menuItem, Context context, ActionHandler actionHandler) {
+            if (menuItem == null)
+                return;
+            if (menuMap.containsKey(menuItem)) {
+
+            } else {
+                logger.debug("The Menu {} is not registered.", menuItem);
+            }
+        }
+
+        public void destroy() {
+            this.menuActionMap.clear();
+            for (Map.Entry<MENU, JMenuItem> menuItem : menuMap.entrySet()) {
+                if (menuItem.getKey().parent == null) {
+                    menuBar.remove(menuItem.getValue());
+                }
+            }
+            this.menuMap.clear();
         }
     }
 }

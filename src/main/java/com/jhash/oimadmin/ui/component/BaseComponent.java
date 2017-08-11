@@ -14,14 +14,25 @@
  * limitations under the License.
  */
 
-package com.jhash.oimadmin.ui;
+package com.jhash.oimadmin.ui.component;
 
-import javax.swing.*;
+import com.jhash.oimadmin.Config;
+import com.jhash.oimadmin.ui.DisplayArea;
+import com.jhash.oimadmin.ui.componentTree.UIComponentTree;
+import com.jhash.oimadmin.ui.menu.MenuHandler;
 
-public interface DisplayArea {
+public interface BaseComponent {
 
-    void add(UIComponent<? extends JComponent> component);
+    ParentComponent getParent();
 
-    void remove(UIComponent<? extends JComponent> component);
+    Config.Configuration getConfiguration();
+
+    UIComponentTree getUIComponentTree();
+
+    DisplayArea getDisplayArea();
+
+    MenuHandler getMenuHandler();
+
+    void displayMessage(String title, String message, Exception exception);
 
 }

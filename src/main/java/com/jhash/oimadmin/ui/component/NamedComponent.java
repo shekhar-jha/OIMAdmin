@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-package com.jhash.oimadmin.ui;
+package com.jhash.oimadmin.ui.component;
 
-import javax.swing.*;
+public interface NamedComponent {
 
-public interface DisplayArea {
+    String getName();
 
-    void add(UIComponent<? extends JComponent> component);
-
-    void remove(UIComponent<? extends JComponent> component);
-
+    String getStringRepresentation();
 }

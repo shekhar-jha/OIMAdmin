@@ -54,7 +54,11 @@ public class Config {
         if (properties != null) {
             copyOfProperties.putAll(properties);
         }
-        return new Configuration(copyOfProperties, this);
+        return new Configuration(oimConnectionName, copyOfProperties, this);
+    }
+
+    public Configuration getConfiguration() {
+        return new Configuration("", new Properties(), this);
     }
 
     public void load() {
@@ -417,10 +421,12 @@ public class Config {
 
         private final Properties configuration;
         private final Config config;
+        private final String stringRepresentation;
 
-        private Configuration(Properties properties, Config config) {
+        private Configuration(String name, Properties properties, Config config) {
             configuration = properties;
             this.config = config;
+            this.stringRepresentation = "Configuration {" + name + "}";
         }
 
         public String getWorkArea() {
@@ -442,6 +448,11 @@ public class Config {
             return config;
         }
 
+        @Override
+        public String toString() {
+            return stringRepresentation;
+        }
+
     }
 
     public static class EditableConfiguration extends Configuration {
@@ -449,7 +460,7 @@ public class Config {
         private final Properties editableConfiguration;
 
         public EditableConfiguration(Configuration configuration) {
-            super(configuration.configuration, configuration.config);
+            super(configuration.stringRepresentation, configuration.configuration, configuration.config);
             editableConfiguration = new Properties();
             editableConfiguration.putAll(configuration.configuration);
         }
@@ -464,8 +475,14 @@ public class Config {
         }
 
         private void syncProperties() {
-            for (String attributeName : editableConfiguration.stringPropertyNames()) {
-                super.configuration.setProperty(attributeName, editableConfiguration.getProperty(attributeName));
+            String existingConfiguration = super.configuration.getProperty(Connection.ATTR_CONN_NAME);
+            String newConfiguration = editableConfiguration.getProperty(Connection.ATTR_CONN_NAME);
+            if (newConfiguration.equalsIgnoreCase(existingConfiguration)) {
+                for (String attributeName : editableConfiguration.stringPropertyNames()) {
+                    super.configuration.setProperty(attributeName, editableConfiguration.getProperty(attributeName));
+                }
+            } else {
+                logger.debug("Ignoring sync call to sync properties between {} and {} since the name differs.", existingConfiguration, newConfiguration);
             }
         }
     }

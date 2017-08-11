@@ -14,14 +14,27 @@
  * limitations under the License.
  */
 
-package com.jhash.oimadmin.ui;
+package com.jhash.oimadmin.ui.componentTree;
 
-import javax.swing.*;
+import java.util.List;
 
-public interface DisplayArea {
+public interface UIComponentTree {
 
-    void add(UIComponent<? extends JComponent> component);
+    void addChildNode(Node parent, Node child);
 
-    void remove(UIComponent<? extends JComponent> component);
+    List<Node> getChildNodes(Node parent);
 
+    void removeChildNode(Node parent, Node child);
+
+    ROOTAdminTreeNode getRootNode();
+
+    enum EVENT_TYPE {
+        NODE_EXPAND, NODE_COLLAPSE, NODE_DISPLAY, NODE_SELECTED, NODE_DESELECTED
+    }
+
+    interface Node<T> {
+        T getUIObject();
+
+        void handleNodeEvent(EVENT_TYPE event_type);
+    }
 }

@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package com.jhash.oimadmin.ui;
+package com.jhash.oimadmin.events;
 
-import javax.swing.*;
+public interface EventListenerRegistrar<T extends EventListenerRegistrar> {
 
-public interface DisplayArea {
+    T registerEventListener(EventConsumer childComponent);
 
-    void add(UIComponent<? extends JComponent> component);
+    T registerEventListener(Event event, EventConsumer childComponent);
 
-    void remove(UIComponent<? extends JComponent> component);
+    T unRegisterEventListener(EventConsumer childComponent);
+
+    T unRegisterEventListener(Event event, EventConsumer childComponent);
 
 }

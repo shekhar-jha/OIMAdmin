@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.jhash.oimadmin.ui;
+package com.jhash.oimadmin.ui.menu;
 
 import javax.swing.*;
 
-public interface DisplayArea {
+public interface ContextMenuEnabledNode<T extends JPopupMenu> {
 
-    void add(UIComponent<? extends JComponent> component);
+    boolean hasContextMenu();
 
-    void remove(UIComponent<? extends JComponent> component);
+    T getContextMenu();
 
 }

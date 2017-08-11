@@ -14,14 +14,18 @@
  * limitations under the License.
  */
 
-package com.jhash.oimadmin.ui;
+package com.jhash.oimadmin.ui.componentTree;
 
-import javax.swing.*;
+import com.jhash.oimadmin.ui.component.ParentComponent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public interface DisplayArea {
+public class LoadingNode extends DummyAdminTreeNode {
 
-    void add(UIComponent<? extends JComponent> component);
+    private static final Logger logger = LoggerFactory.getLogger(LoadingNode.class);
 
-    void remove(UIComponent<? extends JComponent> component);
-
+    public LoadingNode(ParentComponent parentNode) {
+        super(DUMMY_LEAF_NODE_NAME, parentNode);
+        logger.trace("LoadingNode({})", new Object[]{parentNode});
+    }
 }

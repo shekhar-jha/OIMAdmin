@@ -14,14 +14,25 @@
  * limitations under the License.
  */
 
-package com.jhash.oimadmin.ui;
+package com.jhash.oimadmin.ui.utils;
 
-import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
-public interface DisplayArea {
+public class DeferredTextOperations implements DocumentListener{
 
-    void add(UIComponent<? extends JComponent> component);
+    @Override
+    public void insertUpdate(DocumentEvent e) {
 
-    void remove(UIComponent<? extends JComponent> component);
+    }
 
+    @Override
+    public void removeUpdate(DocumentEvent e) {
+
+    }
+
+    @Override
+    public void changedUpdate(DocumentEvent e) {
+
+    }
 }

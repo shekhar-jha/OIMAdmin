@@ -13,15 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.jhash.oimadmin.ui;
 
-import javax.swing.*;
+public interface UIComponent<T> {
 
-public interface DisplayArea {
-
-    void add(UIComponent<? extends JComponent> component);
-
-    void remove(UIComponent<? extends JComponent> component);
+    T getComponent();
 
 }

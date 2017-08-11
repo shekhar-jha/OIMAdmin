@@ -14,14 +14,10 @@
  * limitations under the License.
  */
 
-package com.jhash.oimadmin.ui;
+package com.jhash.oimadmin.events;
 
-import javax.swing.*;
+public interface EventConsumer {
 
-public interface DisplayArea {
-
-    void add(UIComponent<? extends JComponent> component);
-
-    void remove(UIComponent<? extends JComponent> component);
+    void triggerEvent(EventSource source, Event event);
 
 }
