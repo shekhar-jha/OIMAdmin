@@ -37,7 +37,7 @@ public abstract class ServiceComponentImpl<T extends ServiceComponentImpl> exten
     }
 
     @Override
-    public final T initialize() {
+    public T initialize() {
         logger.debug("Trying to initialize component");
         if (getState() == Service.INITIALIZATION_IN_PROGRESS) {
             logger.warn("Service {} is already being initialized, ignoring the trigger", this);
@@ -74,11 +74,12 @@ public abstract class ServiceComponentImpl<T extends ServiceComponentImpl> exten
     }
 
     @Override
-    public final void destroy() {
+    public void destroy() {
         logger.debug("Trying to destroy {}", this);
         STATE currentState = getState();
         if (currentState == Service.INITIALIZED || currentState == Service.INITIALIZED_NO_OP) {
             logger.debug("Service in {} state, setting status to {} before destroying", currentState, Service.DESTRUCTION_IN_PROGRESS);
+            setState(DESTRUCTION_IN_PROGRESS);
             try {
                 destroyComponent();
                 logger.debug("Completed destruction");
