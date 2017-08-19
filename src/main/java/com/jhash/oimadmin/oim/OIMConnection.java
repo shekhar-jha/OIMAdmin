@@ -58,6 +58,7 @@ public class OIMConnection extends AbstractConnection {
 
     private Object oimClient = null;
     private Config.OIM_VERSION version = null;
+    private String loginUser = null;
 
     public OIMConnection() {
         STRING_REPRESENTATION = "OIMConnection:";
@@ -222,6 +223,7 @@ public class OIMConnection extends AbstractConnection {
                 Thread.currentThread().setContextClassLoader(getClassLoader());
                 Object roles = oimClient.getClass().getMethod("login", String.class, char[].class).invoke(oimClient, userName, password);
                 logger.debug("Successfully performed login. Roles {}", roles);
+                loginUser = userName;
             } finally {
                 Thread.currentThread().setContextClassLoader(currentClassLoader);
             }
@@ -385,6 +387,60 @@ public class OIMConnection extends AbstractConnection {
             }
         }
 
+    }
+
+    public void unregisterJar(String type, String jarName) {
+        if (!isLogin)
+            throw new IllegalStateException("The OIM Connection " + this + " is not in a login state");
+        try {
+            Object platformUtilsService = getService("oracle.iam.platformservice.api.PlatformUtilsService");
+            logger.debug("Loaded PlatformUtilsService Service {}", platformUtilsService);
+            ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
+            try {
+                Thread.currentThread().setContextClassLoader(getClassLoader());
+                Class jarElementClass = getClass("oracle.iam.platformservice.vo.JarElement");
+                Object jarElement = jarElementClass.newInstance();
+                Utils.getMethod(jarElementClass, "setName", String.class).invoke(jarElement, jarName);
+                Utils.getMethod(jarElementClass, "setType", String.class).invoke(jarElement, type);
+                Set jarElementSet = new HashSet();
+                jarElementSet.add(jarElement);
+                Utils.getMethod(platformUtilsService.getClass(), "deleteJars", Set.class).invoke(platformUtilsService, jarElementSet);
+            } finally {
+                Thread.currentThread().setContextClassLoader(currentClassLoader);
+            }
+        } catch (Exception exception) {
+            throw new OIMAdminException("Failed to unregister jar " + jarName + " of type " + type, exception);
+        }
+
+    }
+
+    public long getLoginUserIdentifier() {
+        if (!isLogin)
+            throw new IllegalStateException("The OIM Connection " + this + " is not in a login state");
+        try {
+            Object userManagerService = getService("oracle.iam.identity.usermgmt.api.UserManager");
+            logger.debug("Loaded UserManager Service {}", userManagerService);
+            ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
+            try {
+                Thread.currentThread().setContextClassLoader(getClassLoader());
+                Object userObject = Utils.getMethod(userManagerService.getClass(), "getDetails", String.class, Set.class, boolean.class).invoke(userManagerService, loginUser, null, true);
+                if (userObject != null) {
+                    Object idValue = Utils.invoke(userObject, "getId");
+                    if (idValue instanceof String) {
+                        return Long.parseLong((String) idValue);
+                    } else {
+                        logger.warn("Did not locate any ID for authenticated user from user object " + userObject);
+                    }
+                } else {
+                    logger.warn("No authenticated User detail was returned.");
+                }
+            } finally {
+                Thread.currentThread().setContextClassLoader(currentClassLoader);
+            }
+        } catch (Exception exception) {
+            throw new OIMAdminException("Failed to retrieve User ID for Login user", exception);
+        }
+        return -1L;
     }
 
     public void logout() {
