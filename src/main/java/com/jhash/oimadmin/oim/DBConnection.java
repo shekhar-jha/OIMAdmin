@@ -80,13 +80,27 @@ public class DBConnection extends AbstractConnection {
     }
 
     public Details invokeSQL(String sqlID, Object... parameterValues) {
+        return invokeSQL(false, false, sqlID, parameterValues);
+    }
+
+    public Details invokeSQL(boolean suppressException, String sqlID, Object... parameterValues) {
+        return invokeSQL(suppressException, false, sqlID, parameterValues);
+    }
+
+    public void invokeOperation(String sqlID, Object... parameterValues) {
+        invokeSQL(false, true, sqlID, parameterValues);
+    }
+
+    public void invokeOperation(boolean suppressException, String sqlID, Object... parameterValues) {
+        invokeSQL(suppressException, true, sqlID, parameterValues);
+    }
+
+    public Details invokeSQL(boolean suppressException, boolean operation, String sqlID, Object... parameterValues) {
         logger.trace("Trying to invoke SQL {} with parameters {}", sqlID, parameterValues);
-        try (PreparedStatement preparedStatement = dbConnection.prepareStatement(sqlID)) {
+        try (PreparedStatement preparedStatement = operation ? dbConnection.prepareStatement(sqlID, PreparedStatement.RETURN_GENERATED_KEYS) : dbConnection.prepareStatement(sqlID)) {
             ParameterMetaData parameterMetaData = preparedStatement.getParameterMetaData();
-            if (parameterMetaData.getParameterCount() != parameterValues.length) {
-                throw new NullPointerException("The number of values " + parameterValues
-                        + " do not match number of parameters "
-                        + parameterMetaData.getParameterCount() + " of SQL statement " + sqlID);
+            if (parameterValues != null && parameterMetaData.getParameterCount() != parameterValues.length) {
+                logger.warn("The number of values {} do not match number of parameters {} of SQL Statement {}", new Object[]{parameterValues.length, parameterMetaData.getParameterCount(), sqlID});
             }
             int parameterIndexCounter = 1;
             for (Object parameterValue : parameterValues) {
@@ -94,30 +108,44 @@ public class DBConnection extends AbstractConnection {
                 parameterIndexCounter++;
             }
             try {
-                ResultSet result = preparedStatement.executeQuery();
-                ResultSetMetaData resultSetMetaData = preparedStatement.getMetaData();
-                int totalColumnsInResult = resultSetMetaData.getColumnCount();
-                List<String> columnNames = new ArrayList<>();
-                for (int columnCounter = 1; columnCounter <= totalColumnsInResult; columnCounter++) {
-                    columnNames.add(resultSetMetaData.getColumnName(columnCounter));
-                }
-                List<Map<String, Object>> resultData = new ArrayList<>();
-                while (result.next()) {
-                    Map<String, Object> record = new HashMap<>();
+                if (operation) {
+                    int affectedRows = preparedStatement.executeUpdate();
+                    logger.debug("Affected rows of executed prepared statement is {}", affectedRows);
+                    //TODO: handle generated keys preparedStatement.getGeneratedKeys();
+                    dbConnection.commit();
+                } else {
+                    ResultSet result = preparedStatement.executeQuery();
+                    ResultSetMetaData resultSetMetaData = preparedStatement.getMetaData();
+                    int totalColumnsInResult = resultSetMetaData.getColumnCount();
+                    List<String> columnNames = new ArrayList<>();
                     for (int columnCounter = 1; columnCounter <= totalColumnsInResult; columnCounter++) {
-                        String columnName = resultSetMetaData.getColumnLabel(columnCounter);
-                        Object columnValue = result.getObject(columnCounter);
-                        record.put(columnName, columnValue);
+                        columnNames.add(resultSetMetaData.getColumnName(columnCounter));
                     }
-                    resultData.add(record);
+                    List<Map<String, Object>> resultData = new ArrayList<>();
+                    while (result.next()) {
+                        Map<String, Object> record = new HashMap<>();
+                        for (int columnCounter = 1; columnCounter <= totalColumnsInResult; columnCounter++) {
+                            String columnName = resultSetMetaData.getColumnLabel(columnCounter);
+                            Object columnValue = result.getObject(columnCounter);
+                            record.put(columnName, columnValue);
+                        }
+                        resultData.add(record);
+                    }
+                    return new Details(resultData, columnNames.toArray(new String[0]));
                 }
-                return new Details(resultData, columnNames.toArray(new String[0]));
             } catch (Exception exception) {
-                throw new OIMAdminException("Failed to read result", exception);
+                if (suppressException)
+                    logger.warn("Failed to read result for SQL " + sqlID, exception);
+                else
+                    throw new OIMAdminException("Failed to read result", exception);
             }
         } catch (Exception exception) {
-            throw new OIMAdminException("Failed to execute SQL " + sqlID + " with parameter " + parameterValues, exception);
+            if (suppressException)
+                logger.warn("Failed to execute SQL " + sqlID + " with parameter " + parameterValues, exception);
+            else
+                throw new OIMAdminException("Failed to execute SQL " + sqlID + " with parameter " + parameterValues, exception);
         }
+        return null;
     }
 
     @Override
