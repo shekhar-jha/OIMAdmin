@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class AbstractUIComponentTreeNode<R extends AbstractUIComponentTreeNode>
-        extends EventEnabledServiceComponentImpl<R> implements UIComponentTree.Node<DefaultMutableTreeNode>, ContextMenuEnabledNode, ParentComponent<R>, PublishableComponent<R> {
+        extends EventEnabledServiceComponentImpl<R> implements UIComponentTree.Node<DefaultMutableTreeNode>, ContextMenuEnabledNode, ParentComponent<R>, PublishableComponent<R>, EventSource {
 
     public static final String DUMMY_LEAF_NODE_NAME = "Loading...";
     public static final MenuHandler.MENU REFRESH = new MenuHandler.MENU("Refresh", MenuHandler.MENU.FILE,
@@ -99,23 +99,6 @@ public abstract class AbstractUIComponentTreeNode<R extends AbstractUIComponentT
         }
     }
 
-    public static void destroyChildNodes(UIComponentTree.Node node, UIComponentTree selectionTree) {
-        logger.debug("Trying to destroy all the associated child nodes of {}", node);
-        for (UIComponentTree.Node childNode : selectionTree.getChildNodes(node)) {
-            if (childNode instanceof Service) {
-                logger.trace("Trying to destroy child node {}", childNode);
-                try {
-                    ((Service) childNode).destroy();
-                    logger.trace("Destroyed child node {}", childNode);
-                } catch (Exception exception) {
-                    logger.warn("Error occurred while destroying child node " + childNode + " of node " + node + ". Ignoring error", exception);
-                }
-            }
-            selectionTree.removeChildNode(node, childNode);
-        }
-        logger.debug("Destroyed all child nodes of {}", node);
-    }
-
     @Override
     public String toString() {
         return getName();
@@ -139,9 +122,19 @@ public abstract class AbstractUIComponentTreeNode<R extends AbstractUIComponentT
 
     public R publish() {
         if (publish && !published) {
-            if (getParent() instanceof AbstractUIComponentTreeNode) {
-                this.getUIComponentTree().addChildNode((AbstractUIComponentTreeNode) getParent(), this);
+            if (getParent() instanceof UIComponentTree.Node) {
+                this.getUIComponentTree().addChildNode((UIComponentTree.Node) getParent(), this);
                 published = true;
+            }
+        }
+        return (R) this;
+    }
+
+    public R unPublish() {
+        if (published) {
+            if (getParent() instanceof UIComponentTree.Node) {
+                this.getUIComponentTree().removeChildNode((UIComponentTree.Node) getParent(), this);
+                published = false;
             }
         }
         return (R) this;
@@ -159,25 +152,29 @@ public abstract class AbstractUIComponentTreeNode<R extends AbstractUIComponentT
     public final void initializeComponent() {
         logger.debug("Initializing Node...");
         try {
+            super.initializeComponent();
             setupNode();
             UIComponentTree selectionTree = this.getUIComponentTree();
             List<UIComponentTree.Node> childNodes = selectionTree.getChildNodes(this);
             if (childNodes.size() >= 1 && childNodes.get(0) instanceof LoadingNode) {
-                selectionTree.removeChildNode(this, childNodes.get(0));
+                ((LoadingNode) childNodes.get(0)).destroy();
             }
             publish();
             logger.debug("Initialized Node.");
         } catch (Exception exception) {
             logger.warn("Failed to initialize node " + this, exception);
-            destroyChildNodes(this, getParent().getUIComponentTree());
+            triggerEvent(this, DESTROY);
             throw exception;
         }
     }
 
     public abstract void setupNode();
 
-    public boolean handleEvent(EventSource parent, Event event) {
-        return false;
+    public Boolean handleEvent(EventSource parent, Event event) {
+        logger.debug("Handling event in Tree Node ");
+        Boolean eventHandled = super.handleEvent(parent, event);
+        logger.debug("Handled event. Propagate? {}", eventHandled);
+        return eventHandled;
     }
 
     public void handleNodeEvent(UIComponentTree.EVENT_TYPE event) {
@@ -248,7 +245,7 @@ public abstract class AbstractUIComponentTreeNode<R extends AbstractUIComponentT
         if (actionHandler != null) {
             if (popupMenu == null)
                 popupMenu = new JPopupMenu();
-            JMenuItem popupMenuItem = new JMenuItem(menu.getName());
+            JMenuItem popupMenuItem = new JMenuItem(menu.popupMenuName);
             popupMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -286,12 +283,26 @@ public abstract class AbstractUIComponentTreeNode<R extends AbstractUIComponentT
         }
     }
 
+
+    public final void destroy(boolean unpublish) {
+        if (unpublish)
+            unPublish();
+        super.destroy();
+    }
+
+    @Override
+    public final void destroy() {
+        logger.debug("Destroying AbstractUIComponentTreeNode {}", this);
+        unPublish();
+        super.destroy();
+        logger.debug("Destroyed AbstractUIComponentTreeNode {}", this);
+    }
+
     @Override
     public final void destroyComponent() {
         logger.trace("Destroying Node {}", this);
         this.isSelected = false;
-        unregisterMenu(OPEN);
-        destroyChildNodes(this, getUIComponentTree());
+        triggerEvent(this, DESTROY);
         try {
             destroyNode();
             logger.debug("Completed node specific destruction");

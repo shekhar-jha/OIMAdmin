@@ -269,10 +269,9 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel, ConnectionDet
                 connectionDetails.getConfig().saveConfiguration(connectionDetails, false);
                 String connectionName = connectionDetails.getProperty(Connection.ATTR_CONN_NAME);
                 if (isNewConnection || (initialConnectionName != null && !initialConnectionName.equalsIgnoreCase(connectionName))) {
-                    getUIComponentTree().addChildNode(getUIComponentTree().getRootNode(),
-                            new ConnectionTreeNode(connectionName,
-                                    getUIComponentTree().getRootNode().generateParentComponent(
-                                            connectionDetails.getConfig().getConnectionDetails(connectionName))));
+                    new ConnectionTreeNode(connectionName,
+                            getUIComponentTree().getRootNode().generateParentComponent(
+                                    connectionDetails.getConfig().getConnectionDetails(connectionName))).publish();
                 }
                 if (connectionTreeNode != null) {
                     ConnectionDetails.this.connectionTreeNode.refreshUI();

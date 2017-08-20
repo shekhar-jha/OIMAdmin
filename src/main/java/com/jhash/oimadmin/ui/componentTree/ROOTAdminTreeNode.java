@@ -80,8 +80,7 @@ public class ROOTAdminTreeNode implements Service, UIComponentTree.Node<DefaultM
     public ROOTAdminTreeNode initialize() {
         for (String connectionName : config.getConnectionNames()) {
             Config.Configuration configuration = config.getConnectionDetails(connectionName);
-            ConnectionTreeNode connectionTreeNode = new ConnectionTreeNode(connectionName, generateParentComponent(configuration));
-            selectionTree.addChildNode(this, connectionTreeNode);
+            new ConnectionTreeNode(connectionName, generateParentComponent(configuration)).publish();
         }
         eventManager.registerEventListener(new VirtualNode<>(generateParentComponent(config.getConnectionDetails("")), OIMClientUI.class).initialize());
         eventManager.registerEventListener(new VirtualNode<>(generateParentComponent(config.getConnectionDetails("")), ConnectionTreeNode.class).initialize());

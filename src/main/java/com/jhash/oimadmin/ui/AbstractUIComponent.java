@@ -52,9 +52,12 @@ public abstract class AbstractUIComponent<T extends JComponent, W extends Abstra
 
 
     @Override
-    public boolean handleEvent(EventSource parent, Event event) {
+    public Boolean handleEvent(EventSource parent, Event event) {
+        logger.debug("Handling event in UI Component");
+        Boolean handledEvent = super.handleEvent(parent, event);
         //TODO:
-        return false;
+        logger.debug("Handled event in UI Component. Result {}", handledEvent);
+        return handledEvent;
     }
 
     public <I, O> O executeCallback(CallbackEvent<I, O> event, I input) {
@@ -79,6 +82,11 @@ public abstract class AbstractUIComponent<T extends JComponent, W extends Abstra
         } else {
             logger.debug("Not publishing the component.");
         }
+        return (W) this;
+    }
+
+    public W unPublish() {
+        getDisplayArea().remove(this);
         return (W) this;
     }
 

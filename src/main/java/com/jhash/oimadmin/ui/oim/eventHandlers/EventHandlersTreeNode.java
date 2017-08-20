@@ -72,7 +72,7 @@ public class EventHandlersTreeNode extends AbstractUIComponentTreeNode<EventHand
         registerMenu(REFRESH, new MenuHandler.ActionHandler() {
             @Override
             public void invoke(MenuHandler.MENU menuItem, MenuHandler.Context context) {
-                EventHandlersTreeNode.this.destroy();
+                EventHandlersTreeNode.this.destroy(false);
                 EventHandlersTreeNode.this.initialize();
             }
         });

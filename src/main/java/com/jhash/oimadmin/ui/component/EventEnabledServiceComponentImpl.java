@@ -38,24 +38,31 @@ public abstract class EventEnabledServiceComponentImpl<T extends EventEnabledSer
     @Override
     public void triggerEvent(EventSource parent, Event event) {
         logger.debug("Received event {} from {}", event, parent);
-        if (event == INITIALIZE && getState() == NOT_INITIALIZED)
-            initialize();
-        if (event == DESTROY && getState() == INITIALIZED)
-            destroy();
-        boolean dontPropagate = false;
+        Boolean dontPropagate = false;
         try {
             dontPropagate = handleEvent(parent, event);
         } catch (Exception exception) {
             logger.warn("Failed to handle event " + event + " from " + parent, exception);
         } finally {
-            if (!dontPropagate) {
+            if (dontPropagate == null || !dontPropagate) {
                 eventManager.triggerEvent(parent, event);
             }
         }
         logger.debug("Processed event {} from {}", event, parent);
     }
 
-    public abstract boolean handleEvent(EventSource parent, Event event);
+    public Boolean handleEvent(EventSource parent, Event event) {
+        logger.debug("Handling event {} from {}", event, parent);
+        if (event == INITIALIZE && getState() == NOT_INITIALIZED) {
+            initialize();
+            return true;
+        }
+        if (event == DESTROY && (getState() == INITIALIZED || getState() == INITIALIZED_NO_OP)) {
+            destroy();
+            return false;
+        }
+        return null;
+    }
 
     @Override
     public T registerEventListener(EventConsumer childComponent) {
@@ -84,15 +91,17 @@ public abstract class EventEnabledServiceComponentImpl<T extends EventEnabledSer
 
     @Override
     public void initializeComponent() {
-
+        logger.debug("Initialized Event Enabled Service component {}", this);
     }
 
     @Override
     public void destroyComponent() {
+        logger.debug("Destroying Event Enabled Service component Component {}", this);
         try {
             eventManager.clear();
         } catch (Exception exception) {
             logger.warn("Failed to clear event manager " + eventManager, exception);
         }
+        logger.debug("Destroyed Event Enabled Service component {}", this);
     }
 }

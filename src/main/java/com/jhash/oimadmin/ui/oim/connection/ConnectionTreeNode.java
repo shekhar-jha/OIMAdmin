@@ -26,6 +26,7 @@ import com.jhash.oimadmin.oim.cache.CacheManager;
 import com.jhash.oimadmin.oim.eventHandlers.Manager;
 import com.jhash.oimadmin.oim.orch.OrchManager;
 import com.jhash.oimadmin.oim.perf.PerfManager;
+import com.jhash.oimadmin.oim.plugins.JarManager;
 import com.jhash.oimadmin.oim.plugins.PluginManager;
 import com.jhash.oimadmin.oim.request.RequestManager;
 import com.jhash.oimadmin.ui.UIComponent;
@@ -40,6 +41,7 @@ import com.jhash.oimadmin.ui.oim.eventHandlers.EventHandlersTreeNode;
 import com.jhash.oimadmin.ui.oim.mds.MDSTreeNode;
 import com.jhash.oimadmin.ui.oim.orch.TraceOrchestrationDetails;
 import com.jhash.oimadmin.ui.oim.perf.OIMPerformanceTreeNode;
+import com.jhash.oimadmin.ui.oim.plugins.JarTreeNodes;
 import com.jhash.oimadmin.ui.oim.request.TraceRequestDetails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,7 +65,7 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
                 Utils.executeAsyncOperation("Reconnecting Connection", new Runnable() {
                     @Override
                     public void run() {
-                        ConnectionTreeNode.this.destroy();
+                        ConnectionTreeNode.this.destroy(false);
                         ConnectionTreeNode.this.initialize();
                     }
                 });
@@ -76,7 +78,6 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
                 logger.debug("Started Delete Trigger");
                 ConnectionTreeNode.this.destroy();
                 getConfiguration().getConfig().deleteConfiguration(getConfiguration().getProperty(Connection.ATTR_CONN_NAME));
-                getUIComponentTree().removeChildNode(getParentNode(), ConnectionTreeNode.this);
                 logger.debug("Completed Delete Trigger");
             }
         });
@@ -111,16 +112,21 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
             new EventHandlersTreeNode(eventManager, pluginManager, "Event Handlers", this).publish();
         }
         new DummyAdminTreeNode("Scheduled Tasks", this).initialize();
-        DummyAdminTreeNode cacheNode = new DummyAdminTreeNode("Cache", this).initialize();
+        DummyAdminTreeNode cacheNode = new DummyAdminTreeNode("Cache", this);
+        boolean cacheItemsAdded = false;
         if (connections.contains(CONNECTION_TYPES.JMX)) {
             CacheManager cacheManager = new CacheManager(connections.getConnection(CONNECTION_TYPES.JMX));
             new OIMCacheNode(cacheManager, connections.getConnection(CONNECTION_TYPES.OIM), "OIM Cache", cacheNode).initialize();
+            cacheItemsAdded = true;
         }
+        if (cacheItemsAdded)
+            cacheNode.initialize();
         if (eventManager != null && connections.contains(CONNECTION_TYPES.JMX)) {
             PerfManager perfManager = new PerfManager(eventManager, connections.getConnection(CONNECTION_TYPES.JMX));
             new OIMPerformanceTreeNode(perfManager, "Performance", this).publish();
         }
-        DummyAdminTreeNode trackerNode = new DummyAdminTreeNode("Track", this).initialize();
+        DummyAdminTreeNode trackerNode = new DummyAdminTreeNode("Track", this);
+        boolean trackerItemAdded = false;
         OrchManager orchManager = null;
         if (connections.contains(CONNECTION_TYPES.OIM, CONNECTION_TYPES.JMX, CONNECTION_TYPES.DB)) {
             orchManager = new OrchManager(connections.getConnection(CONNECTION_TYPES.OIM), connections.getConnection(CONNECTION_TYPES.JMX), connections.getConnection(CONNECTION_TYPES.DB));
@@ -130,12 +136,20 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
             new DisplayComponentNode<>("Request",
                     new TraceRequestDetails(requestManager, orchManager, "Request", this),
                     trackerNode).initialize();
-
+            trackerItemAdded = true;
         }
         if (orchManager != null) {
             new DisplayComponentNode<>("Orchestration",
                     new TraceOrchestrationDetails(orchManager, "Orchestration", this),
                     trackerNode).initialize();
+            trackerItemAdded = true;
+        }
+        if (trackerItemAdded)
+            trackerNode.initialize();
+        DummyAdminTreeNode codeNode = new DummyAdminTreeNode("Code", this).initialize();
+        if (connections.contains(CONNECTION_TYPES.OIM, CONNECTION_TYPES.DB)) {
+            JarManager jarManager = new JarManager(connections.getConnection(CONNECTION_TYPES.OIM), connections.getConnection(CONNECTION_TYPES.DB));
+            new JarTreeNodes(jarManager, "OIM Jar", codeNode).publish();
         }
         logger.debug("Initialized {}", this);
     }

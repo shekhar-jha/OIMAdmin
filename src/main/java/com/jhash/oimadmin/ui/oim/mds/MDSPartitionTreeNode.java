@@ -50,7 +50,7 @@ public class MDSPartitionTreeNode extends AbstractUIComponentTreeNode<MDSPartiti
         registerMenu(REFRESH, new MenuHandler.ActionHandler() {
             @Override
             public void invoke(MenuHandler.MENU menuItem, MenuHandler.Context context) {
-                destroy();
+                destroy(false);
                 initialize();
             }
         });

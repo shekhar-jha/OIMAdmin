@@ -21,4 +21,6 @@ public interface PublishableComponent<T extends PublishableComponent> {
     T setPublish(boolean publish);
 
     T publish();
+
+    T unPublish();
 }

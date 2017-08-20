@@ -103,7 +103,7 @@ public class MDSFileDetails extends AbstractUIComponent<JPanel, MDSFileDetails> 
             logger.debug("Trying to save updated MDS File");
             mdsFile.save();
             logger.debug("Saved. Trying to start the refresh of the MDS Partition tree by destroying Partition Tree Node {}", associatedPartition);
-            associatedPartition.destroy();
+            associatedPartition.destroy(false);
             logger.debug("Trying to initialize the MDS Partition tree node {}", associatedPartition);
             associatedPartition.initialize();
             logger.debug("Initialized MDS Partition tree node. Completed MDS File saving process");
