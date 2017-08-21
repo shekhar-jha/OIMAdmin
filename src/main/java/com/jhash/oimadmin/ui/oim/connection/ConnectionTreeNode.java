@@ -102,7 +102,9 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
         this.connections = initializeConnections(getName(), getConfiguration());
         if (connections.isEmpty())
             return;
-        new MDSTreeNode(connections, "MDS Repository", this).publish();
+        if (connections.contains(CONNECTION_TYPES.JMX)) {
+            new MDSTreeNode(connections.getConnection(CONNECTION_TYPES.JMX), "MDS Repository", this).publish();
+        }
         Manager eventManager = null;
         if (connections.contains(CONNECTION_TYPES.JMX)) {
             eventManager = new Manager(connections.getConnection(CONNECTION_TYPES.JMX));
@@ -146,11 +148,15 @@ public class ConnectionTreeNode extends AbstractUIComponentTreeNode<ConnectionTr
         }
         if (trackerItemAdded)
             trackerNode.initialize();
-        DummyAdminTreeNode codeNode = new DummyAdminTreeNode("Code", this).initialize();
+        DummyAdminTreeNode codeNode = new DummyAdminTreeNode("Code", this);
+        boolean codeItemAdded = false;
         if (connections.contains(CONNECTION_TYPES.OIM, CONNECTION_TYPES.DB)) {
             JarManager jarManager = new JarManager(connections.getConnection(CONNECTION_TYPES.OIM), connections.getConnection(CONNECTION_TYPES.DB));
             new JarTreeNodes(jarManager, "OIM Jar", codeNode).publish();
+            codeItemAdded = true;
         }
+        if (codeItemAdded)
+            codeNode.initialize();
         logger.debug("Initialized {}", this);
     }
 

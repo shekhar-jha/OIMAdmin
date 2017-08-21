@@ -29,21 +29,18 @@ import java.util.Set;
 public class MDSTreeNode extends AbstractUIComponentTreeNode<MDSTreeNode> {
 
     private static final Logger logger = LoggerFactory.getLogger(MDSTreeNode.class);
-    private final ConnectionTreeNode.Connections connections;
+    private final JMXConnection jmxConnection;
     private MDSConnectionJMX mdsConnection;
     private Set<MDSPartition> partitions;
 
-    public MDSTreeNode(ConnectionTreeNode.Connections connections, String name, ParentComponent parentComponent) {
+    public MDSTreeNode(JMXConnection jmxConnection, String name, ParentComponent parentComponent) {
         super(name, parentComponent);
-        this.connections = connections;
+        this.jmxConnection = jmxConnection;
     }
 
     @Override
     public void setupNode() {
         logger.debug("Initializing {} ...", this);
-        JMXConnection jmxConnection = connections.getConnection(ConnectionTreeNode.CONNECTION_TYPES.JMX);
-        if (jmxConnection == null)
-            throw new NullPointerException("No JMX Connection is available.");
         mdsConnection = new MDSConnectionJMX(jmxConnection);
         mdsConnection.initialize(getConfiguration());
         partitions = mdsConnection.getMDSPartitions();
