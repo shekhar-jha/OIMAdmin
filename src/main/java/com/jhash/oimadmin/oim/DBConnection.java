@@ -127,7 +127,12 @@ public class DBConnection extends AbstractConnection {
                         for (int columnCounter = 1; columnCounter <= totalColumnsInResult; columnCounter++) {
                             String columnName = resultSetMetaData.getColumnLabel(columnCounter);
                             Object columnValue = result.getObject(columnCounter);
-                            record.put(columnName, columnValue);
+                            if (columnValue instanceof Blob) {
+                                byte[] blobBytes = ((Blob)columnValue).getBytes(1L, (int)((Blob)columnValue).length());
+                                record.put(columnName, blobBytes);
+                            } else {
+                                record.put(columnName, columnValue);
+                            }
                         }
                         resultData.add(record);
                     }
