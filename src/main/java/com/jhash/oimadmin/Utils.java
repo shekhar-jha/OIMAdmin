@@ -24,9 +24,7 @@ import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.InvalidParameterException;
-import java.util.Enumeration;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.jar.JarEntry;
@@ -175,18 +173,54 @@ public class Utils {
         }
     }
 
-    public static void processJarFile(String jarFileName, JarFileProcessor processor) {
+    public static Map<String, Object> createJarTree(String jarFileName) {
+        logger.debug("Creating jar tree for file {}", jarFileName);
+        JarFile exportedFile = null;
         try {
-            JarFile exportedFile = new JarFile(jarFileName);
+            exportedFile = new JarFile(jarFileName);
+            Map<String, Object> jarEntryTreeMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
             for (Enumeration<JarEntry> jarEntryEnumeration = exportedFile.entries(); jarEntryEnumeration
                     .hasMoreElements(); ) {
                 JarEntry jarEntry = jarEntryEnumeration.nextElement();
-                logger.debug("Trying to process entry {} ", jarEntry);
-                processor.process(exportedFile, jarEntry);
+                String filePath = jarEntry.getName();
+                logger.debug("Trying to process entry {} with path {}", jarEntry, filePath);
+                String[] filePathComponents = filePath.split("/");
+                logger.debug("Split the file name {} as {}", filePath, filePathComponents);
+                Map<String, Object> applicableJarEntryTreeMap = jarEntryTreeMap;
+                for (int depth = 0; depth < filePathComponents.length - 1; depth++) {
+                    Object directoryAtDepth = applicableJarEntryTreeMap.get(filePathComponents[depth]);
+                    if (directoryAtDepth == null) {
+                        directoryAtDepth = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+                        applicableJarEntryTreeMap.put(filePathComponents[depth], directoryAtDepth);
+                        applicableJarEntryTreeMap = (Map) directoryAtDepth;
+                    } else if (directoryAtDepth instanceof Map) {
+                        applicableJarEntryTreeMap = (Map) directoryAtDepth;
+                    } else {
+                        throw new OIMAdminException("Expected the entry " + filePath + " to contain " + filePathComponents[depth] + " as directory (represented by Map object) but found it to be " + directoryAtDepth + " of type " + directoryAtDepth.getClass());
+                    }
+                }
+                if (applicableJarEntryTreeMap == null)
+                    throw new OIMAdminException("Failed to locate application parent directory corresponding to path " + filePath);
+                if (jarEntry.isDirectory()) {
+                    applicableJarEntryTreeMap.put(filePathComponents[filePathComponents.length - 1], new HashMap<>());
+                } else {
+                    applicableJarEntryTreeMap.put(filePathComponents[filePathComponents.length - 1], jarEntry);
+                }
             }
-            logger.debug("Processed all the jar entries");
+            logger.debug("Created Jar tree entry as {}", jarEntryTreeMap);
+            return jarEntryTreeMap;
+        } catch (OIMAdminException exception) {
+            throw exception;
         } catch (Exception exception) {
             throw new OIMAdminException("Failed to open the jar file " + jarFileName, exception);
+        } finally {
+            if (exportedFile != null) {
+                try {
+                    exportedFile.close();
+                } catch (Exception exception) {
+                    logger.warn("Failed to close jar file " + jarFileName + " while generating Jar tree map.", exception);
+                }
+            }
         }
     }
 

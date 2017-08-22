@@ -30,6 +30,13 @@ public class MDSFileTreeNode extends AbstractUIComponentTreeNode<MDSFileTreeNode
 
     private MDSFileDetails mdsFileDetails;
 
+    public MDSFileTreeNode(String name, MDSPartitionTreeNode associatedPartition, ParentComponent parentComponent) {
+        super(name, parentComponent, INITIALIZED_NO_OP);
+        this.mdsFile = null;
+        this.associatedPartition = associatedPartition;
+        unregisterMenu(OPEN);
+    }
+
     public MDSFileTreeNode(String name, MDSPartitionTreeNode associatedPartition, MDSFile mdsFile, ParentComponent parentComponent) {
         super(name, parentComponent);
         this.mdsFile = mdsFile;
@@ -39,16 +46,10 @@ public class MDSFileTreeNode extends AbstractUIComponentTreeNode<MDSFileTreeNode
     @Override
     public void setupNode() {
         logger.debug("Initializing MDS File UI {}", this);
-        mdsFileDetails = new MDSFileDetails(getName(), associatedPartition, mdsFile, this);
-        logger.debug("Initialized MDS File UI {} ...", this);
-    }
-
-    public void setFolder(boolean isFolder) {
-        if (isFolder) {
-            destroyNode();
-            setState(INITIALIZED_NO_OP);
-            unregisterMenu(OPEN);
+        if (mdsFile != null) {
+            mdsFileDetails = new MDSFileDetails(getName(), associatedPartition, mdsFile, this);
         }
+        logger.debug("Initialized MDS File UI {} ...", this);
     }
 
     @Override
