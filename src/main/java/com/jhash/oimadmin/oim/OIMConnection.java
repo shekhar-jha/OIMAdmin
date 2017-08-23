@@ -27,6 +27,7 @@ import oracle.jrf.JrfUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -34,7 +35,6 @@ import java.lang.reflect.Constructor;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.sql.Blob;
 import java.util.*;
 import java.util.zip.GZIPInputStream;
 
@@ -370,10 +370,10 @@ public class OIMConnection extends AbstractConnection {
         }
     }
 
-    public PublicProcessImpl getOrchestration(Blob orchestrationObject) {
+    public PublicProcessImpl getOrchestration(byte[] orchestrationObject) {
         ObjectInputStream ins = null;
         try {
-            Object readObject = Utils.getObjectInputStream(new GZIPInputStream(orchestrationObject.getBinaryStream()), getClassLoader()).readObject();
+            Object readObject = Utils.getObjectInputStream(new GZIPInputStream(new ByteArrayInputStream(orchestrationObject)), getClassLoader()).readObject();
             return new PublicProcessImpl(readObject, getClassLoader());
         } catch (Exception e) {
             throw new OIMAdminException("Failed to read process object from Blob " + orchestrationObject, e);

@@ -20,7 +20,7 @@ import com.jhash.oimadmin.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Blob;
+import java.io.ByteArrayInputStream;
 
 public class Event11gR2PS2 {
 
@@ -31,13 +31,14 @@ public class Event11gR2PS2 {
     public Event11gR2PS2(Object[] eventDetails, ClassLoader classLoader) {
         this.eventDetails = eventDetails;
         Object data = eventDetails[9];
-        if (eventDetails[9] instanceof Blob) {
+        if (eventDetails[9] instanceof byte[]) {
             try {
-                data = Utils.getObjectInputStream(((Blob) eventDetails[9]).getBinaryStream(), classLoader).readObject();
+                data = Utils.getObjectInputStream(new ByteArrayInputStream((byte[]) eventDetails[9]), classLoader).readObject();
             } catch (Exception exception) {
                 logger.warn("Failed to extract result from the Event details", exception);
                 data = eventDetails[9];
             }
+
         }
         this.data = data;
     }

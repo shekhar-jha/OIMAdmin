@@ -26,7 +26,6 @@ import com.jhash.oimadmin.oim.OIMConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -139,10 +138,9 @@ public class OrchManager {
                     PublicProcessImpl orchestrationProcessDetails = null;
                     Object orchestrationObject = values.remove(ORCHESTRATION);
                     if (orchestrationObject != null) {
-                        if (orchestrationObject instanceof Blob) {
-                            Blob orchestrationBlob = (Blob) orchestrationObject;
+                        if (orchestrationObject instanceof byte[]) {
                             try {
-                                orchestrationProcessDetails = oimConnection.getOrchestration(orchestrationBlob);
+                                orchestrationProcessDetails = oimConnection.getOrchestration((byte[]) orchestrationObject);
                             } catch (Exception exception) {
                                 logger.warn("Failed to extract orchestration details from blob for process ID " + orchestrationProcessID, exception);
                                 values.put(ORCHESTRATION_ERROR, "Orchestration details could not be retrieved. Error " + exception);
