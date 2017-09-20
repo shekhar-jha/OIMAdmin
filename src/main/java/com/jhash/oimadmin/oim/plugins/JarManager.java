@@ -34,7 +34,7 @@ import java.util.Map;
 
 public class JarManager {
 
-    public static final String GET_ALL_JARS = "SELECT OJ_ID, OJ_TYPE, OJ_NAME FROM ARPPS3_OIM.OIMHOME_JARS Order BY OJ_TYPE ASC";
+    public static final String GET_ALL_JARS = "SELECT OJ_ID, OJ_TYPE, OJ_NAME FROM OIMHOME_JARS Order BY OJ_TYPE ASC";
     public static final String CREATE_JAR = "insert into OIMHOME_JARS(oj_id,oj_name,oj_type,oj_jar,created_on,created_by) values(OIMHOME_JARS_SEQ.NEXTVAL,?,?,?,?,?)";
     public static final String UPDATE_JAR = "update OIMHOME_JARS set oj_jar=?,updated_on=?,updated_by=? where oj_name=? and oj_type=?";
     public static final String DOWNLOAD_JAR = "select OJ_JAR from OIMHOME_JARS where oj_type=? and oj_name=?";
