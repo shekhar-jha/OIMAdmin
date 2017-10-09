@@ -390,7 +390,7 @@ public class Config {
     public enum OIM_VERSION {
         OIM11GR2PS2("11.1.2.2"), OIM11GR2PS3("11.1.2.3"), LATEST("latest"), NOT_AVAILABLE("not available"), UNKNOWN("unknown");
 
-        private final String name;
+        public final String name;
 
         OIM_VERSION(String name) {
             this.name = name;
