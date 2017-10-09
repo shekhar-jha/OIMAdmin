@@ -23,9 +23,7 @@ import com.jgoodies.jsdl.component.JGComponentFactory;
 import com.jhash.oimadmin.Config;
 import com.jhash.oimadmin.Connection;
 import com.jhash.oimadmin.Utils;
-import com.jhash.oimadmin.oim.DBConnection;
-import com.jhash.oimadmin.oim.JMXConnection;
-import com.jhash.oimadmin.oim.OIMConnection;
+import com.jhash.oimadmin.oim.*;
 import com.jhash.oimadmin.ui.AbstractUIComponent;
 import com.jhash.oimadmin.ui.component.ParentComponent;
 import org.slf4j.Logger;
@@ -196,30 +194,75 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel, ConnectionDet
         builder.addLabel("Version", cellConstraint.xy(2, 4));
         builder.add(oimVersion, cellConstraint.xy(4, 4));
 
-        builder.addSeparator("OIM Connection", cellConstraint.xyw(2, 6, 7));
-        builder.addLabel("Server Platform", cellConstraint.xy(2, 8));
-        builder.add(platform, cellConstraint.xy(4, 8));
-        builder.addLabel("OIM Server URL", cellConstraint.xy(6, 8));
-        builder.add(oimURL, cellConstraint.xy(8, 8));
+        builder.addSeparator("Weblogic Admin Server (JMX)", cellConstraint.xyw(2, 6, 5));
+        JButton prePopButton = JGComponentFactory.getCurrent().createButton("Pre-populate");
+        prePopButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Utils.executeAsyncOperation("Prepopulate using JMX Connection", new Runnable() {
+                    public void run() {
+                        logger.debug("Trying to test connection using configuration {}", connectionDetails);
+                        JMXConnection connection = new JMXConnection();
+                        try {
+                            connection.initialize(connectionDetails);
+                            OIMUtils.OIMServerDetails oimServerDetails = OIMUtils.getOIMServerDetails(connection);
+                            if (oimServerDetails.Version != null) {
+                                int versionSelectedItemIndex = Config.OIM_VERSION.valuesAsString().indexOf(OIMUtils.getVersion(oimServerDetails.Version).name);
+                                oimVersion.setSelectedIndex(versionSelectedItemIndex);
+                            }
+                            String hostName = jmxHostname.getText();
+                            if (!Utils.isEmpty(hostName)) {
+                                oimURL.setText("t3://" + hostName + ":14000");
+                            }
+                            String dbURL = (String) oimServerDetails.oimServerDetails.get("oimdb_url");
+                            if (!Utils.isEmpty(dbURL))
+                                dbJDBCURL.setText(dbURL);
+                            String dbJdbcUser = (String) oimServerDetails.oimServerDetails.get("oimdb_schema_user");
+                            if (!Utils.isEmpty(dbJdbcUser))
+                                dbUser.setText(dbJdbcUser);
+                            String dbJdbcDriverString = (String) oimServerDetails.oimServerDetails.get("driver");
+                            if (!Utils.isEmpty(dbJdbcDriverString))
+                                dbJDBCDriverClass.setText(dbJdbcDriverString);
+                        } catch (Exception exception) {
+                            displayMessage("Connection Failed", "Failed to connect to OIM and extract details.", exception);
+                        }
+                        try {
+                            connection.destroy();
+                        } catch (Exception exception) {
+                            logger.warn("Failed to destroy new connection. Ignoring error", exception);
+                        }
+                        logger.debug("Tested connection");
+                    }
+                });
+            }
+        });
+        JPanel jmxButtonPanel = new JPanel();
+        jmxButtonPanel.add(prePopButton);
+        builder.add(jmxButtonPanel, cellConstraint.xy(8, 6, CellConstraints.LEFT, CellConstraints.DEFAULT));
 
-        builder.addLabel("User", cellConstraint.xy(2, 10));
-        builder.add(oimUser, cellConstraint.xy(4, 10));
-        builder.addLabel("Password", cellConstraint.xy(6, 10));
-        builder.add(oimUserPassword, cellConstraint.xy(8, 10));
+        builder.addLabel("Protocol", cellConstraint.xy(2, 8));
+        builder.add(jmxProtocol, cellConstraint.xy(4, 8));
+        builder.addLabel("Server Platform", cellConstraint.xy(6, 8));
+        builder.add(platform, cellConstraint.xy(8, 8));
 
-        builder.addSeparator("Weblogic Admin Server (JMX)", cellConstraint.xyw(2, 12, 7));
-        builder.addLabel("Protocol", cellConstraint.xy(2, 14));
-        builder.add(jmxProtocol, cellConstraint.xy(4, 14));
+        builder.addLabel("Host name", cellConstraint.xy(2, 10));
+        builder.add(jmxHostname, cellConstraint.xy(4, 10));
+        builder.addLabel("Port", cellConstraint.xy(6, 10));
+        builder.add(jmxPort, cellConstraint.xy(8, 10));
 
-        builder.addLabel("Host name", cellConstraint.xy(2, 16));
-        builder.add(jmxHostname, cellConstraint.xy(4, 16));
-        builder.addLabel("Port", cellConstraint.xy(6, 16));
-        builder.add(jmxPort, cellConstraint.xy(8, 16));
+        builder.addLabel("User", cellConstraint.xy(2, 12));
+        builder.add(jmxUser, cellConstraint.xy(4, 12));
+        builder.addLabel("Password", cellConstraint.xy(6, 12));
+        builder.add(jmxUserPassword, cellConstraint.xy(8, 12));
+
+        builder.addSeparator("OIM Connection", cellConstraint.xyw(2, 14, 7));
+        builder.addLabel("OIM Server URL", cellConstraint.xy(2, 16));
+        builder.add(oimURL, cellConstraint.xy(4, 16));
 
         builder.addLabel("User", cellConstraint.xy(2, 18));
-        builder.add(jmxUser, cellConstraint.xy(4, 18));
+        builder.add(oimUser, cellConstraint.xy(4, 18));
         builder.addLabel("Password", cellConstraint.xy(6, 18));
-        builder.add(jmxUserPassword, cellConstraint.xy(8, 18));
+        builder.add(oimUserPassword, cellConstraint.xy(8, 18));
 
         builder.addSeparator("Database", cellConstraint.xyw(2, 20, 5));
         JButton testDBButton = JGComponentFactory.getCurrent().createButton("Test");
@@ -246,7 +289,9 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel, ConnectionDet
                 });
             }
         });
-        builder.add(testDBButton, cellConstraint.xy(8, 20));
+        JPanel dbButtonPanel = new JPanel();
+        dbButtonPanel.add(testDBButton);
+        builder.add(dbButtonPanel, cellConstraint.xy(8, 20, CellConstraints.LEFT, CellConstraints.DEFAULT));
 
         builder.addLabel("Driver Class", cellConstraint.xy(2, 22));
         builder.add(dbJDBCDriverClass, cellConstraint.xy(4, 22));
@@ -287,8 +332,12 @@ public class ConnectionDetails extends AbstractUIComponent<JPanel, ConnectionDet
                 destroy();
             }
         });
-        builder.add(saveButton, cellConstraint.xy(4, 28));
-        builder.add(cancelButton, cellConstraint.xy(6, 28));
+        JPanel saveButtonPanel = new JPanel();
+        saveButtonPanel.add(saveButton);
+        builder.add(saveButtonPanel, cellConstraint.xy(4, 28, CellConstraints.RIGHT, CellConstraints.DEFAULT));
+        JPanel cancelButtonPanel = new JPanel();
+        cancelButtonPanel.add(cancelButton);
+        builder.add(cancelButtonPanel, cellConstraint.xy(6, 28, CellConstraints.LEFT, CellConstraints.DEFAULT));
         return builder.build();
     }
 

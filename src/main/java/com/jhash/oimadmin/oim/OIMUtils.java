@@ -17,25 +17,54 @@
 package com.jhash.oimadmin.oim;
 
 import com.jhash.oimadmin.Config;
+import com.jhash.oimadmin.OIMAdminException;
+import com.jhash.oimadmin.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.openmbean.TabularData;
+import java.util.Map;
+
 public class OIMUtils {
 
-    public static final JMXConnection.OIM_JMX_BEANS OIM_VERSION_INFO_MBEAN_NAME = new JMXConnection.OIM_JMX_BEANS("oim#11.1.2.0.0", "EMIntegration");
+    public static final JMXConnection.OIM_JMX_BEANS OIM_VERSION_INFO_MBEAN_NAME = new JMXConnection.OIM_JMX_BEANS("OIM", "EMIntegration");
     private static final Logger logger = LoggerFactory.getLogger(OIMUtils.class);
 
-    public static Config.OIM_VERSION getVersion(JMXConnection jmxConnection) {
-        Config.OIM_VERSION connectionOIMVersion;
-        String versionValue = jmxConnection.getValue(OIM_VERSION_INFO_MBEAN_NAME, "Version");
-        logger.info("Read OIM Version as {} for connection {}", versionValue, jmxConnection);
-        if (versionValue.startsWith("11.1.2.3"))
-            connectionOIMVersion = Config.OIM_VERSION.OIM11GR2PS3;
-        else if (versionValue.startsWith("11.1.2.2"))
-            connectionOIMVersion = Config.OIM_VERSION.OIM11GR2PS2;
-        else
-            connectionOIMVersion = Config.OIM_VERSION.UNKNOWN;
+    public static Config.OIM_VERSION getVersion(String version) {
+        Config.OIM_VERSION connectionOIMVersion = Config.OIM_VERSION.UNKNOWN;
+        if (!Utils.isEmpty(version)) {
+            if (version.startsWith("11.1.2.3"))
+                connectionOIMVersion = Config.OIM_VERSION.OIM11GR2PS3;
+            else if (version.startsWith("11.1.2.2"))
+                connectionOIMVersion = Config.OIM_VERSION.OIM11GR2PS2;
+        }
         return connectionOIMVersion;
     }
 
+    public static OIMServerDetails getOIMServerDetails(JMXConnection jmxConnection) {
+        Object oimDetailsObject = jmxConnection.getValue(OIM_VERSION_INFO_MBEAN_NAME, "EMInstanceProperties");
+        if (oimDetailsObject instanceof TabularData) {
+            Map<String, Object> oimServerDetails = JMXUtils.extractData((TabularData) oimDetailsObject);
+            return new OIMServerDetails(oimServerDetails);
+        } else {
+            throw new OIMAdminException("Expected a tabular data but received " + oimDetailsObject + " while retrieving 'EMInstanceProperties' from " + OIM_VERSION_INFO_MBEAN_NAME);
+        }
+    }
+
+
+    public static class OIMServerDetails {
+
+        public final String Version;
+        public final String OracleHome;
+        public final String[] Servers;
+        public final Map<String, Object> oimServerDetails;
+
+        public OIMServerDetails(Map<String, Object> oimServerDetails) {
+            this.Version = (String) oimServerDetails.get("version");
+            this.OracleHome = (String) oimServerDetails.get("OracleHome");
+            this.Servers = ((String) oimServerDetails.get("ServerNames")).split(",");
+            this.oimServerDetails = oimServerDetails;
+        }
+
+    }
 }

@@ -67,7 +67,7 @@ public class JMXConnection extends AbstractConnection {
             throw new OIMAdminException("Failed to create JMX Connector while initializing JMX Connection " + this,
                     exception);
         }
-        oimVersion = OIMUtils.getVersion(this);
+        oimVersion = OIMUtils.getVersion(OIMUtils.getOIMServerDetails(this).Version);
         logger.debug("Initialized JMX Connection");
     }
 
@@ -340,6 +340,8 @@ public class JMXConnection extends AbstractConnection {
 
     public interface ProcessingBean {
         OIM_JMX_BEANS getBean();
+
+        Map<String, String> getProperties();
 
         Object getValue(String attributeName);
 

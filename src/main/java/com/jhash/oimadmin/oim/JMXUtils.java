@@ -23,6 +23,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.management.*;
 import javax.management.openmbean.CompositeData;
+import javax.management.openmbean.CompositeDataSupport;
+import javax.management.openmbean.TabularData;
 import java.util.*;
 
 public class JMXUtils {
@@ -125,6 +127,30 @@ public class JMXUtils {
         return new Details(result, applicableColumns.toArray(new String[0]));
     }
 
+    public static Map<String, Object> extractData(TabularData tabularData) {
+        Map<String, Object> extractedData = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        Collection<?> elements = tabularData.values();
+        if (elements != null) {
+            for (Object element : elements) {
+                if (element instanceof CompositeDataSupport) {
+                    Object key = (((CompositeDataSupport) element).get("key"));
+                    Object value = ((CompositeDataSupport) element).get("value");
+                    if (key instanceof String) {
+                        logger.trace("Adding key {} and value {}", key, value);
+                        extractedData.put((String) key, value);
+                    } else {
+                        logger.debug("Skipping element {} with key {} since it does not contain String key. Found {}", new Object[]{element, key, key == null ? "null" : key.getClass()});
+                    }
+                } else {
+                    logger.debug("Skipping element {} of type {} since it is not of type {}", new Object[]{element, element == null ? "null" : element.getClass(), CompositeDataSupport.class});
+                }
+            }
+        } else {
+            logger.debug("Tabular data does not contain any elements. Returning empty map.");
+        }
+        return extractedData;
+    }
+
     static class ProcessingBeanImpl implements JMXConnection.ProcessingBean {
         private final MBeanServerConnection serverConnection;
         private final ObjectInstance objectInstance;
@@ -139,6 +165,11 @@ public class JMXUtils {
         @Override
         public JMXConnection.OIM_JMX_BEANS getBean() {
             return bean;
+        }
+
+        @Override
+        public Map<String, String> getProperties() {
+            return objectInstance.getObjectName().getKeyPropertyList();
         }
 
         @Override
