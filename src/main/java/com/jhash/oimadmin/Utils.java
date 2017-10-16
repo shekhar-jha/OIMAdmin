@@ -69,6 +69,19 @@ public class Utils {
             }
         }
         if (templateStream == null) {
+            logger.trace("Trying to read file as {}", fileName);
+            File templateFile = new File(fileName);
+            if (templateFile.exists() && templateFile.canRead()) {
+                logger.trace("Trying to setup {} for reading", templateFile);
+                try {
+                    templateStream = new FileInputStream(templateFile);
+                    logger.trace("File can be read using {}", templateStream);
+                }catch (IOException exception) {
+                    throw new OIMAdminException("Could not read " + templateFile.getAbsolutePath(), exception);
+                }
+            }
+        }
+        if (templateStream == null) {
             logger.trace("Trying to setup {} for reading from system classpath ", fileName);
             templateStream = ClassLoader.getSystemResourceAsStream(fileName);
         }
@@ -81,6 +94,14 @@ public class Utils {
             }
         } catch (IOException e1) {
             throw new OIMAdminException("Failed to read templates/EventHandlerConditional", e1);
+        }finally {
+            if (templateStream != null) {
+                try {
+                    templateStream.close();
+                }catch (Exception exception) {
+                    logger.warn("Failed to close stream for file " +fileName +" in work area " + workArea, exception);
+                }
+            }
         }
         return templateString.toString();
     }
@@ -173,12 +194,12 @@ public class Utils {
         }
     }
 
-    public static Map<String, Object> createJarTree(String jarFileName) {
+    public static Map<JarEntryKey, Object> createJarTree(String jarFileName) {
         logger.debug("Creating jar tree for file {}", jarFileName);
         JarFile exportedFile = null;
         try {
             exportedFile = new JarFile(jarFileName);
-            Map<String, Object> jarEntryTreeMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+            Map<JarEntryKey, Object> jarEntryTreeMap = new TreeMap<>(CASE_INSENSITIVE_COMPARATOR);
             for (Enumeration<JarEntry> jarEntryEnumeration = exportedFile.entries(); jarEntryEnumeration
                     .hasMoreElements(); ) {
                 JarEntry jarEntry = jarEntryEnumeration.nextElement();
@@ -186,25 +207,34 @@ public class Utils {
                 logger.debug("Trying to process entry {} with path {}", jarEntry, filePath);
                 String[] filePathComponents = filePath.split("/");
                 logger.debug("Split the file name {} as {}", filePath, filePathComponents);
-                Map<String, Object> applicableJarEntryTreeMap = jarEntryTreeMap;
+                Map<JarEntryKey, Object> applicableJarEntryTreeMap = jarEntryTreeMap;
+                StringBuilder filePathIdentifier = new StringBuilder("/");
                 for (int depth = 0; depth < filePathComponents.length - 1; depth++) {
-                    Object directoryAtDepth = applicableJarEntryTreeMap.get(filePathComponents[depth]);
+                    filePathIdentifier.append(filePathComponents[depth]);
+                    JarEntryKey jarEntryKey = new JarEntryKey(filePathComponents[depth], filePathIdentifier.toString());
+                    logger.trace("Processing file path {}", filePathIdentifier.toString());
+                    Object directoryAtDepth = applicableJarEntryTreeMap.get(jarEntryKey);
                     if (directoryAtDepth == null) {
-                        directoryAtDepth = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-                        applicableJarEntryTreeMap.put(filePathComponents[depth], directoryAtDepth);
+                        directoryAtDepth = new TreeMap<>(Utils.CASE_INSENSITIVE_COMPARATOR);
+                        logger.trace("Creating Jar Entry tree Map for {}", jarEntryKey);
+                        applicableJarEntryTreeMap.put(jarEntryKey, directoryAtDepth);
                         applicableJarEntryTreeMap = (Map) directoryAtDepth;
                     } else if (directoryAtDepth instanceof Map) {
                         applicableJarEntryTreeMap = (Map) directoryAtDepth;
                     } else {
                         throw new OIMAdminException("Expected the entry " + filePath + " to contain " + filePathComponents[depth] + " as directory (represented by Map object) but found it to be " + directoryAtDepth + " of type " + directoryAtDepth.getClass());
                     }
+                    filePathIdentifier.append("/");
                 }
+                JarEntryKey jarEntryKey = new JarEntryKey(filePathComponents[filePathComponents.length - 1], jarEntry.getName());
                 if (applicableJarEntryTreeMap == null)
                     throw new OIMAdminException("Failed to locate application parent directory corresponding to path " + filePath);
                 if (jarEntry.isDirectory()) {
-                    applicableJarEntryTreeMap.put(filePathComponents[filePathComponents.length - 1], new HashMap<>());
+                    logger.trace("Creating Jar Entry tree Map for {}", jarEntryKey);
+                    applicableJarEntryTreeMap.put(jarEntryKey, new HashMap<>());
                 } else {
-                    applicableJarEntryTreeMap.put(filePathComponents[filePathComponents.length - 1], jarEntry);
+                    logger.trace("Creating Jar Entry tree Map for {}", jarEntry);
+                    applicableJarEntryTreeMap.put(jarEntryKey, jarEntry);
                 }
             }
             logger.debug("Created Jar tree entry as {}", jarEntryTreeMap);
@@ -418,4 +448,30 @@ public class Utils {
 
     }
 
+    public static final Comparator<JarEntryKey> CASE_INSENSITIVE_COMPARATOR = new Comparator<JarEntryKey>() {
+        @Override
+        public int compare(JarEntryKey o1, JarEntryKey o2) {
+            if (o1 == null || o2 == null)
+                throw new NullPointerException("Can not compare to Null Jar Entry Key. Provided values " + o1 + " compare to " + o2);
+            return String.CASE_INSENSITIVE_ORDER.compare(o1.keyName, o2.keyName);
+        }
+    };
+
+    public static class JarEntryKey {
+
+        public final String keyName;
+        public final String jarEntry;
+        private final String toString;
+
+        private JarEntryKey(String keyName, String jarEntry) {
+            this.keyName = keyName;
+            this.jarEntry = jarEntry;
+            toString = "JarEntry(" +keyName +"," + jarEntry +")";
+        }
+
+        @Override
+        public String toString() {
+            return toString;
+        }
+    }
 }

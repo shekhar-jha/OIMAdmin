@@ -45,7 +45,7 @@ public class MDSTreeNode extends AbstractUIComponentTreeNode<MDSTreeNode> {
         mdsConnection.initialize(getConfiguration());
         partitions = mdsConnection.getMDSPartitions();
         for (MDSPartition partition : partitions) {
-            new MDSPartitionTreeNode(partition, mdsConnection, partition.toString(), this).publish();
+            new MDSPartitionTreeNode(partition, partition.toString(), this).publish();
         }
         logger.debug("Initialized {} ...", this);
     }

@@ -64,11 +64,6 @@ public class MDSConnectionJMX extends AbstractConnection {
         STRING_REPRESENTATION += "(" + jmxConnection + ")";
     }
 
-    protected String generateFileName(boolean export) {
-        return config.getWorkArea() + File.separator + Config.VAL_WORK_AREA_TMP + File.separator + "MDS"
-                + (export ? "Export" : "Import") + System.currentTimeMillis() + ".jar";
-    }
-
     public Set<MDSPartition> getMDSPartitions() {
         logger.debug("Trying to get all MDS Partitions...");
         Set<MDSPartition> partitions = new HashSet<MDSPartition>();
