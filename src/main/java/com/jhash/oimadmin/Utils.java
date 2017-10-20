@@ -76,7 +76,7 @@ public class Utils {
                 try {
                     templateStream = new FileInputStream(templateFile);
                     logger.trace("File can be read using {}", templateStream);
-                }catch (IOException exception) {
+                } catch (IOException exception) {
                     throw new OIMAdminException("Could not read " + templateFile.getAbsolutePath(), exception);
                 }
             }
@@ -94,12 +94,12 @@ public class Utils {
             }
         } catch (IOException e1) {
             throw new OIMAdminException("Failed to read templates/EventHandlerConditional", e1);
-        }finally {
+        } finally {
             if (templateStream != null) {
                 try {
                     templateStream.close();
-                }catch (Exception exception) {
-                    logger.warn("Failed to close stream for file " +fileName +" in work area " + workArea, exception);
+                } catch (Exception exception) {
+                    logger.warn("Failed to close stream for file " + fileName + " in work area " + workArea, exception);
                 }
             }
         }
@@ -111,22 +111,35 @@ public class Utils {
     }
 
     public static void createJarFileFromDirectory(String directory, String jarFileName) {
+        logger.debug("Creating Jar file {} from directory {}", new Object[]{jarFileName, directory});
         File jarDirectory = new File(directory);
         try (JarOutputStream jarFileOutputStream = new JarOutputStream(new FileOutputStream(jarFileName))) {
             for (Iterator<File> fileIterator = FileUtils.iterateFiles(jarDirectory, null, true); fileIterator.hasNext(); ) {
                 File inputFile = fileIterator.next();
                 String inputFileName = inputFile.getAbsolutePath();
+                logger.trace("Processing file {}", inputFileName);
                 String directoryFileName = jarDirectory.getAbsolutePath();
                 String relativeInputFileName = inputFileName.substring(directoryFileName.length() + 1);
+                logger.trace("Identified entry name as {}", relativeInputFileName);
+                if (!File.separator.equalsIgnoreCase("/")) {
+                    relativeInputFileName = relativeInputFileName.replace(File.separator, "/");
+                    logger.trace("Replaced the {} with {}. Updated jar entry is  {}", new Object[]{File.separator, "/", relativeInputFileName});
+                }
                 JarEntry newFileEntry = new JarEntry(relativeInputFileName);
                 newFileEntry.setTime(System.currentTimeMillis());
                 jarFileOutputStream.putNextEntry(newFileEntry);
-                jarFileOutputStream.write(FileUtils.readFileToByteArray(inputFile));
+                logger.trace("Extracting file content from {}", inputFile);
+                byte[] content = FileUtils.readFileToByteArray(inputFile);
+                logger.trace("Writing content of size {} to jar", content == null ? "null" : content.length);
+                jarFileOutputStream.write(content);
+                jarFileOutputStream.closeEntry();
             }
+            jarFileOutputStream.flush();
         } catch (Exception exception) {
             throw new OIMAdminException(
                     "Failed to create the jar file " + jarFileName + " from directory " + directory, exception);
         }
+        logger.debug("Created Jar file.");
     }
 
     public static void createJarFileFromContent(Map<String, byte[]> content, String[] fileSequence, String jarFileName) {
@@ -466,7 +479,7 @@ public class Utils {
         private JarEntryKey(String keyName, String jarEntry) {
             this.keyName = keyName;
             this.jarEntry = jarEntry;
-            toString = "JarEntry(" +keyName +"," + jarEntry +")";
+            toString = "JarEntry(" + keyName + "," + jarEntry + ")";
         }
 
         @Override
