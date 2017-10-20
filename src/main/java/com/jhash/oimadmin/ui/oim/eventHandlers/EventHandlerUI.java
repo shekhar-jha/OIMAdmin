@@ -330,8 +330,10 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
         JideSplitPane configurationSplitPane = new JideSplitPane(JideSplitPane.HORIZONTAL_SPLIT);
         private JTextArea pluginXMLTextArea = new JTextArea();
         private JButton pluginXMLGenerateButton = JGComponentFactory.getCurrent().createButton("Generate..");
+        private JButton pluginXMLResetButton = JGComponentFactory.getCurrent().createButton("Reset");
         private JTextArea eventHandlerXMLTextArea = new JTextArea(Utils.readFile("templates/eventHandlerxml"));
         private JButton eventHandlerXMLGenerateButton = JGComponentFactory.getCurrent().createButton("Generate..");
+        private JButton eventHandlerXMLResetButton = JGComponentFactory.getCurrent().createButton("Reset");
 
         public EventHandlerConfigurationPanel(String name, AbstractUIComponent parent) {
             super(name, parent);
@@ -352,7 +354,14 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
                     }}));
                 }
             });
+            pluginXMLResetButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    pluginXMLTextArea.setText(Utils.readFile("templates/pluginxml", getConfiguration().getWorkArea()));
+                }
+            });
             pluginXMLButtonPanel.add(pluginXMLGenerateButton);
+            pluginXMLButtonPanel.add(pluginXMLResetButton);
             JPanel pluginXMLPanel = new JPanel(new BorderLayout());
             pluginXMLPanel.add(new JideScrollPane(pluginXMLTextArea), BorderLayout.CENTER);
             pluginXMLPanel.add(pluginXMLButtonPanel, BorderLayout.NORTH);
@@ -375,7 +384,14 @@ public class EventHandlerUI extends AbstractUIComponent<JPanel, EventHandlerUI> 
                                     {"SYNC", executeCallback(SYNC, "")}}));
                 }
             });
+            eventHandlerXMLResetButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    eventHandlerXMLTextArea.setText(Utils.readFile("templates/eventHandlerxml"));
+                }
+            });
             eventHandlerXMLButtonPanel.add(eventHandlerXMLGenerateButton);
+            eventHandlerXMLButtonPanel.add(eventHandlerXMLResetButton);
             JPanel eventHandlerXMLPanel = new JPanel(new BorderLayout());
             eventHandlerXMLPanel.add(new JideScrollPane(eventHandlerXMLTextArea), BorderLayout.CENTER);
             eventHandlerXMLPanel.add(eventHandlerXMLButtonPanel, BorderLayout.NORTH);
