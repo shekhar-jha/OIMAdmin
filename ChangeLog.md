@@ -1,3 +1,13 @@
+Version 0.11
+-----------------
+
+1. Support for managing (upload, update, download and unregister) OIM Jar files (Scheduled Task, Thirdparty)
+2. Upload new MDS File and delete existing MDS Files.
+3. Prepopulate Connection information by providing Weblogic Admin server details.
+4. UI Refactoring
+5. Bug - New Event Handler jar file is invalid on Windows
+6. Bug - OIMClient can handle input through system.in
+
 Version 0.10
 -----------------
 
