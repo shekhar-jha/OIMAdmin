@@ -22,6 +22,7 @@ import com.jhash.oimadmin.ui.AbstractUIComponent;
 
 import javax.swing.*;
 import javax.swing.text.JTextComponent;
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
@@ -77,6 +78,22 @@ public class UIUtils {
         if (exception != null)
             messageDetails.append(Utils.extractExceptionDetails(exception));
         JOptionPane.showMessageDialog(null, messageDetails.toString(), title, JOptionPane.ERROR_MESSAGE);
+    }
+
+    public static File selectFile(Boolean directoryOnly, String buttonText) {
+        JFileChooser jarFileChooser = new JFileChooser();
+        if (directoryOnly == Boolean.TRUE)
+            jarFileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        else if (directoryOnly == Boolean.FALSE)
+            jarFileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        else
+            jarFileChooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+        int returnedResult = jarFileChooser.showDialog(JFrame.getFrames()[0], Utils.isEmpty(buttonText) ? "Select..." : buttonText);
+        if (returnedResult == JFileChooser.APPROVE_OPTION) {
+            return jarFileChooser.getSelectedFile();
+        } else {
+            return null;
+        }
     }
 
     public static class TextFieldCallback extends AbstractUIComponent.Callback<String, String> {
