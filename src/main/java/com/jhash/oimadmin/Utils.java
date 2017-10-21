@@ -221,7 +221,7 @@ public class Utils {
                 String[] filePathComponents = filePath.split("/");
                 logger.debug("Split the file name {} as {}", filePath, filePathComponents);
                 Map<JarEntryKey, Object> applicableJarEntryTreeMap = jarEntryTreeMap;
-                StringBuilder filePathIdentifier = new StringBuilder("/");
+                StringBuilder filePathIdentifier = new StringBuilder();
                 for (int depth = 0; depth < filePathComponents.length - 1; depth++) {
                     filePathIdentifier.append(filePathComponents[depth]);
                     JarEntryKey jarEntryKey = new JarEntryKey(filePathComponents[depth], filePathIdentifier.toString());
