@@ -92,6 +92,17 @@ public class MDSPartitionTreeNode extends AbstractUIComponentTreeNode<MDSPartiti
         }
     }
 
+    public void delete(String... files) {
+        if (files == null || files.length == 0)
+            displayMessage("MDS File deletion", "No files were provided for deletion.", null);
+        try {
+            partition.deleteMDSFile(files);
+        } catch (Exception exception) {
+            displayMessage("MDS File deletion", "Failed to delete file from MDS", exception);
+        }
+
+    }
+
     private void generateMDSFileNode(Map<Utils.JarEntryKey, Object> jarSubTree, ParentComponent parent, JarFile jarFile) {
         if (jarSubTree == null)
             return;
@@ -99,7 +110,7 @@ public class MDSPartitionTreeNode extends AbstractUIComponentTreeNode<MDSPartiti
             parent = this;
         for (Map.Entry<Utils.JarEntryKey, Object> jarEntry : jarSubTree.entrySet()) {
             if (jarEntry.getValue() instanceof Map) {
-                generateMDSFileNode((Map) jarEntry.getValue(), new MDSFileTreeNode(jarEntry.getKey().keyName, MDSPartitionTreeNode.this, parent).initialize(), jarFile);
+                generateMDSFileNode((Map) jarEntry.getValue(), new MDSFileTreeNode(jarEntry.getKey().keyName, jarEntry.getKey().jarEntry, MDSPartitionTreeNode.this, parent).initialize(), jarFile);
             } else if (jarEntry.getValue() instanceof JarEntry) {
                 new MDSFileTreeNode(jarEntry.getKey().keyName, MDSPartitionTreeNode.this,
                         new MDSFile(partition.getPartitionName(), jarFile, (JarEntry) jarEntry.getValue()), parent).initialize();

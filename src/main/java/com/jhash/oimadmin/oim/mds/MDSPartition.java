@@ -69,6 +69,16 @@ public class MDSPartition {
         }
     }
 
+    public void deleteMDSFile(String... files) {
+        logger.debug("Trying to delete files {} from MDS", files);
+        try {
+            mdsConnectionJMX.delete(application, serverName, files);
+            logger.debug("Deleted files.");
+        }catch (Exception exception) {
+            throw new OIMAdminException("Failed to delete files from MDS repository " + application + " at location " + serverName, exception);
+        }
+    }
+
     public void importFile(String fileName, MDSFile... files) {
         if (files != null && files.length > 0) {
             try (JarOutputStream importFileOutputStream = new JarOutputStream(new FileOutputStream(fileName))) {

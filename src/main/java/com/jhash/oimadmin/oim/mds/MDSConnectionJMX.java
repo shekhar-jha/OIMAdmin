@@ -27,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.management.MBeanServerConnection;
-import java.io.File;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -163,6 +162,32 @@ public class MDSConnectionJMX extends AbstractConnection {
                     + " to " + exportFileLocation, ex);
         }
         logger.debug("Completed export of Meta data from MDS repository");
+    }
+
+    public static JMXConnection.OIM_JMX_BEANS MDS_RUNTIME = new JMXConnection.OIM_JMX_BEANS(null, "MDSAppRuntime");
+    public static JMXConnection.JMX_BEAN_METHOD MDS_DELETE = new JMXConnection.JMX_BEAN_METHOD(MDS_RUNTIME, "deleteMetadata", new String[]{
+            String[].class.getName(), String[].class.getName(), boolean.class.getName(), boolean.class.getName(), boolean.class.getName(), boolean.class.getName()});
+
+    protected void delete(final MDSAppInfo application, final String server, final String... mdsFiles) {
+        logger.debug("Deleting files {} from MDS Application {} on server {}", new Object[]{mdsFiles, application, server});
+        if (application == null || server == null || mdsFiles == null || mdsFiles.length == 0)
+            return;
+        jmxConnection.invoke(MDS_RUNTIME, new JMXConnection.ProcessBeanType() {
+            @Override
+            public void execute(JMXConnection.ProcessingBean bean) {
+                if (bean == null) return;
+                logger.trace("Matching bean {} to desired bean", bean.getProperties());
+                if (bean.getProperties().containsKey("Location") && bean.getProperties().containsKey("Application") && bean.getProperties().containsKey("ApplicationVersion")) {
+                    if (bean.getProperties().get("Location").equalsIgnoreCase(server) &&
+                            bean.getProperties().get("Application").equalsIgnoreCase(application.getName()) &&
+                            bean.getProperties().get("ApplicationVersion").equalsIgnoreCase(application.getVersion())) {
+                        logger.debug("Trying to delete MDS files {} using bean {}", mdsFiles, bean);
+                        bean.invoke(MDS_DELETE, mdsFiles, null, false, false, false, true);
+                        logger.debug("Deleted MDS files");
+                    }
+                }
+            }
+        });
     }
 
     protected void destroyConnection() {
