@@ -173,6 +173,8 @@ public abstract class AbstractUIComponentTreeNode<R extends AbstractUIComponentT
     public Boolean handleEvent(EventSource parent, Event event) {
         logger.debug("Handling event in Tree Node ");
         Boolean eventHandled = super.handleEvent(parent, event);
+        if (eventHandled == null && event == DESTROY && published)
+            unPublish();
         logger.debug("Handled event. Propagate? {}", eventHandled);
         return eventHandled;
     }
