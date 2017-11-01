@@ -29,9 +29,29 @@ public class PerfConfiguration {
     public final String displayName;
 
     public PerfConfiguration(String displayName, String componentBeanName, String attributeName) {
-        this.mBean = new JMXConnection.OIM_JMX_BEANS(componentBeanName);
+        this(displayName, new JMXConnection.OIM_JMX_BEANS(componentBeanName), attributeName);
+    }
+
+    public PerfConfiguration(String displayName, JMXConnection.OIM_JMX_BEANS oimJmxBeans, String attributeName) {
+        this.mBean = oimJmxBeans;
         this.attributeName = attributeName;
-        this.displayName = (displayName == null ? componentBeanName : displayName);
+        this.displayName = (displayName == null ? oimJmxBeans.name : displayName);
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (object instanceof PerfConfiguration) {
+            if (this.mBean == ((PerfConfiguration) object).mBean || (this.mBean != null && this.mBean.equals(((PerfConfiguration) object).mBean))) {
+                if ((this.attributeName == ((PerfConfiguration) object).attributeName) || (this.attributeName != null && this.attributeName.equalsIgnoreCase(((PerfConfiguration) object).attributeName)))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return (mBean + ":" + attributeName).hashCode();
     }
 
     public enum DATA_POINT {

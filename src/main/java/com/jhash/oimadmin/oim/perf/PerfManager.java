@@ -17,15 +17,21 @@
 package com.jhash.oimadmin.oim.perf;
 
 import com.jhash.oimadmin.Config;
+import com.jhash.oimadmin.OIMAdminException;
 import com.jhash.oimadmin.Utils;
 import com.jhash.oimadmin.oim.Details;
 import com.jhash.oimadmin.oim.JMXConnection;
+import com.jhash.oimadmin.oim.JMXUtils;
+import com.jhash.oimadmin.oim.OIMUtils;
 import com.jhash.oimadmin.oim.eventHandlers.Manager;
 import com.jhash.oimadmin.oim.eventHandlers.OperationDetail;
 import com.jhash.oimadmin.oim.orch.OrchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.management.openmbean.CompositeData;
+import javax.management.openmbean.TabularData;
+import javax.management.openmbean.TabularDataSupport;
 import java.util.*;
 
 public class PerfManager {
@@ -36,6 +42,12 @@ public class PerfManager {
     public static final String ATTR_PERFORMANCE_CONFIG_TYPE = ".type";
     public static final String ATTR_PERFORMANCE_CONFIG_DISPLAY_NAME = ".display";
     public static final String ATTR_PERFORMANCE_CONFIG_CALL = ".call";
+    public static final JMXConnection.OIM_JMX_BEANS DMS_CONFIG_MBEAN = new JMXConnection.OIM_JMX_BEANS(null,
+            "JMXEventConfig");
+    public static final JMXConnection.OIM_JMX_BEANS ALL_DMS_PERF_MBEANS = new JMXConnection.OIM_JMX_BEANS("oracle.dms", null, null);
+    public static final JMXConnection.JMX_BEAN_METHOD ADD_EVENT_ROUTE = new JMXConnection.JMX_BEAN_METHOD(DMS_CONFIG_MBEAN,
+            "addEventRoute", new String[]{String.class.getName(), String.class.getName(), boolean.class.getName()});
+    public static final JMXConnection.JMX_BEAN_METHOD ACTIVATE_CONFIGURATION = new JMXConnection.JMX_BEAN_METHOD(DMS_CONFIG_MBEAN, "activateConfiguration");
 
     private static final Logger logger = LoggerFactory.getLogger(OrchManager.class);
     private final JMXConnection jmxConnection;
@@ -46,6 +58,77 @@ public class PerfManager {
         this.eventHandlerManager = eventHandlerManager;
     }
 
+    public Map<String, Boolean> performanceConfigurationForServer() {
+        final Map<String, Boolean> applicableValues = new HashMap<>();
+        jmxConnection.invoke(DMS_CONFIG_MBEAN, new JMXConnection.ProcessBeanType() {
+            @Override
+            public void execute(JMXConnection.ProcessingBean bean) {
+                Map<String, String> beanProperties = bean.getProperties();
+                logger.trace("Processing bean {}", beanProperties);
+                if (beanProperties.containsKey("ServerName")) { // this give server specific beans.
+                    Object allEventRouteStatusObject = bean.getValue("AllEventRouteStatus");
+                    if (!(allEventRouteStatusObject instanceof TabularData))
+                        throw new OIMAdminException("Located value of JMX Attribute value 'AllEventRouteStatus'  of type "
+                                + (allEventRouteStatusObject == null ? "null" : allEventRouteStatusObject.getClass()) + " expected "
+                                + TabularData.class + "Value : " + allEventRouteStatusObject + " Bean: " + beanProperties);
+                    TabularData routeStatus = (TabularDataSupport) allEventRouteStatusObject;
+                    Collection routeStatusValue = routeStatus.values();
+                    if (routeStatusValue.size() != 1)
+                        throw new OIMAdminException("Value of JMX Attribute 'AllEventRouteStatus' was expected to contain 1 element, found " + routeStatusValue.size() + ". Bean: " + beanProperties);
+                    Object routeStatusElementValues = routeStatusValue.toArray()[0];
+                    if (!(routeStatusElementValues instanceof CompositeData)) {
+                        throw new OIMAdminException("Value if JMX Attribute 'AllEventRouteStatus' must be of type "
+                                + CompositeData.class + ". Found " + (routeStatusElementValues == null ? "null" : routeStatusElementValues.getClass())
+                                + " Bean: " + beanProperties);
+                    }
+                    applicableValues.put(beanProperties.get("ServerName"), JMXUtils.<Boolean>extractData(
+                            (TabularData) JMXUtils.extractData(
+                                    (CompositeData) routeStatusElementValues).get("value")).get("mbeanCreationDestination"));
+                }
+            }
+        });
+        String[] servers = OIMUtils.getOIMServerDetails(jmxConnection).Servers;
+        if (servers != null && servers.length > 0) {
+            Map<String, Boolean> serverConfiguration = new HashMap<>();
+            for (String server : servers) {
+                serverConfiguration.put(server, applicableValues.get(server));
+            }
+            logger.debug("Performance bean configuration {}", serverConfiguration);
+            return serverConfiguration;
+        }
+        logger.debug("Performance bean configuration {}", applicableValues);
+        return applicableValues;
+    }
+
+    public void enablePerformance(String serverName) {
+        setPerformance(serverName, true);
+    }
+
+    public void disablePerformance(String serverName) {
+        setPerformance(serverName, false);
+    }
+
+    public void setPerformance(final String serverName, final boolean enable) {
+        logger.debug("Setting performance on {} to {}", serverName, enable);
+        if (Utils.isEmpty(serverName))
+            return;
+        final Map<String, Boolean> applicableValues = new HashMap<>();
+        jmxConnection.invoke(DMS_CONFIG_MBEAN, new JMXConnection.ProcessBeanType() {
+            @Override
+            public void execute(JMXConnection.ProcessingBean bean) {
+                Map<String, String> beanProperties = bean.getProperties();
+                logger.trace("Processing bean {}", beanProperties);
+                if (beanProperties.containsKey("ServerName") && beanProperties.get("ServerName").equalsIgnoreCase(serverName)) { // this give server specific beans.
+                    logger.debug("Identified performance bean as {}, Invoking {} with parameters {}, {}, {}", new Object[]{beanProperties, ADD_EVENT_ROUTE, null, "mbeanCreationDestination", enable});
+                    bean.invoke(ADD_EVENT_ROUTE, null, "mbeanCreationDestination", enable);
+                    logger.debug("Invoked the set operation. Invoking the {} operation", ACTIVATE_CONFIGURATION);
+                    bean.invoke(ACTIVATE_CONFIGURATION);
+                    logger.debug("Invoked the activate operation.");
+                }
+            }
+        });
+        logger.debug("Performance set.");
+    }
 
     public Map<String, List<PerfConfiguration>> getPerformanceConfiguration(Config.Configuration configuration) {
         Map<String, List<PerfConfiguration>> performanceConfiguration = new HashMap<>();
@@ -145,13 +228,63 @@ public class PerfManager {
         return performanceConfiguration;
     }
 
-    public PerformanceData.Snapshot capturePerformanceData(PerfConfiguration perfConfiguration) {
+
+    public Set<PerfConfiguration> getPerformanceConfiguration(final String serverName) {
+        final Set<PerfConfiguration> allPerformanceConfiguration = new TreeSet<>(new CASE_INSENSITIVE_COMPARATOR());
+        jmxConnection.invoke(ALL_DMS_PERF_MBEANS, new JMXConnection.ProcessBeanType() {
+            @Override
+            public void execute(JMXConnection.ProcessingBean bean) {
+                logger.trace("Processing bean {}", bean);
+                if (bean.getProperties().containsKey("Location") && bean.getProperties().get("Location").equalsIgnoreCase(serverName)) {
+                    List<String> beanAttributeNames = bean.getAttributeNames();
+                    if (beanAttributeNames != null) {
+                        for (String beanAttributeName : beanAttributeNames) {
+                            if (beanAttributeName.endsWith(PerfConfiguration.DATA_POINT.COMPLETED_TRANSACTIONS.beanNameSuffix)) {
+                                String attributeName = beanAttributeName.substring(0, beanAttributeName.indexOf(PerfConfiguration.DATA_POINT.COMPLETED_TRANSACTIONS.beanNameSuffix));
+                                logger.trace("Adding performance attribute {} for bean {}", attributeName, bean.getBean());
+                                PerfConfiguration perfConfiguration = new PerfConfiguration(null, bean.getBean(), attributeName);
+                                allPerformanceConfiguration.add(perfConfiguration);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        return allPerformanceConfiguration;
+    }
+
+    public PerformanceData.Snapshot capturePerformanceData(final String serverName, final PerfConfiguration perfConfiguration) {
         Map<PerfConfiguration.DATA_POINT, Object> performanceData = new HashMap<>();
         for (PerfConfiguration.DATA_POINT data_point : PerfConfiguration.DATA_POINT.values()) {
-            performanceData.put(data_point, jmxConnection.getValue(perfConfiguration.mBean, perfConfiguration.attributeName + data_point.beanNameSuffix));
+            final PerfConfiguration.DATA_POINT processingDataPoint = data_point;
+            final List<Object> performanceDataValue = new ArrayList<>();
+            jmxConnection.invoke(perfConfiguration.mBean, new JMXConnection.ProcessBeanType() {
+                @Override
+                public void execute(JMXConnection.ProcessingBean bean) {
+                    logger.trace("Processing bean {}", bean);
+                    if (bean.getProperties().containsKey("Location") && bean.getProperties().get("Location").equalsIgnoreCase(serverName)) {
+                        performanceDataValue.add(bean.getValue(perfConfiguration.attributeName + processingDataPoint.beanNameSuffix));
+                    }
+                }
+            });
+            if (performanceDataValue.size() == 1)
+                performanceData.put(data_point, performanceDataValue.get(0));
+            else if (performanceDataValue.size() > 1) {
+                logger.warn("Performance capture: Found {} beans corresponding to {} while capturing data for {}. Using first value identified.", new Object[]{performanceDataValue.size(), perfConfiguration.mBean, perfConfiguration.attributeName});
+                performanceData.put(data_point, performanceDataValue.get(0));
+            }
         }
         return new PerformanceData.Snapshot(performanceData);
     }
 
+    private class CASE_INSENSITIVE_COMPARATOR implements Comparator<PerfConfiguration> {
+
+        @Override
+        public int compare(PerfConfiguration o1, PerfConfiguration o2) {
+            if (o1 == null || o2 == null)
+                throw new NullPointerException("Can not compare null PerfConfiguration object.");
+            return o1.displayName.compareToIgnoreCase(o2.displayName);
+        }
+    }
 
 }

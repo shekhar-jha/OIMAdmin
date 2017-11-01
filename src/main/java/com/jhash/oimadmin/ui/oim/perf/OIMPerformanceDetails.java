@@ -44,6 +44,7 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JPanel, OIMPerfor
     private static final Logger logger = LoggerFactory.getLogger(OIMPerformanceDetails.class);
     private final PerfManager performanceManager;
     private final List<PerfConfiguration> performanceDetails;
+    private final String serverName;
     private JTable performanceTable;
     private JLabel minimum = JGComponentFactory.getCurrent().createLabel();
     private JLabel maximum = JGComponentFactory.getCurrent().createLabel();
@@ -56,8 +57,9 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JPanel, OIMPerfor
     private JPanel performanceUI;
     private boolean isRecording = false;
 
-    public OIMPerformanceDetails(List<PerfConfiguration> performanceMetrics, PerfManager performanceManager, String name, ParentComponent parentComponent) {
+    public OIMPerformanceDetails(String serverName, List<PerfConfiguration> performanceMetrics, PerfManager performanceManager, String name, ParentComponent parentComponent) {
         super(name, parentComponent);
+        this.serverName = serverName;
         this.performanceDetails = performanceMetrics;
         this.performanceManager = performanceManager;
     }
@@ -93,7 +95,7 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JPanel, OIMPerfor
                                 for (int rowCounter = 0; rowCounter < performanceDetails.size(); rowCounter++) {
                                     PerformanceData value = (PerformanceData) tableModel.getValueAt(rowCounter, lastColumnAdded);
                                     if (value != null) {
-                                        value.endSnapshot = performanceManager.capturePerformanceData(performanceDetails.get(rowCounter));
+                                        value.endSnapshot = performanceManager.capturePerformanceData(serverName, performanceDetails.get(rowCounter));
                                     }
                                 }
                                 String[] columnNames = new String[lastColumnAdded + 1];
@@ -118,7 +120,7 @@ public class OIMPerformanceDetails extends AbstractUIComponent<JPanel, OIMPerfor
                                 PerformanceData[] startingPerformanceDetails = new PerformanceData[performanceDetails.size()];
                                 for (int rowCounter = 0; rowCounter < startingPerformanceDetails.length; rowCounter++) {
                                     startingPerformanceDetails[rowCounter] = new PerformanceData();
-                                    startingPerformanceDetails[rowCounter].startSnapshot = performanceManager.capturePerformanceData(performanceDetails.get(rowCounter));
+                                    startingPerformanceDetails[rowCounter].startSnapshot = performanceManager.capturePerformanceData(serverName, performanceDetails.get(rowCounter));
                                 }
                                 tableModel.addColumn("Recording", startingPerformanceDetails);
                                 startTracking.setText("Stop");
