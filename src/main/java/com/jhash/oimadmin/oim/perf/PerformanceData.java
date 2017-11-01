@@ -67,7 +67,19 @@ public class PerformanceData {
             Object value;
             if ((value = snapShot.get(data_point)) instanceof Long)
                 return (long) value;
-            else
+            else if (value instanceof Integer) {
+                return (long) (int) (Integer) value;
+            } else if (value instanceof String) {
+                try {
+                    Long valueAsLong = Long.parseLong((String) value);
+                    if (valueAsLong != null)
+                        return valueAsLong;
+                    else
+                        return 0;
+                } catch (Exception exception) {
+                    return 0;
+                }
+            } else
                 return 0;
 
         }
