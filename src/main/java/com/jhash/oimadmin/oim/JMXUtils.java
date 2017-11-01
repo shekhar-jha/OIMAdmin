@@ -34,20 +34,25 @@ public class JMXUtils {
     public static Set<ObjectInstance> getJMXBean(MBeanServerConnection connection, JMXConnection.OIM_JMX_BEANS jmxBeans) {
         logger.trace("Trying to locate beans for {}", jmxBeans);
         try {
-            String expression = "*:";
+            StringBuilder expression = new StringBuilder();
+            if (jmxBeans.nameSpace != null)
+                expression.append(jmxBeans.nameSpace);
+            else
+                expression.append("*");
+            expression.append(":type=");
             if (jmxBeans.type != null) {
-                expression += "type=" + jmxBeans.type;
+                expression.append(jmxBeans.type);
             } else {
-                expression += "type=*";
+                expression.append("*");
             }
+            expression.append(",");
             if (jmxBeans.name != null) {
-                expression += ",name=" + jmxBeans.name + ",";
-            } else {
-                expression += ",";
+                expression.append("name=").append(jmxBeans.name).append(",");
             }
-            expression += "*";
-            logger.trace("Query expression {}", expression);
-            Set<ObjectInstance> jmxBeanObjectInstances = connection.queryMBeans(new ObjectName(expression), null);
+            expression.append("*");
+            String expressionValue = expression.toString();
+            logger.trace("Query expression {}", expressionValue);
+            Set<ObjectInstance> jmxBeanObjectInstances = connection.queryMBeans(new ObjectName(expressionValue), null);
             logger.trace("Returning search result {}", jmxBeanObjectInstances);
             return jmxBeanObjectInstances;
         } catch (Exception exception) {
@@ -69,6 +74,39 @@ public class JMXUtils {
             type = bean.getObjectName().getKeyPropertyList().get("Type");
         }
         return type;
+    }
+
+    public static List<String> getAttributeNames(MBeanServerConnection connection, ObjectInstance objectInstance) {
+        if (connection == null || objectInstance == null)
+            return null;
+        logger.debug("Trying to get attribute names for bean {}", objectInstance);
+        List<String> attributeNames = new ArrayList<>();
+        try {
+            MBeanInfo beanInfo = connection.getMBeanInfo(objectInstance.getObjectName());
+            if (beanInfo != null) {
+                MBeanAttributeInfo[] beanAttributesInfo = beanInfo.getAttributes();
+                if (beanAttributesInfo != null && beanAttributesInfo.length > 0){
+                    for (MBeanAttributeInfo beanAttributeInfo : beanAttributesInfo) {
+                        if (beanAttributeInfo != null) {
+                            attributeNames.add(beanAttributeInfo.getName());
+                        } else {
+                            logger.debug("Located null attribute info while processing attribute info for bean {}", objectInstance);
+                        }
+                    }
+                } else {
+                    logger.debug("No attributes could be retrieved for bean {}", objectInstance);
+                }
+            } else {
+                logger.warn("Could not locate bean information for bean {}", objectInstance);
+            }
+        } catch (InstanceNotFoundException exception) {
+            logger.warn("Could not locate the bean {}", new Object[]{objectInstance});
+            return null;
+        } catch (Exception exception) {
+            throw new OIMAdminException("Failed to get name of the attributes of bean " + objectInstance, exception);
+        }
+        logger.debug("Retrieved attribute names as {}", attributeNames);
+        return attributeNames;
     }
 
     public static Object getValue(MBeanServerConnection connection, ObjectInstance objectInstance, String attributeName) {
@@ -127,17 +165,36 @@ public class JMXUtils {
         return new Details(result, applicableColumns.toArray(new String[0]));
     }
 
-    public static Map<String, Object> extractData(TabularData tabularData) {
-        Map<String, Object> extractedData = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+    public static Map<String, Object> extractData(CompositeData compositeData) {
+        return extractData(compositeData, null, null);
+    }
+
+    public static Map<String, Object> extractData(CompositeData compositeData, Map<String, Object> consolidatedData) {
+        return extractData(compositeData, consolidatedData, null);
+    }
+
+    public static Map<String, Object> extractData(CompositeData
+                                                          compositeData, Map<String, Object> consolidatedData, Map<String, String> nameToColumnNameMapping) {
+        Map<String, Object> dataMap = consolidatedData == null ? new HashMap<String, Object>() : consolidatedData;
+        Set<String> columnNames = compositeData.getCompositeType().keySet();
+        for (String columnName : columnNames) {
+            String applicableColumnName = Utils.getOrDefault(nameToColumnNameMapping, columnName, columnName);
+            dataMap.put(applicableColumnName, compositeData.get(columnName));
+        }
+        return dataMap;
+    }
+
+    public static <T> Map<String, T> extractData(TabularData tabularData) {
+        Map<String, T> extractedData = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
         Collection<?> elements = tabularData.values();
         if (elements != null) {
             for (Object element : elements) {
-                if (element instanceof CompositeDataSupport) {
-                    Object key = (((CompositeDataSupport) element).get("key"));
-                    Object value = ((CompositeDataSupport) element).get("value");
+                if (element instanceof CompositeData) {
+                    Object key = (((CompositeData) element).get("key"));
+                    Object value = ((CompositeData) element).get("value");
                     if (key instanceof String) {
                         logger.trace("Adding key {} and value {}", key, value);
-                        extractedData.put((String) key, value);
+                        extractedData.put((String) key, (T) value);
                     } else {
                         logger.debug("Skipping element {} with key {} since it does not contain String key. Found {}", new Object[]{element, key, key == null ? "null" : key.getClass()});
                     }
@@ -170,6 +227,13 @@ public class JMXUtils {
         @Override
         public Map<String, String> getProperties() {
             return objectInstance.getObjectName().getKeyPropertyList();
+        }
+
+        @Override
+        public List<String> getAttributeNames() {
+            if (objectInstance == null)
+                return null;
+            return JMXUtils.getAttributeNames(serverConnection, objectInstance);
         }
 
         @Override

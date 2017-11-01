@@ -328,7 +328,8 @@ public class JMXConnection extends AbstractConnection {
             }
         } else {
             ObjectInstance objectInstance = getBean(bean);
-            processBean.execute(new JMXUtils.ProcessingBeanImpl(getConnection(), objectInstance));
+            if (objectInstance != null)
+                processBean.execute(new JMXUtils.ProcessingBeanImpl(getConnection(), objectInstance));
         }
 
     }
@@ -342,6 +343,8 @@ public class JMXConnection extends AbstractConnection {
         OIM_JMX_BEANS getBean();
 
         Map<String, String> getProperties();
+
+        List<String> getAttributeNames();
 
         Object getValue(String attributeName);
 
@@ -359,6 +362,7 @@ public class JMXConnection extends AbstractConnection {
 
         public final String name;
         public final String type;
+        public final String nameSpace;
         private final String stringRepresentation;
 
         public OIM_JMX_BEANS(String name) {
@@ -370,10 +374,15 @@ public class JMXConnection extends AbstractConnection {
         }
 
         public OIM_JMX_BEANS(String name, String type) {
-            if (name == null && type == null)
+            this(null, name, type);
+        }
+
+        public OIM_JMX_BEANS(String nameSpace, String name, String type) {
+            if (name == null && type == null && nameSpace == null)
                 throw new NullPointerException("JMX Bean definition can not have both name and type as null value");
             this.name = name;
             this.type = type;
+            this.nameSpace = nameSpace;
             if (name != null) {
                 OIM_JMX_BEANS.beanNames.add(name);
                 OIM_JMX_BEANS.beanMapping.put(name, this);
@@ -382,7 +391,7 @@ public class JMXConnection extends AbstractConnection {
                 OIM_JMX_BEANS.beanTypeNames.add(type);
                 beanTypeMapping.put(type, this);
             }
-            stringRepresentation = "JMX Bean [" + (name == null ? "" : name) + ":" + (type == null ? "" : type) + "]";
+            stringRepresentation = "JMX Bean [" + (nameSpace == null ? "" : nameSpace) + ":" + (name == null ? "" : name) + "," + (type == null ? "" : type) + "]";
         }
 
         @Override
